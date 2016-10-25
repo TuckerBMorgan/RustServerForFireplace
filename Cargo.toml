@@ -1,0 +1,12 @@
+[package]
+
+name = "fireplace_server"
+version  = "0.0.1"
+authors = ["Tucker Morgan Tucker.bull.morgan@gmail.com"]
+#![allow(dead_code)]
+
+[dependencies]
+
+rand = "0.3.0"
+rustc-serialize = "0.3"
+rhai = "0.4.0"
