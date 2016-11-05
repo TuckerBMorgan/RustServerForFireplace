@@ -37,5 +37,4 @@ pub fn process_rune(rune: Box<Rune>,mut game_state: &mut GameState)
         }
     }
     */
-    
 }

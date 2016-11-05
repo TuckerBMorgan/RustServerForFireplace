@@ -1,22 +1,24 @@
 
 use rune_vm::Rune;
+use std::any::Any;
 use std::net::TcpStream;
 use controller::Controller;
+use minion_card::MinionCard;
 use game_thread::GameThread;
 use entity::{Entity, eEntityType};
 use std::collections::{VecDeque, HashMap};
+use rhai::{Engine, FnRegister, Scope};
 
 #[derive(Clone)]
 pub struct GameStateData {
-
-    controllers : Vec<Controller>
-
+    controllers : Vec<Controller>,
+    entity_count : u32,
 }
 
 impl GameStateData {
 
     pub fn new() -> GameStateData {
-        GameStateData { controllers : vec![]}
+        GameStateData { controllers : vec![], entity_count : 0}
     }
 
    pub fn add_player_controller(&mut self, controller: Controller){
@@ -31,19 +33,24 @@ impl GameStateData {
         &mut self.controllers
     }
 
+    pub fn get_guid(&mut self) -> u32{
+        self.entity_count = self.entity_count + 1;
+        self.entity_count    
+    }
 }
 
 pub struct GameState<'a>
 {
     players_ready : u8, // the number of players who have done the full handshake for the start of the game
-    entity_count : u32,
+    game_scope : Scope,
+
     team_count : u8,
     connection_number : u8,
 
-//  game_thread : &'a GameThread,
     game_thread : Option<&'a GameThread>,
     game_state_data : GameStateData,
- 
+    script_engine : Engine,
+    
     rune_queue: VecDeque<Box<Rune>>, // the current runes waiting to be fired
     entities: HashMap<String, Box<Entity>>, // all entities in the game, spells, minions, and controllers
     connections: Vec<Box<TcpStream>>, // all the streams of the current people connected so we can talk to them again
@@ -54,18 +61,59 @@ impl<'a> GameState<'a>
 {
     pub fn new(game_thread : & GameThread) -> GameState {
         GameState {game_thread : Some(game_thread), game_state_data : GameStateData::new(),
-                   players_ready : 0, entity_count : 0, team_count : 0, connection_number : 0,
+                   players_ready : 0, team_count : 0, connection_number : 0,
                    connections : vec![], rune_queue : VecDeque::new(), attacked_this_turn : vec![],
-                   entities : HashMap::new()}
+                   entities : HashMap::new(), script_engine : Engine::new(), game_scope : vec![]}
+    }
+    
+    //rhai requires that we tell it about what it is going to be interacting with
+    //this function does that
+    pub fn filled_up_scripting_engine(&mut self){
+        
+        self.script_engine.register_type::<GameStateData>();
+        self.script_engine.register_type::<MinionCard>();
+        self.script_engine.register_fn("new_minion", MinionCard::new_other);
+        self.script_engine.register_fn("minion_basic_info", MinionCard::set_basic_info);
+        self.script_engine.register_fn("minion_attack_health_basic", MinionCard::set_attack_and_health_basics);
     }
 
-    /*
-    pub fn no_game_thread_new() -> GameState<'a> {
-        GameState { players_ready : 0, entity_count : 0, team_count : 0, connection_number : 0,
-                    controllers : vec![], rune_queue : VecDeque::new(),
-                    connections : vec![], game_thread : None}    
+    pub fn run_rhai_statement<T:Any + Clone>(&mut self, rhai_statement : &String) -> T {
+        
+        self.game_scope.push(("game_state".to_string(), Box::new(self.game_state_data.clone())));
+
+        let result = self.script_engine.eval_with_scope::<T>(&mut self.game_scope, &rhai_statement[..]);
+        
+        for &mut (ref name, ref mut val) in &mut self.game_scope.iter_mut().rev(){
+            match val.downcast_mut::<GameStateData>(){
+                Some(mut as_down_cast_struct) => {
+                    self.game_state_data = as_down_cast_struct.clone();
+                },
+                None =>{
+                    println!("problem getting game state back");
+                }
+            }
+        }
+
+        result.unwrap()
     }
-    */
+
+    pub fn populate_deck(&mut self, controller : &mut Controller, card_ids : Vec<String>) {
+        for card_id in card_ids{
+            let proto_minion_card = MinionCard::parse_minion_file(card_id);
+            match proto_minion_card {
+                Ok(proto_minion_card_good) => {
+
+                    let mut card = self.run_rhai_statement::<MinionCard>(&proto_minion_card_good.create_minion_function);
+                    card.set_battle_cry(proto_minion_card_good.battle_cry_function);
+                    card.set_take_damage(proto_minion_card_good.take_damage_function);
+            
+                },
+                Err(_) =>{
+                    println!("Problem loadingcard file");
+                }
+            }
+        }    
+    }
 
     //adds a rune to the rune queue, this is down when a executing rune creates a rune
     pub fn add_rune_to_queue(&mut self, rune: Box<Rune>){
@@ -96,8 +144,8 @@ impl<'a> GameState<'a>
     }
 
     pub fn get_guid(&mut self) -> u32{
-        self.entity_count = self.entity_count + 1;
-        self.entity_count
+        self.game_state_data.entity_count = self.game_state_data.entity_count + 1;
+        self.game_state_data.entity_count
     }
 
     pub fn get_team(&mut self) -> u8 {
@@ -113,5 +161,4 @@ impl<'a> GameState<'a>
     pub fn add_player_controller(&mut self, controller: Controller){
         self.game_state_data.add_player_controller(controller);
     }
-
 }

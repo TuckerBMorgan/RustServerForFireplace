@@ -39,3 +39,11 @@ pub struct Controller{
 //  pub seen_cards : HashMap<String, Box<Card>>
 
 }
+
+impl Controller {
+    /*
+    pub fn add_card_to_deck() {
+
+    }
+    */
+}

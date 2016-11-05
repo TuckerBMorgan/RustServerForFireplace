@@ -46,7 +46,7 @@ impl GameThread {
         
         if client_id == self.client_1_id
         {
-            self.client_1.send(thread_message);    
+            self.client_1.send(thread_message);
         }
         else 
         {
@@ -57,10 +57,10 @@ impl GameThread {
 
 pub fn game_thread_main(mut game_thread : GameThread){
 
-    let mut game_state = GameState::new(& game_thread);
+    let mut game_state = GameState::new(&game_thread);
 
     
-    while true
+    loop 
     {
         let t_message = game_thread.server.recv().unwrap();
         process_message::process_client_message(t_message.payload, t_message.client_id, &mut game_state);

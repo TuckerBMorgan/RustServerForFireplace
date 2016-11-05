@@ -1,0 +1,12 @@
+fn create_minion() {
+    let min = new_minion();
+    
+    min.minion_basic_info("Boar", game_state.get_guid(), "basic", "boar", 1);
+    min.minion_attack_health_basic(1, 1);
+
+    return min;
+}
+@@
+default
+@@
+default
