@@ -1,10 +1,10 @@
-
 use rune_vm::Rune;
 use std::any::Any;
+use std::rc::Rc;
 use std::net::TcpStream;
 use card::{Card, ECardType};
 use controller::Controller;
-use minion_card::Minion;
+use minion_card::{Minion, UID};
 use game_thread::GameThread;
 use entity::{Entity, eEntityType};
 use std::collections::{VecDeque, HashMap};
@@ -13,6 +13,7 @@ use rhai::{Engine, FnRegister, Scope};
 #[derive(Clone)]
 pub struct GameStateData {
     controllers: Vec<Controller>,
+    minions : HashMap<UID, Minion>, 
     entity_count: u32,
 }
 
@@ -21,6 +22,7 @@ impl GameStateData {
         GameStateData {
             controllers: vec![],
             entity_count: 0,
+            minions : HashMap::new()
         }
     }
 
@@ -36,9 +38,19 @@ impl GameStateData {
         &mut self.controllers
     }
 
-    pub fn get_guid(&mut self) -> u32 {
+    pub fn get_minion(&mut self, minion_uid : UID) -> Option<&mut Minion> {
+       self.minions.get_mut(&minion_uid)
+    }
+
+    pub fn get_uid(&mut self) -> UID {
         self.entity_count = self.entity_count + 1;
         self.entity_count
+    }
+
+
+
+    pub fn add_minion_to_minions(&mut self, minion : Minion) {
+       self.minions.insert(minion.get_uid(), minion);
     }
 }
 
@@ -91,6 +103,7 @@ impl<'a> GameState<'a> {
         self.script_engine.register_fn("minion_basic_info", Minion::set_basic_info);
         self.script_engine.register_fn("minion_attack_health_basic",
                                        Minion::set_attack_and_health_basics);
+        self.script_engine.register_fn("minion_add_tag", Minion::add_tag_to);
     }
 
     pub fn run_rhai_statement<T: Any + Clone>(&mut self, rhai_statement: &String) -> T {
@@ -129,16 +142,17 @@ impl<'a> GameState<'a> {
                     let play_card = Card::new(minion.get_cost(),
                                               ECardType::Minion,
                                               minion.get_id(),
-                                              self.get_guid().to_string(),
+                                              self.get_uid(),
                                               minion.get_name(),
-                                              minion.get_guid().to_string());
+                                              minion.get_uid().to_string());
 
                     // we do this because, a minion is not a card,
                     // but something placed into the field BY a card
                     // on the client we tell them about the minion
                     // right before we tell them they can play it
-                    // and so the client can tell what to display based on the guid of the
-                    controller.add_minion_to_unplayed(minion);
+                    // and so the client can tell what to display based on the uid of the
+                    controller.add_minion_to_unplayed(minion.get_uid());
+                    self.game_state_data.add_minion_to_minions(minion);
                     controller.add_card_to_deck(play_card);
                 }
                 Err(_) => {
@@ -146,6 +160,10 @@ impl<'a> GameState<'a> {
                 }
             }
         }
+    }
+
+    pub fn get_minion(&mut self, minion_uid : UID) -> Option<&mut Minion> {
+        self.game_state_data.get_minion(minion_uid)
     }
 
     // adds a rune to the rune queue, this is down when a executing rune creates a rune
@@ -176,7 +194,7 @@ impl<'a> GameState<'a> {
         self.players_ready;
     }
 
-    pub fn get_guid(&mut self) -> u32 {
+    pub fn get_uid(&mut self) -> UID {
         self.game_state_data.entity_count = self.game_state_data.entity_count + 1;
         self.game_state_data.entity_count
     }
@@ -193,5 +211,16 @@ impl<'a> GameState<'a> {
 
     pub fn add_player_controller(&mut self, controller: Controller) {
         self.game_state_data.add_player_controller(controller);
+    }
+
+    pub fn get_controller_by_uid(&mut self, controller_uid : UID) -> Option<&Controller> {
+        let ref controllers = self.game_state_data.controllers;
+
+        for controller in controllers {
+            if controller.uid == controller_uid {
+                return Some(&controller)
+            }
+        };
+        None
     }
 }

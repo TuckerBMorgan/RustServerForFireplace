@@ -2,6 +2,9 @@ use ::card::Card;
 use std::fs::File;
 use ::card::ECardType;
 use regex::Regex;
+use std::collections::HashSet;
+
+pub type UID = u32;
 
 pub enum EFileReadResult {
     GoodRead,
@@ -32,9 +35,11 @@ impl ProtoMinion {
 pub struct Minion {
     cost: u16,
     id: String,
-    guid: String,
+    uid: UID,
     name: String,
     set: String,
+
+    tags : HashSet<String>,
 
     battle_cry_function: String,
     take_damage_function: String,
@@ -58,7 +63,7 @@ impl Minion {
     pub fn new(&mut self,
                cost: u16,
                id: String,
-               guid: String,
+               uid: UID,
                name: String,
                set: String,
                base_attack: u16,
@@ -68,9 +73,10 @@ impl Minion {
         Minion {
             cost: cost,
             id: id,
-            guid: guid,
+            uid: uid,
             name: name,
             set: set,
+            tags : HashSet::new(),
             base_attack: base_attack,
             current_attack: base_attack,
             total_attack: base_attack,
@@ -88,9 +94,10 @@ impl Minion {
         Minion {
             cost: 0,
             id: "default".to_string(),
-            guid: "deafult".to_string(),
+            uid: 0,
             name: "default".to_string(),
             set: "default".to_string(),
+            tags : HashSet::new(),
             base_attack: 0,
             current_attack: 0,
             total_attack: 0,
@@ -100,7 +107,10 @@ impl Minion {
             battle_cry_function: "default".to_string(),
             take_damage_function: "default".to_string(),
         }
+    }
 
+    pub fn add_tag_to(&mut self, tag : String) {
+        self.tags.insert(tag.clone());
     }
 
     pub fn get_cost(&self) -> u16 {
@@ -111,8 +121,8 @@ impl Minion {
         self.id.clone()
     }
 
-    pub fn get_guid(&self) -> String {
-        self.guid.clone()
+    pub fn get_uid(&self) -> u32 {
+        self.uid.clone()
     }
 
     pub fn get_name(&self) -> String {
@@ -158,15 +168,15 @@ impl Minion {
         self.current_health = basic_health;
     }
 
-    // sets name, guid, id, and set, this is to get around the rhais function paramater limit
+    // sets name, uid, id, and set, this is to get around the rhais function paramater limit
     pub fn set_basic_info(&mut self,
                           name: String,
-                          guid: String,
+                          uid: u32,
                           set: String,
                           id: String,
                           cost: u16) {
         self.name = name;
-        self.guid = guid;
+        self.uid = uid;
         self.set = set;
         self.id = id;
         self.cost = cost;
@@ -176,8 +186,16 @@ impl Minion {
         self.battle_cry_function = battle_cry_function;
     }
 
+    pub fn get_battle_cry(&mut self) ->String {
+        self.battle_cry_function.clone()
+    }
+
     pub fn set_take_damage(&mut self, take_damage_function: String) {
         self.take_damage_function = take_damage_function;
+    }
+
+    pub fn get_take_damage(&mut self) -> String {
+        self.take_damage_function.clone()
     }
 
     pub fn parse_minion_file(file_name: String) -> Result<ProtoMinion, EFileReadResult> {

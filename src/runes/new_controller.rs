@@ -2,6 +2,7 @@
 use ::card::Card;
 use ::rune_vm::Rune;
 use rustc_serialize::json;
+use minion_card::UID;
 use ::game_state::GameState;
 use std::collections::HashMap;
 use rustc_serialize::json::Json;
@@ -10,20 +11,20 @@ use ::controller::{eControllerType, eControllerState, Controller};
 
 #[derive(RustcDecodable, RustcEncodable)]
 pub struct NewController {
-    pub guid: String,
+    pub uid: UID,
     pub controller_type: eControllerType,
     pub hero: String,
     pub client_id: u32,
 }
 
 impl NewController {
-    pub fn new(guid: String,
+    pub fn new(uid: UID,
                controller_type: eControllerType,
                hero: String,
                client_id: u32)
                -> NewController {
         NewController {
-            guid: guid,
+            uid: uid,
             controller_type: controller_type,
             hero: hero,
             client_id: client_id,
@@ -38,7 +39,7 @@ impl Rune for NewController {
             name: "controller".to_string(),
             hero: self.hero.clone(),
             controller_type: self.controller_type,
-            guid: game_state.get_guid(),
+            uid: game_state.get_uid(),
             baseMana: 0,
             mana: 0,
             team: game_state.get_team(),
@@ -47,9 +48,7 @@ impl Rune for NewController {
             deck: vec![],
             hand: vec![],
             unplayed_minions: vec![],
-            //   in_play: vec![],
-            //      graveyard: vec![],
-            //    seen_cards: HashMap::new(),
+            in_play_minions : vec![],
             client_id: self.client_id.clone(),
         };
 

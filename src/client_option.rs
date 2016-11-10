@@ -1,4 +1,3 @@
-
 #[derive(Copy, Clone)]
 pub enum EOptionType {
     play_card,
@@ -7,16 +6,16 @@ pub enum EOptionType {
 
 pub struct ClientOption {
     option_type: EOptionType,
-    source_guid: String,
-    target_guid: String,
+    source_uid: u32,
+    target_uid: u32,
 }
 
 impl ClientOption {
-    pub fn new(source_guid: String, target_guid: String, option_type: EOptionType) -> ClientOption {
+    pub fn new(source_uid: u32, target_uid: u32, option_type: EOptionType) -> ClientOption {
         ClientOption {
             option_type: option_type,
-            source_guid: source_guid,
-            target_guid: target_guid,
+            source_uid: source_uid,
+            target_uid: target_uid,
         }
     }
 }

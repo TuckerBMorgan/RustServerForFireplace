@@ -1,6 +1,7 @@
 
 use client_option::{ClientOption, EOptionType};
 use game_state::GameState;
+use minion_card::UID;
 
 #[derive(Copy, Clone)]
 pub enum ECardType {
@@ -11,13 +12,13 @@ pub enum ECardType {
 
 #[derive(Clone)]
 pub struct Card {
-    
-    //
     cost: u16,
     card_type: ECardType,
     id: String,
-    guid: String,
+    uid: UID,
     name: String,
+    //for play minion cards this is the uid of the minion
+    //for spells this is the rhai file that executes the spell
     content : String
 }
 
@@ -25,7 +26,7 @@ impl Card {
     pub fn new(cost: u16,
                card_type: ECardType,
                id: String,
-               guid: String,
+               uid: UID,
                name: String,
                content : String)
                -> Card {
@@ -33,9 +34,9 @@ impl Card {
             cost: cost,
             card_type: card_type,
             id: id,
-            guid: guid,
+            uid: uid,
             name: name,
-            content : content
+            content: content
         }
     }
 
@@ -43,8 +44,8 @@ impl Card {
         self.cost.clone()
     }
 
-    pub fn get_guid(&self) -> String {
-        self.guid.clone()
+    pub fn get_uid(&self) -> u32 {
+        self.uid.clone()
     }
 
     pub fn get_name(&self) -> String {
@@ -63,12 +64,28 @@ impl Card {
         vec![]
     }
 
+    pub fn execute_card(&mut self, game_state: &mut GameState) {
+        
+        match self.card_type {
+            ECardType::Minion => {
+
+            },
+            ECardType::Spell => {
+
+            },
+            ECardType::Weapon => {
+
+            }
+        }
+
+    }
+
     // fn set_cost(&mut self, cost: u16){
     // self.cost = cost;
     // }
     //
-    // fn set_guid(&mut self, guid: String){
-    // self.guid = guid;
+    // fn set_uid(&mut self, uid: String){
+    // self.uid = uid;
     // }
     //
     // fn set_name(&mut self, name: String){

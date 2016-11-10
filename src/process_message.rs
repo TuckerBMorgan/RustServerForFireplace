@@ -47,7 +47,7 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
 fn new_connection(client_id: u32, mut game_state: &mut GameState) {
 
     let new_controller_rune = NewController {
-        guid: game_state.get_guid().to_string(),
+        uid: game_state.get_uid(),
         controller_type: eControllerType::player,
         hero: "hunter".to_string(),
         client_id: client_id,
