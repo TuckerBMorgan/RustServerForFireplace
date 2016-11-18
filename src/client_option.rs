@@ -1,9 +1,12 @@
+
+#[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub enum EOptionType {
-    play_card,
-    mulligan,
+    PlayCard,
+    Mulligan,
 }
 
+#[allow(dead_code)]
 pub struct ClientOption {
     option_type: EOptionType,
     source_uid: u32,
@@ -11,6 +14,7 @@ pub struct ClientOption {
 }
 
 impl ClientOption {
+    #[allow(dead_code)]
     pub fn new(source_uid: u32, target_uid: u32, option_type: EOptionType) -> ClientOption {
         ClientOption {
             option_type: option_type,

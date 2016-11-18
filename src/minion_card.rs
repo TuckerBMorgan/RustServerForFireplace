@@ -1,7 +1,3 @@
-use ::card::Card;
-use std::fs::File;
-use ::card::ECardType;
-use regex::Regex;
 use std::collections::HashSet;
 
 pub type UID = u32;
@@ -157,7 +153,20 @@ impl Minion {
         self.total_attack = attack
     }
 
+    pub fn get_base_health(&self) -> u16 {
+        self.base_health.clone()
+    }
+
+    pub fn get_current_health(&self) -> u16 {
+        self.current_health.clone()
+    }
+
+    pub fn get_total_health(&self) -> u16 {
+        self.total_health.clone()
+    }
+
     // healper function for setting all varibles at one, used in summon minion functions in rhai
+    #[allow(dead_code)]
     pub fn set_attack_and_health_basics(&mut self, basic_attack: u16, basic_health: u16) {
         self.base_attack = basic_attack;
         self.total_attack = basic_attack;
@@ -169,6 +178,7 @@ impl Minion {
     }
 
     // sets name, uid, id, and set, this is to get around the rhais function paramater limit
+    #[allow(dead_code)]
     pub fn set_basic_info(&mut self,
                           name: String,
                           uid: u32,
@@ -186,7 +196,7 @@ impl Minion {
         self.battle_cry_function = battle_cry_function;
     }
 
-    pub fn get_battle_cry(&mut self) ->String {
+    pub fn get_battle_cry(& self) ->String {
         self.battle_cry_function.clone()
     }
 
@@ -194,19 +204,13 @@ impl Minion {
         self.take_damage_function = take_damage_function;
     }
 
-    pub fn get_take_damage(&mut self) -> String {
+    pub fn _get_take_damage(& self) -> String {
         self.take_damage_function.clone()
     }
 
-    pub fn parse_minion_file(file_name: String) -> Result<ProtoMinion, EFileReadResult> {
-        use std::io::prelude::*;
-
-        if let Ok(mut f) = File::open(file_name.clone()) {
-            let mut contents = String::new();
-
-
-            if let Ok(r) = f.read_to_string(&mut contents) {
-                let functions: Vec<&str> = contents.split("@@").collect();
+    
+    pub fn parse_minion_file(file_contents: String) -> Result<ProtoMinion, EFileReadResult> {
+                let functions: Vec<&str> = file_contents.split("@@").collect();
 
                 let mut create_minion_function: String = "hold".to_string();
                 let mut battle_cry_function: String = "hold".to_string();
@@ -214,11 +218,11 @@ impl Minion {
                 let mut i: u32 = 0;
 
                 for function in functions {
-                    if i == 0 {
+                    if i == 1 {
                         create_minion_function = String::from(function);
-                    } else if i == 1 {
-                        battle_cry_function = String::from(function);
                     } else if i == 2 {
+                        battle_cry_function = String::from(function);
+                    } else if i == 3 {
                         take_damage_function = String::from(function);
                     }
                     i += 1;
@@ -228,13 +232,5 @@ impl Minion {
                                              battle_cry_function,
                                              take_damage_function);
                 Ok(proto)
-            } else {
-                println!("Problem reading file{:?}", file_name);
-                Err(EFileReadResult::BadFileRead)
-            }
-        } else {
-            println!("Problem finding file {:?}", file_name);
-            Err(EFileReadResult::BadFileOpen)
-        }
     }
 }

@@ -1,4 +1,4 @@
-pub enum eEntityType {
+pub enum EEntityType {
     Controller,
     Card,
     CinionCard,
@@ -7,5 +7,5 @@ pub enum eEntityType {
 
 pub trait Entity: Send {
     fn get_health(&self) -> u16;
-    fn get_entity_type(&self) -> eEntityType;
+    fn get_entity_type(&self) -> EEntityType; 
 }

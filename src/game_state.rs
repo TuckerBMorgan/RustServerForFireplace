@@ -1,14 +1,18 @@
 use rune_vm::Rune;
 use std::any::Any;
-use std::rc::Rc;
 use std::net::TcpStream;
 use card::{Card, ECardType};
 use controller::Controller;
 use minion_card::{Minion, UID};
 use game_thread::GameThread;
-use entity::{Entity, eEntityType};
+use runes::new_controller::NewController;
+use runes::start_game::StartGame;
+use entity::Entity;
 use std::collections::{VecDeque, HashMap};
 use rhai::{Engine, FnRegister, Scope};
+use std::fs::File;
+use std::io::prelude::*;
+use std::io::BufReader;
 
 #[derive(Clone)]
 pub struct GameStateData {
@@ -47,10 +51,20 @@ impl GameStateData {
         self.entity_count
     }
 
-
+    pub fn get_number_of_controllers(&self ) -> usize {
+        self.controllers.len().clone()
+    }
 
     pub fn add_minion_to_minions(&mut self, minion : Minion) {
        self.minions.insert(minion.get_uid(), minion);
+    }
+
+    pub fn get_client_ids(&self) -> Vec<u32> {
+        let mut ids = Vec::new();
+        for controller in self.controllers.iter() {
+            ids.push(controller.client_id.clone());
+        }
+        ids
     }
 }
 
@@ -74,6 +88,8 @@ pub struct GameState<'a> {
     connections: Vec<Box<TcpStream>>,
     // those entities that have attacked this turn
     attacked_this_turn: Vec<Box<Entity>>,
+
+    first_to_connect : Option<NewController>
 }
 
 impl<'a> GameState<'a> {
@@ -90,13 +106,14 @@ impl<'a> GameState<'a> {
             entities: HashMap::new(),
             script_engine: Engine::new(),
             game_scope: vec![],
+            first_to_connect : None
         }
     }
 
     // rhai requires that we tell it about what it is going to be interacting with
     // this function does that
     pub fn filled_up_scripting_engine(&mut self) {
-
+        
         self.script_engine.register_type::<GameStateData>();
         self.script_engine.register_type::<Minion>();
         self.script_engine.register_fn("new_minion", Minion::new_other);
@@ -104,8 +121,8 @@ impl<'a> GameState<'a> {
         self.script_engine.register_fn("minion_attack_health_basic",
                                        Minion::set_attack_and_health_basics);
         self.script_engine.register_fn("minion_add_tag", Minion::add_tag_to);
-    }
-
+    } 
+  
     pub fn run_rhai_statement<T: Any + Clone>(&mut self, rhai_statement: &String) -> T {
 
         self.game_scope.push(("game_state".to_string(), Box::new(self.game_state_data.clone())));
@@ -113,9 +130,9 @@ impl<'a> GameState<'a> {
         let result = self.script_engine
             .eval_with_scope::<T>(&mut self.game_scope, &rhai_statement[..]);
 
-        for &mut (ref name, ref mut val) in &mut self.game_scope.iter_mut().rev() {
+        for &mut (_, ref mut val) in &mut self.game_scope.iter_mut().rev() {
             match val.downcast_mut::<GameStateData>() {
-                Some(mut as_down_cast_struct) => {
+                Some(as_down_cast_struct) => {
                     self.game_state_data = as_down_cast_struct.clone();
                 }
                 None => {
@@ -124,42 +141,72 @@ impl<'a> GameState<'a> {
             }
         }
 
-        result.unwrap()
+        result.unwrap() 
     }
 
+    #[allow(dead_code)]
     pub fn populate_deck(&mut self, controller: &mut Controller, card_ids: Vec<String>) {
-        for card_id in card_ids {
-            let proto_minion = Minion::parse_minion_file(card_id);
-            match proto_minion {
-                Ok(proto_minion_good) => {
+        for card_id in card_ids {   
+            let mut f = File::open(card_id.clone()).unwrap();
 
-                    let mut minion =
-                        self.run_rhai_statement::<Minion>(
-                            &proto_minion_good.create_minion_function);
+            let mut contents = String::new();
+            let result = f.read_to_string(&mut contents);
 
-                    minion.set_battle_cry(proto_minion_good.battle_cry_function);
-                    minion.set_take_damage(proto_minion_good.take_damage_function);
-                    let play_card = Card::new(minion.get_cost(),
-                                              ECardType::Minion,
-                                              minion.get_id(),
-                                              self.get_uid(),
-                                              minion.get_name(),
-                                              minion.get_uid().to_string());
+            match result {
+                Ok(_) => {
 
-                    // we do this because, a minion is not a card,
-                    // but something placed into the field BY a card
-                    // on the client we tell them about the minion
-                    // right before we tell them they can play it
-                    // and so the client can tell what to display based on the uid of the
-                    controller.add_minion_to_unplayed(minion.get_uid());
-                    self.game_state_data.add_minion_to_minions(minion);
-                    controller.add_card_to_deck(play_card);
-                }
+                },
                 Err(_) => {
-                    println!("Problem loadingcard file");
+                    println!("error reading file {} for deck creations", card_id.clone());
+                }
+            }
+
+            let spl : Vec<&str> = contents.split("@@").collect();
+
+            if spl[0] == "minion" {
+                let proto_minion = Minion::parse_minion_file(contents.clone());
+                match proto_minion {
+                    Ok(proto_minion_good) => {
+
+                        let mut minion =
+                            self.run_rhai_statement::<Minion>(
+                                &proto_minion_good.create_minion_function);
+
+                        minion.set_battle_cry(proto_minion_good.battle_cry_function);
+                        minion.set_take_damage(proto_minion_good.take_damage_function);
+                        let play_card = Card::new(minion.get_cost(),
+                                                ECardType::Minion,
+                                                minion.get_id(),
+                                                self.get_uid(),
+                                                minion.get_name(),
+                                                minion.get_uid().to_string());
+
+                        // we do this because, a minion is not a card,
+                        // but something placed into the field BY a card
+                        // on the client we tell them about the minion
+                        // right before we tell them they can play it
+                        // and so the client can tell what to display based on the uid of the
+                        controller.add_minion_to_unplayed(minion.get_uid());
+                        self.game_state_data.add_minion_to_minions(minion);
+                        controller.add_card_to_deck(play_card);
+                    }
+                    Err(_) => {
+                        println!("Problem loadingcard file");
+                    }
                 }
             }
         }
+    }
+
+    pub fn parse_deck(deck_file_name : String ) -> Vec<String> {
+        let f = File::open("decks/".to_string() + &deck_file_name).unwrap();
+        let reader = BufReader::new(f);
+        let mut cards : Vec<String> = Vec::new();
+
+        for line in reader.lines() {
+            cards.push(line.unwrap().clone());
+        }
+        cards
     }
 
     pub fn get_minion(&mut self, minion_uid : UID) -> Option<&mut Minion> {
@@ -209,18 +256,43 @@ impl<'a> GameState<'a> {
         self.connection_number
     }
 
-    pub fn add_player_controller(&mut self, controller: Controller) {
-        self.game_state_data.add_player_controller(controller);
+    pub fn new_connection(&mut self, new_controller : NewController) {
+        let use_first = self.first_to_connect.clone();
+        let good_first = self.first_to_connect.clone().unwrap();
+
+        match use_first {
+            Some(first_to_connect) => {
+                first_to_connect.execute_rune(self);
+                new_controller.execute_rune(self);
+            },
+            None => {
+                self.first_to_connect = Some(new_controller);
+                return;
+            }
+        }
+        
+        self.report_rune_to_client(good_first.client_id.clone(), good_first.to_json());
+        self.report_rune_to_client(new_controller.client_id.clone(), new_controller.to_json());
     }
 
-    pub fn get_controller_by_uid(&mut self, controller_uid : UID) -> Option<&Controller> {
-        let ref controllers = self.game_state_data.controllers;
+    pub fn add_player_controller(&mut self, controller: Controller) {
 
-        for controller in controllers {
-            if controller.uid == controller_uid {
-                return Some(&controller)
-            }
-        };
-        None
+        self.game_state_data.add_player_controller(controller);
+        if self.game_state_data.get_number_of_controllers() == 2 {
+            println!("Start game!!\n");
+            //they need to be told the game has started, and dealt their first hands
+            let sg = StartGame::new();
+            self.game_thread.unwrap().report_message_to_all(sg.to_json().clone());
+
+        }
+    }
+
+    pub fn get_controller_by_uid(&mut self, controller_uid : UID) -> Option<&mut Controller> {        
+        let index = self.game_state_data.controllers.iter().position(|x| x.uid == controller_uid).unwrap();
+        self.game_state_data.controllers.get_mut(index)
+    }
+
+    pub fn get_controller_client_id(&self) -> Vec<u32> {
+        self.game_state_data.get_client_ids()
     }
 }

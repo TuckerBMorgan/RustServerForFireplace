@@ -1,3 +1,5 @@
+minion
+@@
 fn create_minion() {
     let min = new_minion();
     

@@ -3,11 +3,9 @@
 use std::str;
 use std::thread;
 use ::process_message;
-use std::io::prelude::*;
 use ::game_state::GameState;
 use std::thread::JoinHandle;
-use std::net::{TcpListener, TcpStream};
-use std::sync::mpsc::{channel, Sender, Receiver};
+use std::sync::mpsc::{Sender, Receiver};
 
 
 pub struct ThreadMessage {
@@ -42,6 +40,7 @@ impl GameThread {
 
     }
 
+    #[allow(dead_code)]
     pub fn start_thread(self) -> JoinHandle<()> {
         Some(thread::spawn(move || {
                 game_thread_main(self);
@@ -49,6 +48,7 @@ impl GameThread {
             .unwrap()
     }
 
+    #[allow(dead_code)]
     pub fn report_message(&self, client_id: u32, message: String) {
         let thread_message = ThreadMessage {
             client_id: client_id,
@@ -56,17 +56,46 @@ impl GameThread {
         };
 
         if client_id == self.client_1_id {
-            self.client_1.send(thread_message);
+            let result = self.client_1.send(thread_message);
+
+            match result {
+                _ => {
+                    println!("getting ride of warnings");
+                }
+            }
         } else {
-            self.client_2.send(thread_message);
+            let result = self.client_2.send(thread_message);
+            match result {
+                _ => {
+                        println!("getting ride of warnings");
+                
+                }
+            }
         }
+    }
+
+    pub fn report_message_to_all(&self, message : String ) {
+
+        let thread_message_1 = ThreadMessage {
+            client_id : self.client_1_id,
+            payload : message.clone()
+        };
+
+        let thread_message_2 = ThreadMessage {
+            client_id : self.client_1_id,
+            payload : message.clone()
+        };
+
+        let _ = self.client_1.send(thread_message_1);
+        let _ = self.client_2.send(thread_message_2);
+    
     }
 }
 
-pub fn game_thread_main(mut game_thread: GameThread) {
+#[allow(dead_code)]
+pub fn game_thread_main(game_thread: GameThread) {
 
     let mut game_state = GameState::new(&game_thread);
-
 
     loop {
         let t_message = game_thread.server.recv().unwrap();

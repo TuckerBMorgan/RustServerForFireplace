@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 
 extern crate rand;
 extern crate rustc_serialize;
@@ -21,43 +22,12 @@ use game_thread::GameThread;
 use std::sync::mpsc::channel;
 use player_thread::PlayerThread;
 use std::net::{TcpListener, TcpStream};
-use rhai::{Engine, Scope};
 
 fn spawn_new_player(client_id: u32, stream: TcpStream) -> PlayerThread {
     PlayerThread::new(client_id, stream)
 }
 
 fn main() {
-    // let mut ts : TestStruct = TestStruct::new();
-    //
-    // let mut gs : GameState = GameState::no_game_thread_new();
-    //
-    // scope.push(("game_state".to_string(), Box::new(ts)));
-    // scope.push(("game_state_check".to_string(), Box::new(gs)));
-    //
-    // engine.register_type::<TestStruct>();
-    //
-    // engine.register_fn("update", TestStruct::update);
-    // engine.register_fn("new_ts", TestStruct::new);
-    //
-    // println!("{:?}", scope);
-    //
-    // gs = engine.eval_with_scope::<GameState>(&mut scope, "game_state_check").unwrap();
-    //
-    // for &mut (ref name, ref mut val) in &mut scope.iter_mut().rev(){
-    // match val.downcast_mut::<GameState>(){
-    // Some(mut as_Test_Struct) => {
-    // println!("good cast");
-    // },
-    // None =>{
-    // println!("___");
-    // }
-    // }
-    // }
-    //
-    // let i_result = engine.eval_with_scope::<TestStruct>(&mut scope, "game_state");
-    //
-    // println!("{:?}", i_result.unwrap().x);
 
     let mut connected_clients: u32 = 0;
     let listener = TcpListener::bind("127.0.0.1:1337").unwrap();
@@ -93,7 +63,6 @@ fn main() {
                     new_client_thread_2.start_thread(tx_client.clone(), rx_client_2);
                     games.push(new_game_thread);
                 }
-
             }
             Err(_) => {
                 println!("Bad Connection");

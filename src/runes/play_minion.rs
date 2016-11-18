@@ -1,11 +1,13 @@
 use ::card::Card;
-use ::rune_vm::Rune;
+use ::rune_vm::{Rune, process_rune};
 use rustc_serialize::json;
 use ::minion_card::Minion;
 use ::game_state::GameState;
 use std::collections::HashMap;
 use rustc_serialize::json::Json;
-use ::controller::{eControllerType, eControllerState, Controller};
+
+
+use runes::summon_minion::SummonMinion;
 
 /*the play_minion rune is called when you play a minion
  *out of your hand. It will call battle_cry if it has one
@@ -35,24 +37,27 @@ impl PlayMinion {
 }
 
 impl Rune for PlayMinion {
-    fn execute_rune(&self, game_state: &mut GameState) {
-
-        let min = game_state.get_minion(self.card_uid);
-        match min {
-            Some(min) => {
-                if min.get_battle_cry() != "default".to_string() {
-
+    fn execute_rune(&self, mut game_state: &mut GameState) {
+        
+        {
+            let min = game_state.get_minion(self.card_uid);
+            match min {
+                Some(min) => {
+                    if min.get_battle_cry() != "default".to_string() {
+                        
+                    }
+                },
+                None => {
+                    println!("Could not find minion with uid {}", self.card_uid);
                 }
-            },
-            None => {
-                println!("Could not find minion with uid {}", self.card_uid);
             }
         }
 
-        
+        let s_r = SummonMinion::new(self.controller_uid, self.card_uid, self.field_index);
+        process_rune(Box::new(s_r), &mut game_state);
     }
 
-    fn can_see(&self, controller: &Controller, game_state: &GameState) -> bool {
+    fn can_see(&self, controller: u32, game_state: &GameState) -> bool {
         return true;
     }
 

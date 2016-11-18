@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use std::net::TcpStream;
 use std::thread;
 use std::thread::JoinHandle;
-use std::sync::mpsc::{channel, Sender, Receiver};
+use std::sync::mpsc::{Sender, Receiver};
 use ::game_thread::ThreadMessage;
 
 pub struct PlayerThread {
@@ -13,7 +13,7 @@ pub struct PlayerThread {
 }
 
 impl PlayerThread {
-    pub fn new(client_id: u32, mut stream: TcpStream) -> PlayerThread {
+    pub fn new(client_id: u32, stream: TcpStream) -> PlayerThread {
         let p_thread = PlayerThread {
             client_id: client_id,
             stream: stream,
@@ -35,7 +35,7 @@ impl PlayerThread {
 
 fn player_thread_function(mut player_thread: PlayerThread,
                           to_server: Sender<ThreadMessage>,
-                          from_server: Receiver<ThreadMessage>) {
+                          _from_server: Receiver<ThreadMessage>) {
     let mut buffer = [0; 128];
 
     let ready = ThreadMessage {
@@ -55,7 +55,6 @@ fn player_thread_function(mut player_thread: PlayerThread,
     loop {
         let read_bytes = player_thread.stream.read(&mut buffer).unwrap();
         let message = str::from_utf8(&buffer[0..read_bytes]);
-
 
         match message {
             Ok(message_string) => {

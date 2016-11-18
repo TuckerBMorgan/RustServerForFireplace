@@ -2,13 +2,12 @@ extern crate rustc_serialize;
 
 
 use ::rune_vm;
-use rustc_serialize::json;
 use ::game_state::GameState;
 use rustc_serialize::json::Json;
-use ::controller::eControllerType;
+use ::controller::EControllerType;
 use ::runes::new_controller::NewController;
-use ::client_message::ConnectionMessage;//, MulliganMessage, OptionsMessage};
 
+#[allow(dead_code)]
 pub fn process_client_message(message: String, client_id: u32, game_state: &mut GameState) {
     let j_message: Json = Json::from_str(message.trim()).unwrap();
     let obj = j_message.as_object().unwrap();
@@ -44,14 +43,19 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
     }
 }
 
+
+
+#[allow(dead_code)]
 fn new_connection(client_id: u32, mut game_state: &mut GameState) {
 
     let new_controller_rune = NewController {
         uid: game_state.get_uid(),
-        controller_type: eControllerType::player,
+        controller_type: EControllerType::Player,
         hero: "hunter".to_string(),
         client_id: client_id,
+        deck : "test".to_string()
     };
+    
+    //????
     rune_vm::execute_rune(Box::new(new_controller_rune), &mut game_state);
-
 }
