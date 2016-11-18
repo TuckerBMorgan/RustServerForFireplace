@@ -1,11 +1,8 @@
 
-use ::card::Card;
 use ::rune_vm::Rune;
 use rustc_serialize::json;
 use ::game_state::GameState;
 use minion_card::{UID};
-use std::collections::HashMap;
-use rustc_serialize::json::Json;
 
 #[derive(RustcDecodable, RustcEncodable)]
 pub struct SummonMinion {
@@ -30,7 +27,7 @@ impl SummonMinion {
 impl Rune for SummonMinion {
 
     fn execute_rune(&self, game_state: &mut GameState) {
-        let mut controller = game_state.get_controller_by_uid(self.controller_uid);    
+        let controller = game_state.get_controller_by_uid(self.controller_uid);    
         match controller {
             Some(controller) => {
                 controller.move_minion_from_unplayed_into_play(self.card_uid);
@@ -41,7 +38,7 @@ impl Rune for SummonMinion {
         }
     }
 
-    fn can_see(&self, controller: u32, game_state: &GameState) -> bool {
+    fn can_see(&self, _controller: u32, _game_state: &GameState) -> bool {
         return true;
     }
 

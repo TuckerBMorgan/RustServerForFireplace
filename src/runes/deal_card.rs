@@ -1,12 +1,9 @@
 
-use ::card::{Card, ECardType};
+use ::card::ECardType;
 use ::rune_vm::Rune;
 use rustc_serialize::json;
 use ::game_state::GameState;
 use minion_card::{UID};
-use std::collections::HashMap;
-use rustc_serialize::json::Json;
-use runes::create_minion::CreateMinion;
 
 #[derive(RustcDecodable, RustcEncodable)]
 pub struct DealCard {

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use rune_vm::Rune;
 use std::any::Any;
 use std::net::TcpStream;
@@ -146,8 +148,9 @@ impl<'a> GameState<'a> {
 
     #[allow(dead_code)]
     pub fn populate_deck(&mut self, controller: &mut Controller, card_ids: Vec<String>) {
-        for card_id in card_ids {   
-            let mut f = File::open(card_id.clone()).unwrap();
+         for card_id in card_ids {
+      //      println!("{}", "content/cards/".to_string() + &card_id.clone() + &".arhai".to_string()); 
+            let mut f = File::open("content/cards/".to_string() + &card_id.clone() + &".arhai".to_string()).unwrap();
 
             let mut contents = String::new();
             let result = f.read_to_string(&mut contents);
@@ -191,7 +194,7 @@ impl<'a> GameState<'a> {
                         controller.add_card_to_deck(play_card);
                     }
                     Err(_) => {
-                        println!("Problem loadingcard file");
+                        println!("Problem loading card file");
                     }
                 }
             }
@@ -199,7 +202,8 @@ impl<'a> GameState<'a> {
     }
 
     pub fn parse_deck(deck_file_name : String ) -> Vec<String> {
-        let f = File::open("decks/".to_string() + &deck_file_name).unwrap();
+        //println!("{}", "content/decks/".to_string() + &deck_file_name);
+        let f = File::open("content/decks/".to_string() + &deck_file_name).unwrap();
         let reader = BufReader::new(f);
         let mut cards : Vec<String> = Vec::new();
 
@@ -258,7 +262,6 @@ impl<'a> GameState<'a> {
 
     pub fn new_connection(&mut self, new_controller : NewController) {
         let use_first = self.first_to_connect.clone();
-        let good_first = self.first_to_connect.clone().unwrap();
 
         match use_first {
             Some(first_to_connect) => {
@@ -270,6 +273,7 @@ impl<'a> GameState<'a> {
                 return;
             }
         }
+        let good_first = self.first_to_connect.clone().unwrap();
         
         self.report_rune_to_client(good_first.client_id.clone(), good_first.to_json());
         self.report_rune_to_client(new_controller.client_id.clone(), new_controller.to_json());
@@ -278,12 +282,9 @@ impl<'a> GameState<'a> {
     pub fn add_player_controller(&mut self, controller: Controller) {
 
         self.game_state_data.add_player_controller(controller);
-        if self.game_state_data.get_number_of_controllers() == 2 {
-            println!("Start game!!\n");
-            //they need to be told the game has started, and dealt their first hands
+        if self.game_state_data.get_number_of_controllers() == 2 {      
             let sg = StartGame::new();
             self.game_thread.unwrap().report_message_to_all(sg.to_json().clone());
-
         }
     }
 

@@ -1,5 +1,5 @@
 
-use client_option::{ClientOption, EOptionType};
+use client_option::ClientOption;
 use game_state::GameState;
 use minion_card::UID;
 
@@ -60,24 +60,8 @@ impl Card {
         self.id.clone()
     }
 
-    pub fn get_play_options(&self, game_state: &GameState) -> Vec<ClientOption> {
+    pub fn get_play_options(&self, _game_state: &GameState) -> Vec<ClientOption> {
         vec![]
-    }
-
-    pub fn execute_card(&mut self, game_state: &mut GameState) {
-        
-        match self.card_type {
-            ECardType::Minion => {
-
-            },
-            ECardType::Spell => {
-
-            },
-            ECardType::Weapon => {
-
-            }
-        }
-
     }
 
     // fn set_cost(&mut self, cost: u16){

@@ -8,12 +8,12 @@ use ::game_thread::ThreadMessage;
 
 pub struct PlayerThread {
     pub client_id: u32,
-    pub stream: TcpStream,
+    pub stream: Option<TcpStream>,
     pub join_handle: Option<JoinHandle<()>>,
 }
 
 impl PlayerThread {
-    pub fn new(client_id: u32, stream: TcpStream) -> PlayerThread {
+    pub fn new(client_id: u32, stream: Option<TcpStream>) -> PlayerThread {
         let p_thread = PlayerThread {
             client_id: client_id,
             stream: stream,
@@ -33,54 +33,73 @@ impl PlayerThread {
     }
 }
 
-fn player_thread_function(mut player_thread: PlayerThread,
+fn player_thread_function(player_thread: PlayerThread,
                           to_server: Sender<ThreadMessage>,
-                          _from_server: Receiver<ThreadMessage>) {
-    let mut buffer = [0; 128];
+                          from_server: Receiver<ThreadMessage>) {
+    
+    let mut payload_message = format!("{{ \"{k}\":\"{v}\"}}", k = "message_type", v = "connection");
 
-    let ready = ThreadMessage {
-        client_id: player_thread.client_id,
-        payload: String::from("{\"message_type\":\"connection\"}"),
-    };
-    let first_result = to_server.send(ready);
+    match player_thread.stream {
+        Some(mut stream) => {
 
-    match first_result {
-        Ok(_) => {
-            println!("No Error");
-        }
-        Err(_) => {
-            println!("error ");
-        }
-    }
-    loop {
-        let read_bytes = player_thread.stream.read(&mut buffer).unwrap();
-        let message = str::from_utf8(&buffer[0..read_bytes]);
+        loop {             
+            if !payload_message.clone().is_empty() {
+                    let ready = ThreadMessage {
+                        client_id: player_thread.client_id,
+                        payload: payload_message.clone()
+                    };
 
-        match message {
-            Ok(message_string) => {
+                    let _ = to_server.send(ready);
+                    
+                    let to_client_message = from_server.recv().unwrap();
+                    let with_flag = to_client_message.payload.clone() + "@@";
+                    let _ = stream.write(&with_flag.into_bytes()[..]);
 
-                let t_messsage = ThreadMessage {
-                    client_id: player_thread.client_id,
-                    payload: String::from(message_string.trim()),
-                };
+                    let mut buffer = [0; 128];
 
-                let res = to_server.send(t_messsage);
+                    let read_bytes = stream.read(&mut buffer).unwrap();
+            
+                    let message = str::from_utf8(&buffer[0..read_bytes]);
 
-                match res {
-                    Ok(_) => {
-                        println!("No Error");
-                    }
-                    Err(_) => {
-                        println!("error ");
+                    match message {
+                        Ok(message_string) => {             
+                            let t_messsage = ThreadMessage {
+                                client_id: player_thread.client_id,
+                                payload: String::from(message_string.trim()),
+                            };
+
+                            let res = to_server.send(t_messsage);
+
+                            match res {
+                                Ok(_) => {
+                                    //println!("No Error");
+                                }
+                                Err(_) => {
+                                    println!("Error in sending message to server");
+                                    break;
+                                }
+                            }
+
+                        }
+                        Err(_) => {
+                            println!("Bad message");
+                        }
                     }
                 }
 
+            payload_message = "".to_string();
             }
-            Err(_) => {
-                println!("Bad message");
+        },
+        //is AI
+        None => {
+         let ready = ThreadMessage {
+                client_id: player_thread.client_id,
+                payload: String::from("{\"message_type\":\"connection\"}"),            
+            };
+            let _ = to_server.send(ready);
+            loop {
+
             }
         }
-
-
     }
 }

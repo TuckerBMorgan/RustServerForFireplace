@@ -42,14 +42,15 @@ impl GameThread {
 
     #[allow(dead_code)]
     pub fn start_thread(self) -> JoinHandle<()> {
-        Some(thread::spawn(move || {
+        Some(thread::Builder::new().name("game_thread".to_string()).spawn(move || {
                 game_thread_main(self);
             }))
-            .unwrap()
+            .unwrap().unwrap()
     }
 
     #[allow(dead_code)]
     pub fn report_message(&self, client_id: u32, message: String) {
+        
         let thread_message = ThreadMessage {
             client_id: client_id,
             payload: message,
@@ -68,14 +69,16 @@ impl GameThread {
             match result {
                 _ => {
                         println!("getting ride of warnings");
-                
+                        
                 }
             }
         }
+
     }
 
     pub fn report_message_to_all(&self, message : String ) {
 
+        println!("{:?}--", message);
         let thread_message_1 = ThreadMessage {
             client_id : self.client_1_id,
             payload : message.clone()
@@ -88,7 +91,6 @@ impl GameThread {
 
         let _ = self.client_1.send(thread_message_1);
         let _ = self.client_2.send(thread_message_2);
-    
     }
 }
 
@@ -96,11 +98,11 @@ impl GameThread {
 pub fn game_thread_main(game_thread: GameThread) {
 
     let mut game_state = GameState::new(&game_thread);
-
     loop {
         let t_message = game_thread.server.recv().unwrap();
         process_message::process_client_message(t_message.payload,
                                                 t_message.client_id,
                                                 &mut game_state);
+    
     }
 }

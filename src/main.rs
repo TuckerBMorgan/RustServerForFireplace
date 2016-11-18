@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 
 extern crate rand;
 extern crate rustc_serialize;
@@ -24,15 +23,18 @@ use player_thread::PlayerThread;
 use std::net::{TcpListener, TcpStream};
 
 fn spawn_new_player(client_id: u32, stream: TcpStream) -> PlayerThread {
-    PlayerThread::new(client_id, stream)
+    PlayerThread::new(client_id, Some(stream))
+}
+fn spawn_new_ai(client_id : u32) -> PlayerThread {
+    PlayerThread::new(client_id, None)
 }
 
 fn main() {
 
     let mut connected_clients: u32 = 0;
     let listener = TcpListener::bind("127.0.0.1:1337").unwrap();
-    let mut players: Vec<PlayerThread> = Vec::new();
-    let mut games: Vec<GameThread> = Vec::new();
+    let mut players: Vec<PlayerThread> = vec![];
+    let mut games = vec![];
 
     for stream in listener.incoming() {
         match stream {
@@ -42,13 +44,13 @@ fn main() {
                 connected_clients += 1;
 
                 players.push(p_thread);
-                if players.len() >= 2 {
+                if players.len() >= 1 {
                     let (tx_client, rx_server) = channel();
                     let (tx_server_to_client_1, rx_client_1) = channel();
                     let (tx_server_to_client_2, rx_client_2) = channel();
 
                     let new_client_thread_1 = players.remove(0);
-                    let new_client_thread_2 = players.remove(0);
+                    let new_client_thread_2 = spawn_new_ai(connected_clients);
 
                     let client_id_1 = new_client_thread_1.client_id.clone();
                     let client_id_2 = new_client_thread_2.client_id.clone();
@@ -61,7 +63,8 @@ fn main() {
 
                     new_client_thread_1.start_thread(tx_client.clone(), rx_client_1);
                     new_client_thread_2.start_thread(tx_client.clone(), rx_client_2);
-                    games.push(new_game_thread);
+                    let jh = new_game_thread.start_thread();
+                    games.push(jh);
                 }
             }
             Err(_) => {

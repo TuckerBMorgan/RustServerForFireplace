@@ -1,10 +1,6 @@
-use ::card::Card;
 use ::rune_vm::{Rune, process_rune};
 use rustc_serialize::json;
-use ::minion_card::Minion;
 use ::game_state::GameState;
-use std::collections::HashMap;
-use rustc_serialize::json::Json;
 
 
 use runes::summon_minion::SummonMinion;
@@ -57,7 +53,7 @@ impl Rune for PlayMinion {
         process_rune(Box::new(s_r), &mut game_state);
     }
 
-    fn can_see(&self, controller: u32, game_state: &GameState) -> bool {
+    fn can_see(&self, _controller: u32, _game_state: &GameState) -> bool {
         return true;
     }
 

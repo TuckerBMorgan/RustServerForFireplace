@@ -26,6 +26,6 @@ impl Rune for StartGame {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap()
+        json::encode(self).unwrap().replace("{", "{\"runeType\":\"StartGame\"")
     }
 }
