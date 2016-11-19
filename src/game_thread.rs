@@ -77,8 +77,6 @@ impl GameThread {
     }
 
     pub fn report_message_to_all(&self, message : String ) {
-
-        println!("{:?}--", message);
         let thread_message_1 = ThreadMessage {
             client_id : self.client_1_id,
             payload : message.clone()

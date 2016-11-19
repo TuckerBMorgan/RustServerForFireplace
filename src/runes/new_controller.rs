@@ -35,6 +35,7 @@ impl NewController {
 
 impl Rune for NewController {
     fn execute_rune(&self, game_state: &mut GameState) {
+        println!("New Controller with client_id {}\n", self.client_id.clone());
 
         let mut new_controller = Controller {
             name: "controller".to_string(),
@@ -56,10 +57,8 @@ impl Rune for NewController {
         let card_names = GameState::parse_deck(self.deck.clone());
 
         game_state.populate_deck(&mut new_controller, card_names);
-
         game_state.add_player_controller(new_controller);
 
-        println!("New Controller with client_id {}\n", self.client_id.clone());
     }
 
     fn can_see(&self, _controller: u32, _game_state: &GameState) -> bool {
