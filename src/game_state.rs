@@ -15,6 +15,8 @@ use rhai::{Engine, FnRegister, Scope};
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
+use rand::{thread_rng, Rng};
+use runes::deal_card::{DealCard};
 
 #[derive(Clone)]
 pub struct GameStateData {
@@ -32,6 +34,7 @@ impl GameStateData {
         }
     }
 
+
     pub fn add_player_controller(&mut self, controller: Controller) {
         self.controllers.push(controller);
     }
@@ -44,8 +47,12 @@ impl GameStateData {
         &mut self.controllers
     }
 
-    pub fn get_minion(&mut self, minion_uid : UID) -> Option<&mut Minion> {
+    pub fn get_mut_minion(&mut self, minion_uid : UID) -> Option<&mut Minion> {
        self.minions.get_mut(&minion_uid)
+    }
+
+    pub fn get_minion(&self, minion_uid : UID) -> Option<& Minion> {
+       self.minions.get(&minion_uid)
     }
 
     pub fn get_uid(&mut self) -> UID {
@@ -142,9 +149,30 @@ impl<'a> GameState<'a> {
                 }
             }
         }
-
         result.unwrap() 
     }
+
+    pub fn execute_rune(&mut self, rune: Box<Rune>) {
+
+        if self.is_rune_queue_empty() == false {
+            self.add_rune_to_queue(rune)
+        } else {
+            self.process_rune(rune);
+        }
+    }
+
+    pub fn process_rune(&mut self, rune: Box<Rune>) {
+     
+     rune.execute_rune(self);
+
+     let controllers = self.get_controller_client_id();
+    
+        for controller in controllers {
+            if rune.can_see(controller, self){
+                    self.report_rune_to_client(controller.clone(),rune.to_json());
+            }
+        }
+    }   
 
     #[allow(dead_code)]
     pub fn populate_deck(&mut self, controller: &mut Controller, card_ids: Vec<String>) {
@@ -213,8 +241,12 @@ impl<'a> GameState<'a> {
         cards
     }
 
-    pub fn get_minion(&mut self, minion_uid : UID) -> Option<&mut Minion> {
+    pub fn get_minion(&self, minion_uid : UID ) -> Option<& Minion> {
         self.game_state_data.get_minion(minion_uid)
+    }
+
+    pub fn get_mut_minion(&mut self, minion_uid : UID) -> Option<&mut Minion> {
+        self.game_state_data.get_mut_minion(minion_uid)
     }
 
     // adds a rune to the rune queue, this is down when a executing rune creates a rune
@@ -283,14 +315,47 @@ impl<'a> GameState<'a> {
 
         self.game_state_data.add_player_controller(controller);
         if self.game_state_data.get_number_of_controllers() == 2 {      
+       
+            let mut rng = thread_rng();
+            let first : u16 = rng.gen_range(0, 1);
+
             let sg = StartGame::new();
-            self.game_thread.unwrap().report_message_to_all(sg.to_json().clone());
+            self.execute_rune(Box::new(sg));
+            let other = 1 - first;
+
+            let mut first_hand  = self.game_state_data.get_mut_controllers()[first as usize].get_n_card_uids_from_deck(3);
+            let mut second_hand  = self.game_state_data.get_mut_controllers()[other as usize].get_n_card_uids_from_deck(4);
+            let mut first_uid = self.game_state_data.get_mut_controllers()[first as usize].uid.clone();
+            let mut sec_uid = self.game_state_data.get_mut_controllers()[other as usize].uid.clone();
+
+            for uid in first_hand {
+                let mut new_deal_card_rune = DealCard::new(uid.clone(), first_uid);
+                self.execute_rune(Box::new(new_deal_card_rune));
+            }
+
+            for uid in second_hand {
+                let mut new_deal_card_rune = DealCard::new(uid.clone(), sec_uid);
+                self.execute_rune(Box::new(new_deal_card_rune));
+            }
         }
     }
 
-    pub fn get_controller_by_uid(&mut self, controller_uid : UID) -> Option<&mut Controller> {        
+    //this is the function that is used to apply all passive rules about the game logic after a major event has occured
+    //such as a player action ,or the start and end of turns
+    pub fn resolve_state(&mut self) {
+            //if anything that could touch off a call of the function again, deaths, summons, etc etc, we set this to true
+            let mut redo = false;
+
+    }
+
+    pub fn get_mut_controller_by_uid(&mut self, controller_uid : UID) -> Option<&mut Controller> {        
         let index = self.game_state_data.controllers.iter().position(|x| x.uid == controller_uid).unwrap();
         self.game_state_data.controllers.get_mut(index)
+    }
+
+    pub fn get_controller_by_uid(&self, controller_uid : UID) -> Option<& Controller> {        
+        let index = self.game_state_data.controllers.iter().position(|x| x.uid == controller_uid).unwrap();
+        self.game_state_data.controllers.get(index)
     }
 
     pub fn get_controller_client_id(&self) -> Vec<u32> {

@@ -64,6 +64,10 @@ impl Card {
         vec![]
     }
 
+    pub fn get_content(&self) ->String {
+        self.content.clone()
+    }
+
     // fn set_cost(&mut self, cost: u16){
     // self.cost = cost;
     // }

@@ -2,6 +2,7 @@
 use minion_card::UID;
 use card::Card;
 use std::collections::HashSet;
+use rand::{thread_rng, Rng};
 
 
 #[derive(RustcDecodable, RustcEncodable, Copy, Clone)]
@@ -59,6 +60,12 @@ impl Controller {
     pub fn add_card_to_deck(&mut self, card: Card) {
         self.deck.push(card);
     }
+
+    pub fn move_card_from_deck_to_hand(&mut self, uid : UID){
+        let index = self.deck.iter().position(|x|x.get_uid() == uid).unwrap();
+        let val = self.deck.remove(index);
+        self.hand.push(val);
+    }
      
     pub fn add_card_to_seen(&mut self, uid : UID) {
         self.seen_cards.insert(uid);
@@ -76,5 +83,25 @@ impl Controller {
             }
         }
         None
+    }
+
+    pub fn get_n_card_uids_from_deck(&self, n : u32) -> Vec<UID> {
+
+        let mut shift = 0;
+        let mut rng = thread_rng();
+        let mut rets : Vec<UID> = vec![];
+
+        for mut x in 0..n {
+            let mut val = rng.gen_range(0, self.deck.len());
+            let uid = self.deck[val].get_uid();
+            if rets.contains(&uid) {
+                x-=1;
+            }
+            else {
+                rets.push(uid);
+            }
+        }
+
+        rets
     }
 }

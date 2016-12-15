@@ -20,7 +20,9 @@ pub struct CreateMinion {
 
     base_health : u16,
     current_health : u16,
-    total_health : u16
+    total_health : u16,
+
+    controller_uid : UID
 }
 
 impl CreateMinion {
@@ -36,7 +38,8 @@ impl CreateMinion {
                
                base_health : u16,
                current_health : u16,
-               total_health : u16 )
+               total_health : u16 ,
+               controller_uid : UID)
                -> CreateMinion {
 
         CreateMinion {
@@ -50,11 +53,12 @@ impl CreateMinion {
             total_attack : total_attack,
             base_health : base_health,
             current_health : current_health,
-            total_health : total_health
+            total_health : total_health,
+            controller_uid : controller_uid
         }
     }
 
-    pub fn from_minion(minion : &Minion) -> CreateMinion {
+    pub fn from_minion(minion : &Minion, controller_uid : UID) -> CreateMinion {
         CreateMinion {
             cost : minion.get_cost(),
             id : minion.get_id(),
@@ -67,6 +71,7 @@ impl CreateMinion {
             base_health : minion.get_base_health(),
             current_health : minion.get_current_health(),
             total_health : minion.get_total_health(),
+            controller_uid : controller_uid.clone()
         }
     }
 }
@@ -77,8 +82,8 @@ impl Rune for CreateMinion {
         
     }
 
-    fn can_see(&self, _controller:u32, _game_state: &GameState) -> bool {
-        return true;
+    fn can_see(&self, controller:UID, _game_state: &GameState) -> bool {
+        return controller == self.controller_uid;
     }
 
     fn to_json(&self) -> String {

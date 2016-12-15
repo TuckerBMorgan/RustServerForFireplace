@@ -17,6 +17,8 @@ mod player_thread;
 mod client_message;
 mod process_message;
 
+use std::thread;
+use std::io::{self, Read};
 use game_thread::GameThread;
 use std::sync::mpsc::channel;
 use player_thread::PlayerThread;
@@ -29,7 +31,21 @@ fn spawn_new_ai(client_id : u32) -> PlayerThread {
     PlayerThread::new(client_id, None)
 }
 
+fn terminal_commands() {
+    let mut buffer = String::new();
+
+
+    loop {
+        io::stdin().read_line(&mut buffer);
+        println!("{}", buffer.to_string());
+        buffer.clear()
+
+
+    }
+}
+
 fn main() {
+    thread::spawn(move || (terminal_commands()));
 
     let mut connected_clients: u32 = 0;
     let listener = TcpListener::bind("127.0.0.1:1337").unwrap();

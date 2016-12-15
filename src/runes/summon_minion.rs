@@ -27,7 +27,7 @@ impl SummonMinion {
 impl Rune for SummonMinion {
 
     fn execute_rune(&self, game_state: &mut GameState) {
-        let controller = game_state.get_controller_by_uid(self.controller_uid);    
+        let controller = game_state.get_mut_controller_by_uid(self.controller_uid);    
         match controller {
             Some(controller) => {
                 controller.move_minion_from_unplayed_into_play(self.card_uid);
