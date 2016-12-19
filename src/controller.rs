@@ -90,8 +90,9 @@ impl Controller {
         let mut shift = 0;
         let mut rng = thread_rng();
         let mut rets : Vec<UID> = vec![];
-
+        
         for mut x in 0..n {
+        println!(" size of deck {}", self.deck.len());
             let mut val = rng.gen_range(0, self.deck.len());
             let uid = self.deck[val].get_uid();
             if rets.contains(&uid) {

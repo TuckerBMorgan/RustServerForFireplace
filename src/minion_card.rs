@@ -212,13 +212,14 @@ impl Minion {
 
     
     pub fn parse_minion_file(file_contents: String) -> Result<ProtoMinion, EFileReadResult> {
+                println!("------");
                 let functions: Vec<&str> = file_contents.split("@@").collect();
 
                 let mut create_minion_function: String = "hold".to_string();
                 let mut battle_cry_function: String = "hold".to_string();
                 let mut take_damage_function: String = "hold".to_string();
                 let mut i: u32 = 0;
-
+                println!("------");
                 for function in functions {
                     if i == 1 {
                         create_minion_function = String::from(function);

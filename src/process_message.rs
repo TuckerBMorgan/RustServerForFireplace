@@ -64,7 +64,8 @@ fn new_connection(client_id: u32, mut game_state: &mut GameState) {
         controller_type: EControllerType::Player,
         hero: "hunter".to_string(),
         client_id: client_id,
-        deck : "test.deck".to_string()
+        deck : "test.deck".to_string(),
+        isMe: false
     };
     
     game_state.new_connection(new_controller_rune);

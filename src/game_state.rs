@@ -162,8 +162,10 @@ impl<'a> GameState<'a> {
     }
 
     pub fn process_rune(&mut self, rune: Box<Rune>) {
-     
+        
+     print!("executing rune {}", rune.to_json());     
      rune.execute_rune(self);
+
 
      let controllers = self.get_controller_client_id();
     
@@ -193,8 +195,7 @@ impl<'a> GameState<'a> {
             }
 
             let spl : Vec<&str> = contents.split("@@").collect();
-
-            if spl[0] == "minion" {
+            if spl[0].contains("minion") {
                 let proto_minion = Minion::parse_minion_file(contents.clone());
                 match proto_minion {
                     Ok(proto_minion_good) => {
@@ -292,7 +293,7 @@ impl<'a> GameState<'a> {
         self.connection_number
     }
 
-    pub fn new_connection(&mut self, new_controller : NewController) {
+    pub fn new_connection(&mut self, mut new_controller : NewController) {
         let use_first = self.first_to_connect.clone();
 
         match use_first {
@@ -305,10 +306,19 @@ impl<'a> GameState<'a> {
                 return;
             }
         }
-        let good_first = self.first_to_connect.clone().unwrap();
+        let mut good_first = self.first_to_connect.clone().unwrap();
         
+        good_first.isMe = true;
         self.report_rune_to_client(good_first.client_id.clone(), good_first.to_json());
+        good_first.isMe = false;
+
+        self.report_rune_to_client(good_first.client_id.clone(), new_controller.to_json());
+
+        new_controller.isMe = true;
         self.report_rune_to_client(new_controller.client_id.clone(), new_controller.to_json());
+        new_controller.isMe = false;
+
+        self.report_rune_to_client(new_controller.client_id.clone(), good_first.to_json());
     }
 
     pub fn add_player_controller(&mut self, controller: Controller) {

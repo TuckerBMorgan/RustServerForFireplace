@@ -13,7 +13,8 @@ pub struct NewController {
     pub controller_type: EControllerType,
     pub hero: String,
     pub client_id: u32,
-    pub deck: String
+    pub deck: String,
+    pub isMe: bool
 }
 
 impl NewController {
@@ -21,14 +22,16 @@ impl NewController {
                controller_type: EControllerType,
                hero: String,
                client_id: u32,
-               deck : String)
+               deck : String, 
+               isMe : bool)
                -> NewController {
         NewController {
             uid: uid,
             controller_type: controller_type,
             hero: hero,
             client_id: client_id,
-            deck : deck
+            deck : deck, 
+            isMe: isMe
         }
     }
 }

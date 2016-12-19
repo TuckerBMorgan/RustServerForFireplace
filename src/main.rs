@@ -1,4 +1,3 @@
-
 extern crate rand;
 extern crate rustc_serialize;
 extern crate rhai;
@@ -37,10 +36,15 @@ fn terminal_commands() {
 
     loop {
         io::stdin().read_line(&mut buffer);
-        println!("{}", buffer.to_string());
+        let mut st  = buffer.to_string();
+
+        if st.contains("clear") {
+            println!("{}[2J", 27 as char);
+        }
+
         buffer.clear()
 
-
+        
     }
 }
 
