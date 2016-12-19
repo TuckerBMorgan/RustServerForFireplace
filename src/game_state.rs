@@ -15,6 +15,7 @@ use rhai::{Engine, FnRegister, Scope};
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
+use std::fmt;
 use rand::{thread_rng, Rng};
 use runes::deal_card::{DealCard};
 
@@ -103,7 +104,7 @@ pub struct GameState<'a> {
 
 impl<'a> GameState<'a> {
     pub fn new(game_thread: &GameThread) -> GameState {
-        GameState {
+       let mut gs = GameState {
             game_thread: Some(game_thread),
             game_state_data: GameStateData::new(),
             players_ready: 0,
@@ -116,7 +117,9 @@ impl<'a> GameState<'a> {
             script_engine: Engine::new(),
             game_scope: vec![],
             first_to_connect : None
-        }
+        };
+        gs.filled_up_scripting_engine();
+        return gs;
     }
 
     // rhai requires that we tell it about what it is going to be interacting with
@@ -130,13 +133,19 @@ impl<'a> GameState<'a> {
         self.script_engine.register_fn("minion_attack_health_basic",
                                        Minion::set_attack_and_health_basics);
         self.script_engine.register_fn("minion_add_tag", Minion::add_tag_to);
+        self.script_engine.register_fn("get_uid", GameState::get_uid);
+        self.script_engine.register_fn("print", GameState::print);
     } 
+
+    pub fn print(string : String) {
+        println!("{}", string);
+    }
   
-    pub fn run_rhai_statement<T: Any + Clone>(&mut self, rhai_statement: &String) -> T {
+    pub fn run_rhai_statement<T: Any + Clone + fmt::Debug>(&mut self, rhai_statement: &String) -> T {
 
         self.game_scope.push(("game_state".to_string(), Box::new(self.game_state_data.clone())));
 
-        let result = self.script_engine
+        let result = self.script_engine 
             .eval_with_scope::<T>(&mut self.game_scope, &rhai_statement[..]);
 
         for &mut (_, ref mut val) in &mut self.game_scope.iter_mut().rev() {
@@ -145,11 +154,12 @@ impl<'a> GameState<'a> {
                     self.game_state_data = as_down_cast_struct.clone();
                 }
                 None => {
-                    println!("problem getting game state back");
+//                    println!("problem getting game state back");
                 }
             }
         }
-        result.unwrap() 
+        println!("{:?}", &result);
+        result.unwrap()
     }
 
     pub fn execute_rune(&mut self, rune: Box<Rune>) {
@@ -197,13 +207,14 @@ impl<'a> GameState<'a> {
             let spl : Vec<&str> = contents.split("@@").collect();
             if spl[0].contains("minion") {
                 let proto_minion = Minion::parse_minion_file(contents.clone());
+                
                 match proto_minion {
                     Ok(proto_minion_good) => {
 
                         let mut minion =
                             self.run_rhai_statement::<Minion>(
                                 &proto_minion_good.create_minion_function);
-
+                                
                         minion.set_battle_cry(proto_minion_good.battle_cry_function);
                         minion.set_take_damage(proto_minion_good.take_damage_function);
                         let play_card = Card::new(minion.get_cost(),
@@ -227,6 +238,8 @@ impl<'a> GameState<'a> {
                     }
                 }
             }
+
+            println!("SDFS");
         }
     }
 

@@ -29,7 +29,7 @@ impl ProtoMinion {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Minion {
     cost: u16,
     id: String,
@@ -58,8 +58,7 @@ pub struct Minion {
 }
 
 impl Minion {
-    pub fn new(&mut self,
-               cost: u16,
+    pub fn new(cost: u16,
                id: String,
                uid: UID,
                name: String,
@@ -88,7 +87,7 @@ impl Minion {
 
     // this is the version that the rhai system uses to create card
     // rhai has a limit on the number of paramaters that a function can have
-    pub fn new_other(&mut self) -> Minion {
+    pub fn new_other() -> Minion {
         Minion {
             cost: 0,
             id: "default".to_string(),
@@ -183,15 +182,15 @@ impl Minion {
     #[allow(dead_code)]
     pub fn set_basic_info(&mut self,
                           name: String,
-                          uid: u32,
+                          uid: UID,
                           set: String,
                           id: String,
-                          cost: u16) {
+                          cost: i16) {
         self.name = name;
         self.uid = uid;
         self.set = set;
         self.id = id;
-        self.cost = cost;
+        self.cost = cost as u16;
     }
 
     pub fn set_battle_cry(&mut self, battle_cry_function: String) {
@@ -212,14 +211,14 @@ impl Minion {
 
     
     pub fn parse_minion_file(file_contents: String) -> Result<ProtoMinion, EFileReadResult> {
-                println!("------");
+                
                 let functions: Vec<&str> = file_contents.split("@@").collect();
 
                 let mut create_minion_function: String = "hold".to_string();
                 let mut battle_cry_function: String = "hold".to_string();
                 let mut take_damage_function: String = "hold".to_string();
                 let mut i: u32 = 0;
-                println!("------");
+                
                 for function in functions {
                     if i == 1 {
                         create_minion_function = String::from(function);
@@ -230,7 +229,7 @@ impl Minion {
                     }
                     i += 1;
                 }
-
+                
                 let proto = ProtoMinion::new(create_minion_function,
                                              battle_cry_function,
                                              take_damage_function);
