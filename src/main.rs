@@ -17,7 +17,7 @@ mod client_message;
 mod process_message;
 
 use std::thread;
-use std::io::{self, Read};
+use std::io::{self};
 use game_thread::GameThread;
 use std::sync::mpsc::channel;
 use player_thread::PlayerThread;
@@ -35,8 +35,8 @@ fn terminal_commands() {
 
 
     loop {
-        io::stdin().read_line(&mut buffer);
-        let mut st  = buffer.to_string();
+        let _ =  io::stdin().read_line(&mut buffer);
+        let st  = buffer.to_string();
 
         if st.contains("clear") {
             println!("{}[2J", 27 as char);

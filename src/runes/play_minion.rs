@@ -1,7 +1,7 @@
 use ::rune_vm::{Rune};
 use rustc_serialize::json;
 use ::game_state::GameState;
-
+use minion_card::UID;
 
 use runes::summon_minion::SummonMinion;
 
@@ -53,7 +53,7 @@ impl Rune for PlayMinion {
         game_state.process_rune(Box::new(s_r));
     }
 
-    fn can_see(&self, _controller: u32, _game_state: &GameState) -> bool {
+    fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {
         return true;
     }
 

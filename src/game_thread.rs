@@ -50,7 +50,7 @@ impl GameThread {
 
     #[allow(dead_code)]
     pub fn report_message(&self, client_id: u32, message: String) {
-        
+        println!("Sending message to client {}, {}", client_id, message);
         let thread_message = ThreadMessage {
             client_id: client_id,
             payload: message,
@@ -61,14 +61,14 @@ impl GameThread {
 
             match result {
                 _ => {
-                    println!("getting ride of warnings");
+                    println!("");
                 }
             }
         } else {
             let result = self.client_2.send(thread_message);
             match result {
                 _ => {
-                        println!("getting ride of warnings");
+                        println!("");
                         
                 }
             }
@@ -77,6 +77,7 @@ impl GameThread {
     }
 
     pub fn report_message_to_all(&self, message : String ) {
+        println!("Sending message to all clients, {}", message);
         let thread_message_1 = ThreadMessage {
             client_id : self.client_1_id,
             payload : message.clone()

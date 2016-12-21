@@ -70,7 +70,7 @@ impl CreateMinion {
             total_attack : minion.get_total_attack(),
             base_health : minion.get_base_health(),
             current_health : minion.get_current_health(),
-            total_health : minion.get_total_health(),
+            total_health : minion.get_total_health(),   
             controller_uid : controller_uid.clone()
         }
     }
@@ -83,7 +83,8 @@ impl Rune for CreateMinion {
     }
 
     fn can_see(&self, controller:UID, _game_state: &GameState) -> bool {
-        return controller == self.controller_uid;
+        let result = controller == self.controller_uid;
+        result    
     }
 
     fn to_json(&self) -> String {

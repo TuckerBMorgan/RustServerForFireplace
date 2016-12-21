@@ -168,24 +168,31 @@ impl Minion {
 
     // healper function for setting all varibles at one, used in summon minion functions in rhai
     #[allow(dead_code)]
-    pub fn set_attack_and_health_basics(&mut self, basic_attack: u16, basic_health: u16) {
-        self.base_attack = basic_attack;
-        self.total_attack = basic_attack;
-        self.current_attack = basic_attack;
+    pub fn set_attack_and_health_basics(&mut self, basic_attack: i64, basic_health: i64) {
+        self.base_attack = basic_attack as u16;
+        self.total_attack = basic_attack as u16;
+        self.current_attack = basic_attack as u16;
 
-        self.base_health = basic_health;
-        self.total_health = basic_health;
-        self.current_health = basic_health;
+        self.base_health = basic_health as u16;
+        self.total_health = basic_health as u16;
+        self.current_health = basic_health as u16;
     }
 
+    pub fn set_uid(&mut self, uid : i64){
+        self.uid = uid as u32;
+    }
+
+
     // sets name, uid, id, and set, this is to get around the rhais function paramater limit
+    // also for whatever reason magic numbers in rhai as default i64 type, and there is
+    //type conversion within rhai, so we take our u16, and cast them from i64s when we use them
     #[allow(dead_code)]
     pub fn set_basic_info(&mut self,
                           name: String,
                           uid: UID,
                           set: String,
                           id: String,
-                          cost: i16) {
+                          cost: i64) {
         self.name = name;
         self.uid = uid;
         self.set = set;

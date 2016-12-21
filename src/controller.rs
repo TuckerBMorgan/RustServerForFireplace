@@ -23,7 +23,6 @@ pub enum EControllerState {
 pub struct Controller {
     pub name: String,
     pub hero: String,
-    pub controller_type: EControllerType,
     pub uid: UID,
     pub mana: u8,
     pub base_mana: u8,
@@ -85,18 +84,17 @@ impl Controller {
         None
     }
 
-    pub fn get_n_card_uids_from_deck(&self, n : u32) -> Vec<UID> {
+    pub fn get_n_card_uids_from_deck(&self, mut n : u32) -> Vec<UID> {
 
-        let mut shift = 0;
         let mut rng = thread_rng();
         let mut rets : Vec<UID> = vec![];
         
-        for mut x in 0..n {
+        for _ in 0..n {
         println!(" size of deck {}", self.deck.len());
-            let mut val = rng.gen_range(0, self.deck.len());
+            let val = rng.gen_range(0, self.deck.len());
             let uid = self.deck[val].get_uid();
             if rets.contains(&uid) {
-                x-=1;
+                n+=1;
             }
             else {
                 rets.push(uid);

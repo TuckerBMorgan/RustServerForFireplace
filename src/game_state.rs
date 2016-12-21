@@ -22,7 +22,8 @@ use runes::deal_card::{DealCard};
 #[derive(Clone)]
 pub struct GameStateData {
     controllers: Vec<Controller>,
-    minions : HashMap<UID, Minion>, 
+    minions : HashMap<UID, Minion>,
+    controller_uid_to_client_id : HashMap<UID, u32>,
     entity_count: u32,
 }
 
@@ -31,12 +32,13 @@ impl GameStateData {
         GameStateData {
             controllers: vec![],
             entity_count: 0,
-            minions : HashMap::new()
+            minions : HashMap::new(),
+            controller_uid_to_client_id : HashMap::new()
         }
     }
 
-
     pub fn add_player_controller(&mut self, controller: Controller) {
+        self.controller_uid_to_client_id.insert(controller.uid.clone(), controller.client_id.clone()); 
         self.controllers.push(controller);
     }
 
@@ -65,6 +67,10 @@ impl GameStateData {
         self.controllers.len().clone()
     }
 
+    pub fn get_client_id_from_controller_uid(&self, controller_uid : UID) -> &u32 {
+        self.controller_uid_to_client_id.get(&controller_uid).unwrap()
+    }
+
     pub fn add_minion_to_minions(&mut self, minion : Minion) {
        self.minions.insert(minion.get_uid(), minion);
     }
@@ -75,6 +81,14 @@ impl GameStateData {
             ids.push(controller.client_id.clone());
         }
         ids
+    }
+
+    pub fn get_controller_uids(&self) -> Vec<UID> {
+        let mut uids = Vec::new();
+        for Controller in self.controllers.iter() {
+            uids.push(controller.uid.clone());
+        }
+        uids
     }
 }
 
@@ -127,27 +141,29 @@ impl<'a> GameState<'a> {
     pub fn filled_up_scripting_engine(&mut self) {
         
         self.script_engine.register_type::<GameStateData>();
+        self.script_engine.register_type::<UID>();
         self.script_engine.register_type::<Minion>();
         self.script_engine.register_fn("new_minion", Minion::new_other);
         self.script_engine.register_fn("minion_basic_info", Minion::set_basic_info);
         self.script_engine.register_fn("minion_attack_health_basic",
                                        Minion::set_attack_and_health_basics);
+        self.script_engine.register_fn("set_uid", Minion::set_uid);
         self.script_engine.register_fn("minion_add_tag", Minion::add_tag_to);
-        self.script_engine.register_fn("get_uid", GameState::get_uid);
+        self.script_engine.register_fn("get_uid", GameStateData::get_uid);
         self.script_engine.register_fn("print", GameState::print);
     } 
 
     pub fn print(string : String) {
         println!("{}", string);
     }
-  
+    
     pub fn run_rhai_statement<T: Any + Clone + fmt::Debug>(&mut self, rhai_statement: &String) -> T {
-
+        
         self.game_scope.push(("game_state".to_string(), Box::new(self.game_state_data.clone())));
 
         let result = self.script_engine 
             .eval_with_scope::<T>(&mut self.game_scope, &rhai_statement[..]);
-
+            
         for &mut (_, ref mut val) in &mut self.game_scope.iter_mut().rev() {
             match val.downcast_mut::<GameStateData>() {
                 Some(as_down_cast_struct) => {
@@ -158,7 +174,10 @@ impl<'a> GameState<'a> {
                 }
             }
         }
-        println!("{:?}", &result);
+        //since we have a scope we carry around, we have to do this, because we can have two varibles with the same name in the scope
+        self.game_scope.clear();
+    //  I like keeping this print statement around so that it I can use it when the rhai system breaks
+    //    println!("{:?}", &result);
         result.unwrap()
     }
 
@@ -173,25 +192,31 @@ impl<'a> GameState<'a> {
 
     pub fn process_rune(&mut self, rune: Box<Rune>) {
         
-     print!("executing rune {}", rune.to_json());     
+     println!("executing rune {}", rune.to_json());     
      rune.execute_rune(self);
 
 
-     let controllers = self.get_controller_client_id();
+     let controllers = self.get_controller_uids();
     
         for controller in controllers {
             if rune.can_see(controller, self){
-                    self.report_rune_to_client(controller.clone(),rune.to_json());
+                    self.report_rune_to_client(self.game_state_dat.get_client_id_from_controller_uid(controller).clone(),rune.to_json());
             }
+        }
+
+        if self.is_rune_queue_empty() == false {
+            let next_rune = self.remove_rune_from_queue();
+            self.process_rune(next_rune);
         }
     }   
 
     #[allow(dead_code)]
     pub fn populate_deck(&mut self, controller: &mut Controller, card_ids: Vec<String>) {
+        
          for card_id in card_ids {
       //      println!("{}", "content/cards/".to_string() + &card_id.clone() + &".arhai".to_string()); 
             let mut f = File::open("content/cards/".to_string() + &card_id.clone() + &".arhai".to_string()).unwrap();
-
+            
             let mut contents = String::new();
             let result = f.read_to_string(&mut contents);
 
@@ -210,11 +235,12 @@ impl<'a> GameState<'a> {
                 
                 match proto_minion {
                     Ok(proto_minion_good) => {
-
+                        
                         let mut minion =
                             self.run_rhai_statement::<Minion>(
                                 &proto_minion_good.create_minion_function);
-                                
+                        
+
                         minion.set_battle_cry(proto_minion_good.battle_cry_function);
                         minion.set_take_damage(proto_minion_good.take_damage_function);
                         let play_card = Card::new(minion.get_cost(),
@@ -238,9 +264,8 @@ impl<'a> GameState<'a> {
                     }
                 }
             }
-
-            println!("SDFS");
         }
+        
     }
 
     pub fn parse_deck(deck_file_name : String ) -> Vec<String> {
@@ -266,6 +291,10 @@ impl<'a> GameState<'a> {
     // adds a rune to the rune queue, this is down when a executing rune creates a rune
     pub fn add_rune_to_queue(&mut self, rune: Box<Rune>) {
         self.rune_queue.push_back(rune);
+    }
+    
+    pub fn remove_rune_from_queue(&mut self) -> Box<Rune> {
+        self.rune_queue.pop_front().unwrap()
     }
 
     pub fn report_rune_to_client(&self, client_id: u32, rune_string: String) {
@@ -311,32 +340,39 @@ impl<'a> GameState<'a> {
 
         match use_first {
             Some(first_to_connect) => {
-                first_to_connect.execute_rune(self);
-                new_controller.execute_rune(self);
+                let mut good_first = self.first_to_connect.clone().unwrap();
+                
+                good_first.isMe = true;
+                self.report_rune_to_client(good_first.client_id.clone(), good_first.to_json());
+                good_first.isMe = false;
+
+                self.report_rune_to_client(good_first.client_id.clone(), new_controller.to_json());
+
+                new_controller.isMe = true;
+                self.report_rune_to_client(new_controller.client_id.clone(), new_controller.to_json());
+                new_controller.isMe = false;
+
+                self.report_rune_to_client(new_controller.client_id.clone(), good_first.to_json());
+                
+                 println!("{}-", self.game_state_data.get_number_of_controllers());
+                 first_to_connect.execute_rune(self);
+                 new_controller.execute_rune(self); 
             },
             None => {
                 self.first_to_connect = Some(new_controller);
                 return;
             }
         }
-        let mut good_first = self.first_to_connect.clone().unwrap();
-        
-        good_first.isMe = true;
-        self.report_rune_to_client(good_first.client_id.clone(), good_first.to_json());
-        good_first.isMe = false;
+     }
 
-        self.report_rune_to_client(good_first.client_id.clone(), new_controller.to_json());
-
-        new_controller.isMe = true;
-        self.report_rune_to_client(new_controller.client_id.clone(), new_controller.to_json());
-        new_controller.isMe = false;
-
-        self.report_rune_to_client(new_controller.client_id.clone(), good_first.to_json());
+    pub fn get_controller_number(&self) -> usize {
+        self.game_state_data.get_number_of_controllers()
     }
 
     pub fn add_player_controller(&mut self, controller: Controller) {
-
+        
         self.game_state_data.add_player_controller(controller);
+        
         if self.game_state_data.get_number_of_controllers() == 2 {      
        
             let mut rng = thread_rng();
@@ -345,19 +381,19 @@ impl<'a> GameState<'a> {
             let sg = StartGame::new();
             self.execute_rune(Box::new(sg));
             let other = 1 - first;
-
-            let mut first_hand  = self.game_state_data.get_mut_controllers()[first as usize].get_n_card_uids_from_deck(3);
-            let mut second_hand  = self.game_state_data.get_mut_controllers()[other as usize].get_n_card_uids_from_deck(4);
-            let mut first_uid = self.game_state_data.get_mut_controllers()[first as usize].uid.clone();
-            let mut sec_uid = self.game_state_data.get_mut_controllers()[other as usize].uid.clone();
+            
+            let first_hand  = self.game_state_data.get_mut_controllers()[first as usize].get_n_card_uids_from_deck(3);
+            let second_hand  = self.game_state_data.get_mut_controllers()[other as usize].get_n_card_uids_from_deck(4);
+            let first_uid = self.game_state_data.get_mut_controllers()[first as usize].uid.clone();
+            let sec_uid = self.game_state_data.get_mut_controllers()[other as usize].uid.clone();
 
             for uid in first_hand {
-                let mut new_deal_card_rune = DealCard::new(uid.clone(), first_uid);
+                let new_deal_card_rune = DealCard::new(uid.clone(), first_uid);
                 self.execute_rune(Box::new(new_deal_card_rune));
             }
 
             for uid in second_hand {
-                let mut new_deal_card_rune = DealCard::new(uid.clone(), sec_uid);
+                let new_deal_card_rune = DealCard::new(uid.clone(), sec_uid);
                 self.execute_rune(Box::new(new_deal_card_rune));
             }
         }
@@ -368,7 +404,6 @@ impl<'a> GameState<'a> {
     pub fn resolve_state(&mut self) {
             //if anything that could touch off a call of the function again, deaths, summons, etc etc, we set this to true
             let mut redo = false;
-
     }
 
     pub fn get_mut_controller_by_uid(&mut self, controller_uid : UID) -> Option<&mut Controller> {        

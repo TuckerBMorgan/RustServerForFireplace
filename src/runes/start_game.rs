@@ -1,6 +1,7 @@
 use ::rune_vm::Rune;
 use rustc_serialize::json;
 use ::game_state::GameState;
+use minion_card::UID;
 
 #[derive(RustcDecodable, RustcEncodable)]
 pub struct StartGame {
@@ -21,7 +22,7 @@ impl Rune for StartGame {
         
     }
 
-    fn can_see(&self, _controller:u32, _game_state: &GameState) -> bool {
+    fn can_see(&self, _controller:UID, _game_state: &GameState) -> bool {
         return true;
     }
 

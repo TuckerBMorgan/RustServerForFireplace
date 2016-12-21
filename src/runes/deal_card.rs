@@ -55,7 +55,7 @@ impl Rune for DealCard {
                 }
     }
 
-    fn can_see(&self, _controller: u32, _game_state: &GameState) -> bool {
+    fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {
         return true;
     }
 

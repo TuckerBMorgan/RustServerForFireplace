@@ -2,7 +2,6 @@ extern crate rustc_serialize;
 
 use ::game_state::GameState;
 use rustc_serialize::json::Json;
-use ::controller::EControllerType;
 use ::runes::new_controller::NewController;
 
 
@@ -33,7 +32,6 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
     match  message_type.as_ref() {
 
         "connection" => {
-
                 new_connection( client_id, game_state);
         },
         /*
@@ -54,14 +52,11 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
     }
 }
 
-
-
 #[allow(dead_code)]
 fn new_connection(client_id: u32, mut game_state: &mut GameState) {
 
     let new_controller_rune = NewController {
         uid: game_state.get_uid(),
-        controller_type: EControllerType::Player,
         hero: "hunter".to_string(),
         client_id: client_id,
         deck : "test.deck".to_string(),

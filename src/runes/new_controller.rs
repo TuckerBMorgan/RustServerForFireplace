@@ -10,7 +10,6 @@ use ::controller::{EControllerType, EControllerState, Controller};
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct NewController {
     pub uid: UID,
-    pub controller_type: EControllerType,
     pub hero: String,
     pub client_id: u32,
     pub deck: String,
@@ -19,7 +18,6 @@ pub struct NewController {
 
 impl NewController {
     pub fn new(uid: UID,
-               controller_type: EControllerType,
                hero: String,
                client_id: u32,
                deck : String, 
@@ -27,7 +25,6 @@ impl NewController {
                -> NewController {
         NewController {
             uid: uid,
-            controller_type: controller_type,
             hero: hero,
             client_id: client_id,
             deck : deck, 
@@ -38,12 +35,10 @@ impl NewController {
 
 impl Rune for NewController {
     fn execute_rune(&self, game_state: &mut GameState) {
-        println!("New Controller with client_id {}\n", self.client_id.clone());
-
+        println!("New Controller with client_id {}", self.client_id.clone());        
         let mut new_controller = Controller {
             name: "controller".to_string(),
             hero: self.hero.clone(),
-            controller_type: self.controller_type,
             uid: game_state.get_uid(),
             base_mana: 0,
             mana: 0,
@@ -58,13 +53,13 @@ impl Rune for NewController {
             seen_cards : HashSet::new(),
         };
         let card_names = GameState::parse_deck(self.deck.clone());
-
+       
         game_state.populate_deck(&mut new_controller, card_names);
+       
         game_state.add_player_controller(new_controller);
-
     }
 
-    fn can_see(&self, _controller: u32, _game_state: &GameState) -> bool {
+    fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {
         return true;
     }
 
