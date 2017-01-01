@@ -1,7 +1,9 @@
 extern crate rand;
-extern crate rustc_serialize;
 extern crate rhai;
 extern crate regex;
+extern crate futures;
+extern crate tokio_core;
+extern crate rustc_serialize;
 
 mod card;
 mod runes;
@@ -16,44 +18,60 @@ mod player_thread;
 mod client_message;
 mod process_message;
 
+use std::process;
 use std::thread;
-use std::io::{self};
+use std::io;
 use game_thread::GameThread;
 use std::sync::mpsc::channel;
 use player_thread::PlayerThread;
-use std::net::{TcpListener, TcpStream};
+use std::net::TcpStream;
+use std::net::TcpListener;
+
+
+
 
 fn spawn_new_player(client_id: u32, stream: TcpStream) -> PlayerThread {
     PlayerThread::new(client_id, Some(stream))
 }
-fn spawn_new_ai(client_id : u32) -> PlayerThread {
+fn spawn_new_ai(client_id: u32) -> PlayerThread {
     PlayerThread::new(client_id, None)
 }
 
 fn terminal_commands() {
+    terminal_help();
     let mut buffer = String::new();
-
-
+    
     loop {
-        let _ =  io::stdin().read_line(&mut buffer);
-        let st  = buffer.to_string();
+        let _ = io::stdin().read_line(&mut buffer);
+        let st = buffer.to_string();
 
         if st.contains("clear") {
             println!("{}[2J", 27 as char);
         }
+        else if st.contains("exit") {
+            process::exit(0);
+        }
+        else if st.contains("help") {
+            terminal_help();
+        }
 
         buffer.clear()
-
-        
     }
+}
+
+fn terminal_help() {
+    println!("Terminal Commands");
+    println!("clear -- clear the screen, will not reset cusor on windows");
+    println!("exit -- will exit the program(Best to use this instead of crlt-c, that may crash terminal)");
+    println!("help -- print this again");
 }
 
 fn main() {
     thread::spawn(move || (terminal_commands()));
 
     let mut connected_clients: u32 = 0;
-    let listener = TcpListener::bind("127.0.0.1:1337").unwrap();
     let mut players: Vec<PlayerThread> = vec![];
+    let listener = TcpListener::bind("127.0.0.1:1337").unwrap();
     let mut games = vec![];
 
     for stream in listener.incoming() {
@@ -92,4 +110,28 @@ fn main() {
             }
         }
     }
+
 }
+
+// fn test_main() {
+//
+// let addr = env::args().nth(1).unwrap_or("127.0.0.1:1337".to_string());
+// let addr = addr.parse::<SocketAddr>().unwrap();
+// let mut core = Core::new().unwrap();
+// let handle = core.handle();
+//
+// let socket = TcpListener::bind(&addr, &handle).unwrap();
+//
+//
+// let done = socket.incoming().for_each(move | (socket, addr)|{
+// let (reader, writer) = socket.split();
+//
+//
+// handle.spawn(msg);
+// Ok(())
+// });
+//
+// core.run(done).unwrap();
+//
+// }
+//

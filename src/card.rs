@@ -17,9 +17,9 @@ pub struct Card {
     id: String,
     uid: UID,
     name: String,
-    //for play minion cards this is the uid of the minion
-    //for spells this is the rhai file that executes the spell
-    content : String
+    // for play minion cards this is the uid of the minion
+    // for spells this is the rhai file that executes the spell
+    content: String,
 }
 
 impl Card {
@@ -28,7 +28,7 @@ impl Card {
                id: String,
                uid: UID,
                name: String,
-               content : String)
+               content: String)
                -> Card {
         Card {
             cost: cost,
@@ -36,7 +36,7 @@ impl Card {
             id: id,
             uid: uid,
             name: name,
-            content: content
+            content: content,
         }
     }
 
@@ -64,7 +64,7 @@ impl Card {
         vec![]
     }
 
-    pub fn get_content(&self) ->String {
+    pub fn get_content(&self) -> String {
         self.content.clone()
     }
 

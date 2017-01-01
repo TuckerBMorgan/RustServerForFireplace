@@ -1,33 +1,35 @@
 extern crate rustc_serialize;
 
 use ::game_state::GameState;
+use rustc_serialize::json;
 use rustc_serialize::json::Json;
 use ::runes::new_controller::NewController;
-
+use client_message::MulliganMessage;
 
 
 #[allow(dead_code)]
 pub fn process_client_message(message: String, client_id: u32, game_state: &mut GameState) {
-    
+
     println!("processing message {}", message);
 
     let j_message: Json = Json::from_str(message.trim()).unwrap();
-    
+
     let obj = j_message.as_object().unwrap();
 
     let message_type = match obj.get("message_type") {
-        Some(message_type) => {   
+        Some(message_type) => {
             match *message_type {
-                Json::String(ref v) => format!("{}" ,v),
+                Json::String(ref v) => format!("{}", v),
                 _ => {
-                    return;} } },
+                    return;
+                }
+            }
+        }
         _ => {
             // key does not exist
             return;
         }
     };
-
-    println!("message type is {:?}", message_type);
 
     match  message_type.as_ref() {
 
@@ -42,10 +44,12 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
           //  let ops_message : OptionsMessage = json::decode(message.trim()).unwrap();
             //execute_option(ops_message);
         },
+        */
         "mulligan" =>{
             let mull_message : MulliganMessage = json::decode(message.trim()).unwrap();
+            game_state.mulligan(client_id, mull_message.index.clone());
         },
-        */
+        
         _ => {
             println!("{}", message_type);
         }
@@ -59,9 +63,9 @@ fn new_connection(client_id: u32, mut game_state: &mut GameState) {
         uid: game_state.get_uid(),
         hero: "hunter".to_string(),
         client_id: client_id,
-        deck : "test.deck".to_string(),
-        isMe: false
+        deck: "test.deck".to_string(),
+        isMe: false,
     };
-    
+
     game_state.new_connection(new_controller_rune);
 }

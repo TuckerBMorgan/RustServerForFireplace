@@ -45,47 +45,49 @@ impl GameThread {
         Some(thread::Builder::new().name("game_thread".to_string()).spawn(move || {
                 game_thread_main(self);
             }))
-            .unwrap().unwrap()
+            .unwrap()
+            .unwrap()
     }
 
     #[allow(dead_code)]
     pub fn report_message(&self, client_id: u32, message: String) {
-        println!("Sending message to client {}, {}", client_id, message);
         let thread_message = ThreadMessage {
             client_id: client_id,
             payload: message,
         };
 
         if client_id == self.client_1_id {
+
             let result = self.client_1.send(thread_message);
 
             match result {
-                _ => {
-                    println!("");
+                Ok(_) => {
+                    print!("");
+                }
+                err => {
+                    println!("{:?}", err);
                 }
             }
         } else {
             let result = self.client_2.send(thread_message);
             match result {
                 _ => {
-                        println!("");
-                        
+                    print!("");
                 }
             }
         }
-
     }
 
-    pub fn report_message_to_all(&self, message : String ) {
+    pub fn report_message_to_all(&self, message: String) {
         println!("Sending message to all clients, {}", message);
         let thread_message_1 = ThreadMessage {
-            client_id : self.client_1_id,
-            payload : message.clone()
+            client_id: self.client_1_id,
+            payload: message.clone(),
         };
 
         let thread_message_2 = ThreadMessage {
-            client_id : self.client_1_id,
-            payload : message.clone()
+            client_id: self.client_1_id,
+            payload: message.clone(),
         };
 
         let _ = self.client_1.send(thread_message_1);
@@ -102,6 +104,6 @@ pub fn game_thread_main(game_thread: GameThread) {
         process_message::process_client_message(t_message.payload,
                                                 t_message.client_id,
                                                 &mut game_state);
-    
+
     }
 }

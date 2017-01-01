@@ -7,22 +7,17 @@ use minion_card::UID;
 pub struct StartGame {
 
 }
- 
+
 impl StartGame {
-    pub fn new( )
-               -> StartGame {
-            StartGame {
-        }
+    pub fn new() -> StartGame {
+        StartGame {}
     }
 }
 
 impl Rune for StartGame {
+    fn execute_rune(&self, _game_state: &mut GameState) {}
 
-    fn execute_rune(&self, _game_state: &mut GameState) {
-        
-    }
-
-    fn can_see(&self, _controller:UID, _game_state: &GameState) -> bool {
+    fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {
         return true;
     }
 
