@@ -108,7 +108,6 @@ fn player_thread_function(player_thread: PlayerThread,
 
                 let mut buffer = [0; 128];
 
-                //     ;
                 let read_bytes = stream.read(&mut buffer);
 
                 match read_bytes {

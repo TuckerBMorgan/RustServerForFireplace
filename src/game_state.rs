@@ -7,18 +7,23 @@ use card::{Card, ECardType};
 use controller::{Controller, EControllerState};
 use minion_card::{Minion, UID};
 use game_thread::GameThread;
-use runes::new_controller::NewController;
-use runes::start_game::StartGame;
+
+use rand::{thread_rng, Rng};
 use entity::Entity;
-use std::collections::{VecDeque, HashMap};
 use rhai::{Engine, FnRegister, Scope};
+
+use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::fmt;
-use rand::{thread_rng, Rng};
+use std::collections::{VecDeque, HashMap};
+
 use runes::deal_card::DealCard;
+use runes::start_game::StartGame;
+use runes::rotate_turn::RotateTurn;
 use runes::shuffle_card::ShuffleCard;
+use runes::new_controller::NewController;
+
 
 #[derive(Clone)]
 pub struct GameStateData {
@@ -27,6 +32,7 @@ pub struct GameStateData {
     controller_uid_to_client_id: HashMap<UID, u32>,
     client_id_to_controller_uid : HashMap<UID, u32>,
     entity_count: u32,
+    on_turn_player : i8
 }
 
 impl GameStateData {
@@ -37,8 +43,9 @@ impl GameStateData {
             minions: HashMap::new(),
             controller_uid_to_client_id: HashMap::new(),
             client_id_to_controller_uid: HashMap::new(),
+            on_turn_player : 0
         }
-    }
+    }   
 
     pub fn add_player_controller(&mut self, controller: Controller) {
         
@@ -50,6 +57,14 @@ impl GameStateData {
 
         self.controllers.push(controller);
 
+    }
+
+    pub fn get_on_turn_player(&self) -> i8 {
+        self.on_turn_player.clone()
+    }
+
+    pub fn set_on_turn_player(&mut self, on_turn_player : i8) {
+        self.on_turn_player = on_turn_player ;
     }
 
     pub fn get_controllers(&self) -> &Vec<Controller> {
@@ -347,7 +362,7 @@ impl<'a> GameState<'a> {
     }
 
     pub fn get_team(&mut self) -> u8 {
-        let ret_team = self.team_count;
+        let ret_team = self.team_count.clone();
         self.team_count = self.team_count + 1;
         return ret_team;
     }
@@ -416,6 +431,9 @@ impl<'a> GameState<'a> {
         if self.mulligan_played_out == 1 {
             let sg = StartGame::new();
             self.execute_rune(Box::new(sg));
+
+            let rt = RotateTurn::new();
+            self.execute_rune(Box::new(rt));
         }
         else {
             self.mulligan_played_out += 1;
@@ -443,6 +461,7 @@ impl<'a> GameState<'a> {
 
             let first_hand = self.game_state_data.get_mut_controllers()[first as usize]
                 .get_n_card_uids_from_deck(3);
+            
             let second_hand = self.game_state_data.get_mut_controllers()[other as usize]
                 .get_n_card_uids_from_deck(4);
             let first_uid = self.game_state_data.get_mut_controllers()[first as usize].uid.clone();
@@ -459,8 +478,12 @@ impl<'a> GameState<'a> {
                 self.execute_rune(Box::new(new_deal_card_rune));
             }
             self.game_state_data.get_mut_controllers()[other as usize].controller_state = EControllerState::Mulligan;
-        
+            self.game_state_data.set_on_turn_player(first as i8);
         }
+    }
+
+    pub fn get_controller_by_index(&self, index : usize) -> &Controller {
+        &self.game_state_data.get_controllers()[index]
     }
 
     // this is the function that is used to apply all passive rules about the game logic after a major event has occured
@@ -484,5 +507,13 @@ impl<'a> GameState<'a> {
 
     pub fn get_controller_client_id(&self) -> Vec<u32> {
         self.game_state_data.get_client_ids()
+    }
+
+     pub fn get_on_turn_player(&self) -> i8 {
+        self.game_state_data.get_on_turn_player().clone()
+    }
+
+    pub fn set_on_turn_player(&mut self, on_turn_player : i8) {
+        self.game_state_data.set_on_turn_player(on_turn_player);
     }
 }

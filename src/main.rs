@@ -17,6 +17,7 @@ mod client_option;
 mod player_thread;
 mod client_message;
 mod process_message;
+mod tags_list;
 
 use std::process;
 use std::thread;

@@ -110,6 +110,14 @@ impl Minion {
         self.tags.insert(tag.clone());
     }
 
+    pub fn remove_tag(&mut self, tag: String) {
+        self.tags.remove(&tag);
+    }
+
+    pub fn has_tag(&self, tag : String) -> bool{
+        self.tags.contains(&tag)
+    }
+
     pub fn get_cost(&self) -> u16 {
         self.cost.clone()
     }
@@ -181,7 +189,6 @@ impl Minion {
     pub fn set_uid(&mut self, uid: i64) {
         self.uid = uid as u32;
     }
-
 
     // sets name, uid, id, and set, this is to get around the rhais function paramater limit
     // also for whatever reason magic numbers in rhai as default i64 type, and there is

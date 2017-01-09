@@ -72,6 +72,22 @@ impl Controller {
         self.shuffle_deck();
     }
 
+    pub fn set_base_mana(&mut self, base_mana : u8) {
+        self.base_mana = base_mana;
+    }
+
+    pub fn get_base_mana(&self) -> u8 {
+        self.base_mana.clone()
+    }
+
+    pub fn set_mana(&mut self, mana : u8){
+        self.mana = mana;
+    }
+
+    pub fn get_mana(&self) -> u8 {
+        self.mana.clone()
+    }
+
     pub fn shuffle_deck(&mut self) {
         let mut rng = thread_rng();
         for _ in 0..100 {
@@ -86,11 +102,6 @@ impl Controller {
 
         }
     }
-    /*
-    pub fn get_card_from_hand_by_index(&mut self) -> Option<Card {
-
-    }
-    */
 
     pub fn get_mut_hand(&mut self) -> &mut Vec<Card> {
         &mut self.hand   
@@ -114,6 +125,10 @@ impl Controller {
         None
     }
 
+    pub fn get_copy_of_in_play(&self) -> Vec<UID> {
+        self.in_play_minions.clone()
+    }
+
     pub fn get_n_card_uids_from_deck(&self, mut n: u32) -> Vec<UID> {
 
         let mut rng = thread_rng();
@@ -130,5 +145,8 @@ impl Controller {
         }
 
         rets
+    }
+    pub fn get_uid(&self) -> UID {
+        self.uid.clone()
     }
 }
