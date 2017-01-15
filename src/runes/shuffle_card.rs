@@ -7,7 +7,7 @@ use minion_card::UID;
 #[derive(RustcDecodable, RustcEncodable)]
 pub struct ShuffleCard {
     pub card_uid: UID,
-    pub controller_uid : UID
+    pub controller_uid: UID,
 }
 
 impl ShuffleCard {
@@ -20,13 +20,12 @@ impl ShuffleCard {
 }
 
 impl Rune for ShuffleCard {
-
     fn execute_rune(&self, game_state: &mut GameState) {
-    
+
         game_state.get_mut_controller_by_uid(self.controller_uid)
-        .unwrap()
-        .move_card_from_hand_to_deck(self.card_uid.clone());
-    
+            .unwrap()
+            .move_card_from_hand_to_deck(self.card_uid.clone());
+
     }
 
     fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {
@@ -36,5 +35,4 @@ impl Rune for ShuffleCard {
     fn to_json(&self) -> String {
         json::encode(self).unwrap().replace("{", "{\"runeType\":\"ShuffleCard\",")
     }
-
 }

@@ -4,17 +4,17 @@ use ::game_state::GameState;
 use minion_card::UID;
 
 #[derive(RustcDecodable, RustcEncodable)]
-pub struct StartGame {
+pub struct Mulligan {
 
 }
 
-impl StartGame {
-    pub fn new() -> StartGame {
-        StartGame {}
+impl Mulligan {
+    pub fn new() -> Mulligan {
+        Mulligan {}
     }
 }
 
-impl Rune for StartGame {
+impl Rune for Mulligan {
     fn execute_rune(&self, _game_state: &mut GameState) {}
 
     fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {
@@ -22,6 +22,6 @@ impl Rune for StartGame {
     }
 
     fn to_json(&self) -> String {
-        "{\"runeType\":\"StartGame\"}".to_string()
+        "{\"runeType\":\"Mulligan\"}".to_string()
     }
 }

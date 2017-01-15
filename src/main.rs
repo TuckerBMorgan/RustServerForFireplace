@@ -41,18 +41,16 @@ fn spawn_new_ai(client_id: u32) -> PlayerThread {
 fn terminal_commands() {
     terminal_help();
     let mut buffer = String::new();
-    
+
     loop {
         let _ = io::stdin().read_line(&mut buffer);
         let st = buffer.to_string();
 
         if st.contains("clear") {
             println!("{}[2J", 27 as char);
-        }
-        else if st.contains("exit") {
+        } else if st.contains("exit") {
             process::exit(0);
-        }
-        else if st.contains("help") {
+        } else if st.contains("help") {
             terminal_help();
         }
 
@@ -63,7 +61,8 @@ fn terminal_commands() {
 fn terminal_help() {
     println!("Terminal Commands");
     println!("clear -- clear the screen, will not reset cusor on windows");
-    println!("exit -- will exit the program(Best to use this instead of crlt-c, that may crash terminal)");
+    println!("exit -- will exit the program(Best to use this instead of crlt-c, that may crash \
+              terminal)");
     println!("help -- print this again");
 }
 

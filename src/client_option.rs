@@ -1,3 +1,4 @@
+use game_state::GameState;
 
 #[allow(dead_code)]
 #[derive(Copy, Clone)]
@@ -22,4 +23,8 @@ impl ClientOption {
             target_uid: target_uid,
         }
     }
+}
+
+pub trait OptionGenerator {
+    fn generate_options(&self, game_state : &GameState) -> Vec<ClientOption>;
 }

@@ -7,27 +7,30 @@ use minion_card::UID;
 
 #[derive(RustcDecodable, RustcEncodable)]
 pub struct RemoveTag {
-    pub minion_uid : UID,
-    pub tag : String
+    pub minion_uid: UID,
+    pub tag: String,
 }
 
 impl RemoveTag {
-    pub fn new(minion_uid : UID, tag : String) -> RemoveTag {
+    pub fn new(minion_uid: UID, tag: String) -> RemoveTag {
         RemoveTag {
-            minion_uid : minion_uid,
-            tag : tag
+            minion_uid: minion_uid,
+            tag: tag,
         }
     }
 }
 
 impl Rune for RemoveTag {
     fn execute_rune(&self, mut game_state: &mut GameState) {
-        let mut minion = game_state.get_mut_minion(self.minion_uid);
+        let minion = game_state.get_mut_minion(self.minion_uid);
         match minion {
             Some(minion) => {
                 minion.remove_tag(self.tag.clone());
-            },
-            None => println!("We could not find the minion with the UID {}", self.minion_uid),
+            }
+            None => {
+                println!("We could not find the minion with the UID {}",
+                         self.minion_uid)
+            }
         }
     }
 
@@ -36,6 +39,6 @@ impl Rune for RemoveTag {
     }
 
     fn to_json(&self) -> String {
-            json::encode(self).unwrap().replace("{", "{\"runeType\":\"RemoveTag\",")
+        json::encode(self).unwrap().replace("{", "{\"runeType\":\"RemoveTag\",")
     }
 }

@@ -72,7 +72,7 @@ impl Controller {
         self.shuffle_deck();
     }
 
-    pub fn set_base_mana(&mut self, base_mana : u8) {
+    pub fn set_base_mana(&mut self, base_mana: u8) {
         self.base_mana = base_mana;
     }
 
@@ -80,7 +80,7 @@ impl Controller {
         self.base_mana.clone()
     }
 
-    pub fn set_mana(&mut self, mana : u8){
+    pub fn set_mana(&mut self, mana: u8) {
         self.mana = mana;
     }
 
@@ -88,12 +88,16 @@ impl Controller {
         self.mana.clone()
     }
 
+    pub fn set_controller_state(&mut self, controller_state: EControllerState) {
+        self.controller_state = controller_state;
+    }
+
     pub fn shuffle_deck(&mut self) {
         let mut rng = thread_rng();
         for _ in 0..100 {
             let val_1 = rng.gen_range(0, self.deck.len());
             let val_2 = rng.gen_range(0, self.deck.len());
-            
+
             let hold_1 = self.deck[val_1].clone();
             let hold_2 = self.deck[val_2].clone();
 
@@ -104,7 +108,7 @@ impl Controller {
     }
 
     pub fn get_mut_hand(&mut self) -> &mut Vec<Card> {
-        &mut self.hand   
+        &mut self.hand
     }
 
     pub fn add_card_to_seen(&mut self, uid: UID) {

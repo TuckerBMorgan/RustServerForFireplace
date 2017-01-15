@@ -1,21 +1,18 @@
 use std::str;
 use std::io::prelude::*;
-use std::ops::Range;
 use std::thread;
 use std::thread::JoinHandle;
 use std::net::TcpStream;
+use rustc_serialize::json;
+use rustc_serialize::json::Json;
 
 use std::sync::mpsc::{Sender, Receiver};
 use ::game_thread::ThreadMessage;
-use std::time::Duration;
 
 pub struct PlayerThread {
     pub client_id: u32,
     pub stream: Option<TcpStream>,
-    pub join_handle: Option<JoinHandle<()>>, /*   pub buf: Vec<u8>,
-                                              *   pub pending: Range<usize>,
-                                              *   pub to_server: Option<Sender<ThreadMessage>>,
-                                              *    pub from_server: Option<Receiver<ThreadMessage>> */
+    pub join_handle: Option<JoinHandle<()>>,
 }
 
 impl PlayerThread {
@@ -78,7 +75,7 @@ fn player_thread_function(player_thread: PlayerThread,
 
         Some(mut stream) => {
             // stream.set_read_timeout(Some(Duration::from_millis(10)));
-            stream.set_nonblocking(true);
+            let _ = stream.set_nonblocking(true);
             loop {
 
                 if !payload_message.is_empty() {
@@ -98,8 +95,8 @@ fn player_thread_function(player_thread: PlayerThread,
                         let e = stream.write(&with_flag.into_bytes()[..]);
                         match e {
                             Ok(_) => {}
-                            Err(e) => {
-                             //  println!("{}", e);
+                            Err(_) => {
+                                //  println!("{}", e);
                             }
                         }
                     }
@@ -140,12 +137,8 @@ fn player_thread_function(player_thread: PlayerThread,
                         }
 
                     }
-                    Err(e) => {
-                       // println!("----------{:?}", e);
-                    }
+                    Err(_) => {}
                 }
-                //       stream.set_nonblocking(false);
-                //   println!("asdfasdfasdf");
 
             }
         }
@@ -158,14 +151,52 @@ fn player_thread_function(player_thread: PlayerThread,
             let _ = to_server.send(ready);
             loop {
                 let to_client_message = from_server.try_recv();
-                match to_client_message {
-                    Ok(message_string) => {
 
-                    },
-                    Err(_) => {
+
+                match to_client_message {
+                    Ok(to_client_message) => {
+                        let message = to_client_message.payload.clone();
+
+                        let j_message: Json = Json::from_str(message.trim()).unwrap();
+                        let obj = j_message.as_object().unwrap();
+
+                        let message_type = match obj.get("runeType") {
+                            Some(message_type) => {
+                                match *message_type {
+                                    Json::String(ref v) => format!("{}", v),
+                                    _ => {
+                                        println!("Happens here");
+                                        continue;
+                                    }
+                                }
+                            }
+                            _ => {
+                                println!("No here");
+                                // key does not exist
+                                continue;
+                            }
+                        };
+
+
                         
+                        if message_type.contains("Mulligan") {
+                            let mulligan_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : [] }}",
+                                                           k = "message_type",
+                                                           v = "mulligan",
+                                                           h = "index");
+                            let to_server_message = ThreadMessage {
+                                client_id: player_thread.client_id,
+                                payload: mulligan_message,
+                            };
+
+                            let _ = to_server.send(to_server_message);
+                        } else if message_type.contains("option_rune") {
+
+                        }
+
                     }
-                    
+                    Err(_) => {}
+
                 }
             }
         }

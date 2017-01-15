@@ -2,8 +2,9 @@ use ::rune_vm::Rune;
 use rustc_serialize::json;
 use ::game_state::GameState;
 use minion_card::UID;
-
+use runes::add_tag::AddTag;
 use runes::summon_minion::SummonMinion;
+use tags_list::{CHARGE, SUMMONING_SICKNESS};
 
 // the play_minion rune is called when you play a minion
 // out of your hand. It will call battle_cry if it has one
@@ -34,16 +35,14 @@ impl Rune for PlayMinion {
     fn execute_rune(&self, mut game_state: &mut GameState) {
 
         {
-            let min = game_state.get_minion(self.card_uid);
-            match min {
-                Some(min) => {
-                    if min.get_battle_cry() != "default".to_string() {
+            let min = game_state.get_minion(self.card_uid).unwrap().clone();
+            if !min.has_tag(CHARGE.to_string()) {
+                let at = AddTag::new(self.card_uid.clone(), SUMMONING_SICKNESS.to_string());
+                game_state.execute_rune(Box::new(at));
+            }
 
-                    }
-                }
-                None => {
-                    println!("Could not find minion with uid {}", self.card_uid);
-                }
+            if min.get_battle_cry() != "default".to_string() {
+
             }
         }
 

@@ -11,9 +11,7 @@ use client_message::MulliganMessage;
 pub fn process_client_message(message: String, client_id: u32, game_state: &mut GameState) {
 
     println!("processing message {}", message);
-
     let j_message: Json = Json::from_str(message.trim()).unwrap();
-
     let obj = j_message.as_object().unwrap();
 
     let message_type = match obj.get("message_type") {

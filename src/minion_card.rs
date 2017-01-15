@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use std::collections::HashSet;
+use client_option::{OptionGenerator, ClientOption};
 
 pub type UID = u32;
 
@@ -14,17 +15,20 @@ pub struct ProtoMinion {
     pub create_minion_function: String,
     pub battle_cry_function: String,
     pub take_damage_function: String,
+    pub generate_options_function: String,
 }
 
 impl ProtoMinion {
     pub fn new(create_minion_function: String,
                battle_cry_function: String,
-               take_damage_function: String)
+               take_damage_function: String, 
+               generate_options_function: String)
                -> ProtoMinion {
         ProtoMinion {
             create_minion_function: create_minion_function,
             battle_cry_function: battle_cry_function,
             take_damage_function: take_damage_function,
+            generate_options_function: generate_options_function
         }
     }
 }
@@ -41,6 +45,7 @@ pub struct Minion {
 
     battle_cry_function: String,
     take_damage_function: String,
+    generate_option_function: String,
 
     // the attack varibles, baseAttack is the default value
     // currentAttack is what we use for how much damage we do
@@ -82,6 +87,7 @@ impl Minion {
             total_health: base_health,
             battle_cry_function: "null".to_string(),
             take_damage_function: "null".to_string(),
+            generate_options_function: "null".to_string()
         }
     }
 
@@ -103,6 +109,7 @@ impl Minion {
             total_health: 0,
             battle_cry_function: "default".to_string(),
             take_damage_function: "default".to_string(),
+            generate_options_function: "default".to_string()
         }
     }
 
@@ -114,7 +121,7 @@ impl Minion {
         self.tags.remove(&tag);
     }
 
-    pub fn has_tag(&self, tag : String) -> bool{
+    pub fn has_tag(&self, tag: String) -> bool {
         self.tags.contains(&tag)
     }
 
@@ -226,6 +233,8 @@ impl Minion {
         let mut create_minion_function: String = "hold".to_string();
         let mut battle_cry_function: String = "hold".to_string();
         let mut take_damage_function: String = "hold".to_string();
+        let mut generate_options_function: String = "hold".to_string();
+
         let mut i: u32 = 0;
 
         for function in functions {
@@ -235,13 +244,31 @@ impl Minion {
                 battle_cry_function = String::from(function);
             } else if i == 3 {
                 take_damage_function = String::from(function);
+            } else if i == 4 {
+                generate_options_function = String::from(function);
             }
             i += 1;
         }
 
         let proto = ProtoMinion::new(create_minion_function,
                                      battle_cry_function,
-                                     take_damage_function);
+                                     take_damage_function,
+                                     generate_options_function);
         Ok(proto)
     }
+}
+
+impl OptionGenerator for Minion {
+
+    fn generate_options(&self, game_state: &GameState, current_controller: &Controller) -> Vec<ClientOption> {
+        
+        //this just means that the minions will follow the standard attack option rules
+        if self.generate_option_function.contains("default") {
+
+            
+
+        }
+
+    }
+
 }

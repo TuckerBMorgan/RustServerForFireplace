@@ -6,6 +6,7 @@ use ::process_message;
 use ::game_state::GameState;
 use std::thread::JoinHandle;
 use std::sync::mpsc::{Sender, Receiver};
+use rune_vm::Rune;
 
 
 pub struct ThreadMessage {
@@ -78,8 +79,8 @@ impl GameThread {
         }
     }
 
-    pub fn report_message_to_all(&self, message: String) {
-        println!("Sending message to all clients, {}", message);
+    pub fn _report_message_to_all(&self, message: String) {
+        println!("Sending message to all clcarients, {}", message);
         let thread_message_1 = ThreadMessage {
             client_id: self.client_1_id,
             payload: message.clone(),
