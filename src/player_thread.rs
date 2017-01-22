@@ -176,8 +176,6 @@ fn player_thread_function(player_thread: PlayerThread,
                                 continue;
                             }
                         };
-
-
                         
                         if message_type.contains("Mulligan") {
                             let mulligan_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : [] }}",

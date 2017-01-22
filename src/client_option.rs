@@ -1,24 +1,25 @@
 use game_state::GameState;
+use controller::Controller;
+use minion_card::UID;
 
-#[allow(dead_code)]
-#[derive(Copy, Clone)]
-pub enum EOptionType {
-    PlayCard,
-    Mulligan,
+#[derive(Copy, Clone, Debug)]
+pub enum OptionType {
+    EAttack,
+    EPlayCard
 }
 
-#[allow(dead_code)]
+#[derive(Copy, Clone, Debug)]
 pub struct ClientOption {
-    option_type: EOptionType,
-    source_uid: u32,
-    target_uid: u32,
+    option_type: OptionType
+    source_uid: UID,
+    target_uid: UID,
 }
 
 impl ClientOption {
     #[allow(dead_code)]
-    pub fn new(source_uid: u32, target_uid: u32, option_type: EOptionType) -> ClientOption {
+    pub fn new(source_uid: UID, target_uid: UID, option_type: OptionType) -> ClientOption {
         ClientOption {
-            option_type: option_type,
+            option_type: OptionType,
             source_uid: source_uid,
             target_uid: target_uid,
         }
@@ -26,5 +27,5 @@ impl ClientOption {
 }
 
 pub trait OptionGenerator {
-    fn generate_options(&self, game_state : &GameState) -> Vec<ClientOption>;
+    fn generate_options(&self, game_state : &mut GameState, controller: &Controller) -> Vec<ClientOption>;
 }

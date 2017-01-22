@@ -7,6 +7,8 @@ use card::{Card, ECardType};
 use controller::{Controller, EControllerState};
 use minion_card::{Minion, UID};
 use game_thread::GameThread;
+use client_option::{ClientOption, OptionType};
+use client_message::OptionsMessage;
 
 use rand::{thread_rng, Rng};
 use entity::Entity;
@@ -17,6 +19,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::collections::{VecDeque, HashMap};
+
 
 use runes::deal_card::DealCard;
 use runes::start_game::StartGame;
@@ -39,7 +42,7 @@ impl GameStateData {
     pub fn new() -> GameStateData {
         GameStateData {
             controllers: vec![],
-            entity_count: 0,
+            entity_count: 1,//this is really emportant that we start this at 1, beause new UIDS are the current value of this, but we need a value for not a UID, which is 0
             minions: HashMap::new(),
             controller_uid_to_client_id: HashMap::new(),
             client_id_to_controller_uid: HashMap::new(),
@@ -175,6 +178,8 @@ impl<'a> GameState<'a> {
         self.script_engine.register_type::<GameStateData>();
         self.script_engine.register_type::<UID>();
         self.script_engine.register_type::<Minion>();
+        self.script_engine.register_type::<ClientOption>();
+        self.script_engine.register_type::<Vec<ClientOption>>();
         self.script_engine.register_fn("new_minion", Minion::new_other);
         self.script_engine.register_fn("minion_basic_info", Minion::set_basic_info);
         self.script_engine.register_fn("minion_attack_health_basic",
@@ -190,26 +195,29 @@ impl<'a> GameState<'a> {
     }
 
     pub fn run_rhai_statement<T: Any + Clone + fmt::Debug>(&mut self,
-                                                           rhai_statement: &String)
+                                                           rhai_statement: &String,
+                                                           with_write_back: bool)//this last paramater is a odd one, but it "should" insure that the actions taken by the statment do change the current game state
+                                                           //it will also cause the function to execute faster
                                                            -> T {
 
         self.game_scope.push(("game_state".to_string(), Box::new(self.game_state_data.clone())));
 
         let result = self.script_engine
             .eval_with_scope::<T>(&mut self.game_scope, &rhai_statement[..]);
-
-        for &mut (_, ref mut val) in &mut self.game_scope.iter_mut().rev() {
-            match val.downcast_mut::<GameStateData>() {
-                Some(as_down_cast_struct) => {
-                    self.game_state_data = as_down_cast_struct.clone();
-                }
-                None => {
-                    //                    println!("problem getting game state back");
+        if with_write_back == true {
+            for &mut (_, ref mut val) in &mut self.game_scope.iter_mut().rev() {
+                match val.downcast_mut::<GameStateData>() {
+                    Some(as_down_cast_struct) => {
+                        self.game_state_data = as_down_cast_struct.clone();
+                    }
+                    None => {
+                        //                    println!("problem getting game state back");
+                    }
                 }
             }
+            // since we have a scope we carry around, we have to do this, because we can have two varibles with the same name in the scope
+            self.game_scope.clear();
         }
-        // since we have a scope we carry around, we have to do this, because we can have two varibles with the same name in the scope
-        self.game_scope.clear();
         //  I like keeping this print statement around so that it I can use it when the rhai system breaks
         //  println!("{:?}", &result);
         result.unwrap()
@@ -251,7 +259,7 @@ impl<'a> GameState<'a> {
     pub fn populate_deck(&mut self, controller: &mut Controller, card_ids: Vec<String>) {
 
         for card_id in card_ids {
-            //      println!("{}", "content/cards/".to_string() + &card_id.clone() + &".arhai".to_string());
+
             let mut f = File::open("content/cards/".to_string() + &card_id.clone() +
                                    &".arhai".to_string())
                 .unwrap();
@@ -275,12 +283,13 @@ impl<'a> GameState<'a> {
 
                         let mut minion =
                             self.run_rhai_statement::<Minion>(
-                                &proto_minion_good.create_minion_function);
+                                &proto_minion_good.create_minion_function,
+                                true);
 
 
                         minion.set_battle_cry(proto_minion_good.battle_cry_function);
                         minion.set_take_damage(proto_minion_good.take_damage_function);
-                        let play_card = Card::new(minion.get_cost(),
+                        let play_card = Card::new(minion.get_cost() as u8,
                                                   ECardType::Minion,
                                                   minion.get_id(),
                                                   self.get_uid(),
@@ -450,6 +459,22 @@ impl<'a> GameState<'a> {
         controller.controller_state = EControllerState::WaitingForStart;
     }
 
+    pub fn execute_option(&mut self, option_message: OptionsMessage) {
+        let index = option_message.index.copy();
+        let controller_index = self.get_on_turn_player();
+        let on_turn_controller = self.game_state_data.get_controllers()[controller_index];
+        let option = on_turn_controller.get_client_option(index);
+
+        match option.option_type {
+            OptionType::EAttack => {
+                
+            },
+            OptionType::EPlayCard => {
+
+            }
+        }
+    }
+
     pub fn get_controller_number(&self) -> usize {
         self.game_state_data.get_number_of_controllers()
     }
@@ -530,5 +555,11 @@ impl<'a> GameState<'a> {
 
     pub fn set_on_turn_player(&mut self, on_turn_player: i8) {
         self.game_state_data.set_on_turn_player(on_turn_player);
+    }
+
+    pub fn get_other_controller(&self, not_this_controller_uid : UID) -> &Controller {
+        let index =
+            self.game_state_data.controllers.iter().position(|x| x.uid != not_this_controller_uid).unwrap();
+        self.game_state_data.controllers.get(index).unwrap()
     }
 }

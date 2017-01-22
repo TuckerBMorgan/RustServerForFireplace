@@ -4,7 +4,8 @@ use ::game_state::GameState;
 use rustc_serialize::json;
 use rustc_serialize::json::Json;
 use ::runes::new_controller::NewController;
-use client_message::MulliganMessage;
+use client_message::{MulliganMessage, OptionsMessage};
+
 
 
 #[allow(dead_code)]
@@ -34,15 +35,15 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
         "connection" => {
                 new_connection( client_id, game_state);
         },
-        /*
+        
         "ready" => {
 
         },
         "option" => {
-          //  let ops_message : OptionsMessage = json::decode(message.trim()).unwrap();
-            //execute_option(ops_message);
+            let ops_message : OptionsMessage = json::decode(message.trim()).unwrap();
+            game_state.execute_option(ops_message);
         },
-        */
+        
         "mulligan" =>{
             let mull_message : MulliganMessage = json::decode(message.trim()).unwrap();
             game_state.mulligan(client_id, mull_message.index.clone());

@@ -2,6 +2,9 @@
 
 use std::collections::HashSet;
 use client_option::{OptionGenerator, ClientOption};
+use tags_list::{TAUNT, STEALTH};
+use game_state::GameState;
+use controller::Controller;
 
 pub type UID = u32;
 
@@ -16,19 +19,22 @@ pub struct ProtoMinion {
     pub battle_cry_function: String,
     pub take_damage_function: String,
     pub generate_options_function: String,
+    pub target_function: String
 }
 
 impl ProtoMinion {
     pub fn new(create_minion_function: String,
                battle_cry_function: String,
                take_damage_function: String, 
-               generate_options_function: String)
+               generate_options_function: String,
+               target_function: String)
                -> ProtoMinion {
         ProtoMinion {
             create_minion_function: create_minion_function,
             battle_cry_function: battle_cry_function,
             take_damage_function: take_damage_function,
-            generate_options_function: generate_options_function
+            generate_options_function: generate_options_function,
+            target_function: target_function
         }
     }
 }
@@ -43,9 +49,10 @@ pub struct Minion {
 
     tags: HashSet<String>,
 
-    battle_cry_function: String,
-    take_damage_function: String,
-    generate_option_function: String,
+    battle_cry_function: String,//does the minion do something when it is placed into combat
+    take_damage_function: String,//does it need to do something special when it takes damage
+    generate_option_function: String,//when it is on the field what can it attack
+    target_function: String,//when it is in the hand how can I play it
 
     // the attack varibles, baseAttack is the default value
     // currentAttack is what we use for how much damage we do
@@ -87,7 +94,8 @@ impl Minion {
             total_health: base_health,
             battle_cry_function: "null".to_string(),
             take_damage_function: "null".to_string(),
-            generate_options_function: "null".to_string()
+            generate_option_function: "null".to_string(),
+            target_function: "null".to_string()
         }
     }
 
@@ -109,7 +117,8 @@ impl Minion {
             total_health: 0,
             battle_cry_function: "default".to_string(),
             take_damage_function: "default".to_string(),
-            generate_options_function: "default".to_string()
+            generate_option_function: "default".to_string(),
+            target_function: "default".to_string()
         }
     }
 
@@ -225,6 +234,10 @@ impl Minion {
         self.take_damage_function.clone()
     }
 
+    pub fn get_target_function(&self) -> String {
+     self.target_function.clone()   
+    }
+
 
     pub fn parse_minion_file(file_contents: String) -> Result<ProtoMinion, EFileReadResult> {
 
@@ -234,6 +247,7 @@ impl Minion {
         let mut battle_cry_function: String = "hold".to_string();
         let mut take_damage_function: String = "hold".to_string();
         let mut generate_options_function: String = "hold".to_string();
+        let mut target_function: String = "hold".to_string();
 
         let mut i: u32 = 0;
 
@@ -246,6 +260,8 @@ impl Minion {
                 take_damage_function = String::from(function);
             } else if i == 4 {
                 generate_options_function = String::from(function);
+            } else if i == 5 {
+                target_function = String::from(function);
             }
             i += 1;
         }
@@ -253,21 +269,67 @@ impl Minion {
         let proto = ProtoMinion::new(create_minion_function,
                                      battle_cry_function,
                                      take_damage_function,
-                                     generate_options_function);
+                                     generate_options_function,
+                                     target_function);
         Ok(proto)
     }
 }
 
 impl OptionGenerator for Minion {
 
-    fn generate_options(&self, game_state: &GameState, current_controller: &Controller) -> Vec<ClientOption> {
+    fn generate_options(&self, game_state: &mut GameState, current_controller: &Controller) -> Vec<ClientOption> {
         
         //this just means that the minions will follow the standard attack option rules
         if self.generate_option_function.contains("default") {
 
-            
+            let other_controller = game_state.get_other_controller(current_controller.get_uid());
 
+            let in_play = other_controller.get_copy_of_in_play();
+
+            let mut taunts = vec![];
+            let mut not_taunts = vec![];
+
+            for uid in in_play {
+                let min = game_state.get_minion(uid);
+                match min {
+                    Some(min) => {
+                        if min.has_tag(TAUNT.to_string()) {
+                            taunts.push(uid.clone());
+                        }
+                        else if !min.has_tag(STEALTH.to_string()) {
+                            not_taunts.push(uid.clone());
+                        }
+                    },
+                    _ => {
+
+                    }
+                }
+            }
+            let mut use_uids = vec![];
+
+            //normal attack options cannot ignore taunts
+            if taunts.len() != 0 {
+                for uids in taunts {
+                    use_uids.push(uids.clone());
+                }
+            }
+            else {
+                for uids in not_taunts {
+                    use_uids.push(uids.clone());
+                }
+            }
+            let mut client_options = vec![];
+            for uids in use_uids {
+                let co = ClientOption::new(self.uid.clone(), uids.clone());
+                client_options.push(co);
+            }
+            client_options
         }
+        else {
+            //TODO: make this runa rhai statment 
+            vec![]
+        }
+
 
     }
 

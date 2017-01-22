@@ -3,6 +3,7 @@ use minion_card::UID;
 use card::Card;
 use std::collections::HashSet;
 use rand::{thread_rng, Rng};
+use client_option::ClientOption;
 
 
 #[derive(RustcDecodable, RustcEncodable, Copy, Clone)]
@@ -42,6 +43,7 @@ pub struct Controller {
     // to modify it, or look it up
     pub unplayed_minions: Vec<UID>,
     pub in_play_minions: Vec<UID>,
+    pub current_options: Vec<ClientOption>
 }
 
 impl Controller {
@@ -105,6 +107,18 @@ impl Controller {
             self.deck[val_2] = hold_1;
 
         }
+    }
+
+    pub fn add_client_options(&mut self, client_option: ClientOption) {
+        self.current_options.push(client_option);
+    }
+
+    pub fn clear_client_options(&mut self) {
+        self.current_options.clear();
+    }
+
+    pub fn get_client_option(&self, index : usize) -> &ClientOption {
+        return &self.current_options[index].unwrap();
     }
 
     pub fn get_mut_hand(&mut self) -> &mut Vec<Card> {
