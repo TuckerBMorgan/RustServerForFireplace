@@ -10,16 +10,16 @@ pub enum OptionType {
 
 #[derive(Copy, Clone, Debug)]
 pub struct ClientOption {
-    option_type: OptionType
-    source_uid: UID,
-    target_uid: UID,
+    pub option_type: OptionType,
+    pub source_uid: UID,
+    pub target_uid: UID,
 }
 
 impl ClientOption {
     #[allow(dead_code)]
     pub fn new(source_uid: UID, target_uid: UID, option_type: OptionType) -> ClientOption {
         ClientOption {
-            option_type: OptionType,
+            option_type: option_type,
             source_uid: source_uid,
             target_uid: target_uid,
         }

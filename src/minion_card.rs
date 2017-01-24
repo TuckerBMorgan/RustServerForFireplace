@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use std::collections::HashSet;
-use client_option::{OptionGenerator, ClientOption};
+use client_option::{OptionGenerator, ClientOption, OptionType};
 use tags_list::{TAUNT, STEALTH};
 use game_state::GameState;
 use controller::Controller;
@@ -320,7 +320,7 @@ impl OptionGenerator for Minion {
             }
             let mut client_options = vec![];
             for uids in use_uids {
-                let co = ClientOption::new(self.uid.clone(), uids.clone());
+                let co = ClientOption::new(self.uid.clone(), uids.clone(), OptionType::EAttack);
                 client_options.push(co);
             }
             client_options

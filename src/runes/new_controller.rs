@@ -39,7 +39,7 @@ impl Rune for NewController {
             mana: 0,
             team: game_state.get_team(),
             controller_state: EControllerState::WaitingForStart,
-
+            current_options: vec![],
             deck: vec![],
             hand: vec![],
             unplayed_minions: vec![],

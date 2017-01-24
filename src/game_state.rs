@@ -460,17 +460,17 @@ impl<'a> GameState<'a> {
     }
 
     pub fn execute_option(&mut self, option_message: OptionsMessage) {
-        let index = option_message.index.copy();
+        let index = option_message.index.clone();
         let controller_index = self.get_on_turn_player();
-        let on_turn_controller = self.game_state_data.get_controllers()[controller_index];
-        let option = on_turn_controller.get_client_option(index);
+        let ref on_turn_controller = self.game_state_data.get_controllers()[controller_index as usize];
+        let option = on_turn_controller.get_client_option(index as usize);
 
         match option.option_type {
             OptionType::EAttack => {
                 
             },
             OptionType::EPlayCard => {
-
+                
             }
         }
     }

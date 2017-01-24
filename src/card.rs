@@ -1,7 +1,7 @@
 
 use game_state::GameState;
 use minion_card::UID;
-use client_option::{OptionGenerator, ClientOption};
+use client_option::{OptionGenerator, ClientOption, OptionType};
 use tags_list::{TARGET};
 use controller::Controller;
 
@@ -106,7 +106,7 @@ impl OptionGenerator for Card {
                 }
                 else {
                     let mut co = vec![];
-                    co.push(ClientOption::new(self.uid, 0));
+                    co.push(ClientOption::new(self.uid, 0, OptionType::EPlayCard));
                     return co;
                 }
             }

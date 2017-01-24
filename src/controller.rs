@@ -118,7 +118,7 @@ impl Controller {
     }
 
     pub fn get_client_option(&self, index : usize) -> &ClientOption {
-        return &self.current_options[index].unwrap();
+        return &self.current_options[index];
     }
 
     pub fn get_mut_hand(&mut self) -> &mut Vec<Card> {
