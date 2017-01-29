@@ -11,3 +11,4 @@ pub mod remove_tag;
 pub mod set_base_mana;
 pub mod set_mana;
 pub mod mulligan;
+pub mod play_card;

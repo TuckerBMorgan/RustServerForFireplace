@@ -4,7 +4,7 @@ use ::game_state::GameState;
 use minion_card::UID;
 use runes::add_tag::AddTag;
 use runes::summon_minion::SummonMinion;
-use tags_list::{CHARGE, SUMMONING_SICKNESS};
+use tags_list::{CHARGE, SUMMONING_SICKNESS, TARGET};
 
 // the play_minion rune is called when you play a minion
 // out of your hand. It will call battle_cry if it has one
@@ -16,17 +16,19 @@ use tags_list::{CHARGE, SUMMONING_SICKNESS};
 
 #[derive(RustcDecodable, RustcEncodable)]
 pub struct PlayMinion {
-    pub card_uid: u32,
-    pub controller_uid: u32,
-    pub field_index: u8,
+    pub minion_uid: UID,
+    pub controller_uid: UID,
+    pub field_index: usize,
+    pub target_uid: UID,
 }
 
 impl PlayMinion {
-    pub fn new(card_uid: u32, controller_uid: u32, field_index: u8) -> PlayMinion {
+    pub fn new(minion_uid: UID, controller_uid: UID, field_index: usize, target_uid: UID) -> PlayMinion {
         PlayMinion {
-            card_uid: card_uid,
+            minion_uid: minion_uid,
             controller_uid: controller_uid,
             field_index: field_index,
+            target_uid: target_uid
         }
     }
 }
@@ -35,18 +37,26 @@ impl Rune for PlayMinion {
     fn execute_rune(&self, mut game_state: &mut GameState) {
 
         {
-            let min = game_state.get_minion(self.card_uid).unwrap().clone();
+
+
+            let min = game_state.get_minion(self.minion_uid).unwrap().clone();
+
+            if min.has_tag(TARGET.to_string()) {
+                //there is no reason for this statment to return anything
+                game_state.run_rhai_statement::<i8>(&min.get_target_function(), true);
+            }
+
             if !min.has_tag(CHARGE.to_string()) {
-                let at = AddTag::new(self.card_uid.clone(), SUMMONING_SICKNESS.to_string());
+                let at = AddTag::new(self.minion_uid.clone(), SUMMONING_SICKNESS.to_string());
                 game_state.execute_rune(Box::new(at));
             }
 
             if min.get_battle_cry() != "default".to_string() {
-
+               game_state.run_rhai_statement::<i8>(&min.get_battle_cry(), true);                
             }
         }
 
-        let s_r = SummonMinion::new(self.controller_uid, self.card_uid, self.field_index);
+        let s_r = SummonMinion::new(self.controller_uid, self.minion_uid, self.field_index as u8);
         game_state.process_rune(Box::new(s_r));
     }
 

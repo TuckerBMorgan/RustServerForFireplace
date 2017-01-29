@@ -1,8 +1,6 @@
 extern crate rand;
 extern crate rhai;
 extern crate regex;
-extern crate futures;
-extern crate tokio_core;
 extern crate rustc_serialize;
 
 mod card;

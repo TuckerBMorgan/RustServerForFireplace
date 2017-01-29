@@ -26,7 +26,12 @@ impl Rune for SummonMinion {
         let controller = game_state.get_mut_controller_by_uid(self.controller_uid);
         match controller {
             Some(controller) => {
-                controller.move_minion_from_unplayed_into_play(self.card_uid);
+                if self.field_index == 0 {
+                    controller.move_minion_from_unplayed_into_play(self.card_uid);
+                }
+                else {
+                    controller.move_minion_from_unplayed_into_play_with_index(self.card_uid, self.field_index as usize);
+                }
             }
             None => {
                 println!("Was unable to find controller in SummonMinion with uuid of {}",

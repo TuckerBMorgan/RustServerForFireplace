@@ -2,7 +2,7 @@
 use minion_card::UID;
 use card::Card;
 use std::collections::HashSet;
-use rand::{thread_rng, Rng};
+use rand::{thread_rng, Rng, sample};
 use client_option::ClientOption;
 
 
@@ -43,7 +43,8 @@ pub struct Controller {
     // to modify it, or look it up
     pub unplayed_minions: Vec<UID>,
     pub in_play_minions: Vec<UID>,
-    pub current_options: Vec<ClientOption>
+    pub current_options: Vec<ClientOption>,
+    pub played_cards: Vec<Card>
 }
 
 impl Controller {
@@ -55,6 +56,12 @@ impl Controller {
         let index = self.unplayed_minions.iter().position(|x| *x == minion_uid).unwrap();
         let val = self.unplayed_minions.remove(index);
         self.in_play_minions.push(val);
+    }
+
+    pub fn move_minion_from_unplayed_into_play_with_index(&mut self, minion_uid: UID, index: usize) {
+        let index = self.unplayed_minions.iter().position(|x| *x == minion_uid).unwrap();
+        let val = self.unplayed_minions.remove(index);
+        self.in_play_minions.insert(index, val);
     }
 
     pub fn add_card_to_deck(&mut self, card: Card) {
@@ -72,6 +79,12 @@ impl Controller {
         let val = self.hand.remove(index);
         self.deck.push(val);
         self.shuffle_deck();
+    }
+
+    pub fn remove_card_from_hand(&mut self, card_uid: UID) {
+        let index = self.hand.iter().position(|x| x.get_uid() == card_uid).unwrap();
+        let val = self.hand.remove(index);
+        self.played_cards.push(val);
     }
 
     pub fn set_base_mana(&mut self, base_mana: u8) {
@@ -143,26 +156,26 @@ impl Controller {
         None
     }
 
+    pub fn get_copy_of_card_from_hand(&self, uid: UID) -> Option<Card>{
+        for card in self.hand.iter() {
+            if card.get_uid() == uid {
+                return Some(card.clone());
+            }
+        }
+        None
+    }
+
     pub fn get_copy_of_in_play(&self) -> Vec<UID> {
         self.in_play_minions.clone()
     }
 
-    pub fn get_n_card_uids_from_deck(&self, mut n: u32) -> Vec<UID> {
+    pub fn get_n_card_uids_from_deck(&self, mut n: usize) -> Vec<UID> {
 
         let mut rng = thread_rng();
-        let mut rets: Vec<UID> = vec![];
 
-        for _ in 0..n {
-            let val = rng.gen_range(0, self.deck.len());
-            let uid = self.deck[val].get_uid();
-            if rets.contains(&uid) {
-                n += 1;
-            } else {
-                rets.push(uid);
-            }
-        }
-
-        rets
+        sample(&mut rng, self.deck.iter(), n).iter().map(|c|{
+            c.get_uid()    
+        }).collect()
     }
     pub fn get_uid(&self) -> UID {
         self.uid.clone()

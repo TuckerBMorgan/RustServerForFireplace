@@ -1,0 +1,7 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+    "rust.racerPath": "~/.cargo/bin/racer",
+    "rust.rustLangSrcPath": "/home/tucker/.multirust/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/src",
+    "rust.rustfmtPath": "~/.cargo/bin/rustfmt",
+    "rust.rustsymPath": "~/.cargo/bin/rustsym"
+}

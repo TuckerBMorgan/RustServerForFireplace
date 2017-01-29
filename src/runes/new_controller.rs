@@ -46,6 +46,7 @@ impl Rune for NewController {
             in_play_minions: vec![],
             client_id: self.client_id.clone(),
             seen_cards: HashSet::new(),
+            played_cards: vec![]
         };
         let card_names = GameState::parse_deck(self.deck.clone());
 

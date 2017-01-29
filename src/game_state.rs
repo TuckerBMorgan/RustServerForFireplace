@@ -27,6 +27,8 @@ use runes::rotate_turn::RotateTurn;
 use runes::shuffle_card::ShuffleCard;
 use runes::new_controller::NewController;
 use runes::mulligan::Mulligan;
+use runes::play_minion::PlayMinion;
+use runes::play_card::PlayCard;
 
 #[derive(Clone)]
 pub struct GameStateData {
@@ -435,7 +437,7 @@ impl<'a> GameState<'a> {
 
         let replacements = self.get_mut_controller_by_uid(controller_uid)
             .unwrap()
-            .get_n_card_uids_from_deck(indices.len() as u32)
+            .get_n_card_uids_from_deck(indices.len())
             .clone();
 
         for uid in replacements {
@@ -470,7 +472,19 @@ impl<'a> GameState<'a> {
                 
             },
             OptionType::EPlayCard => {
-                
+                let card = on_turn_controller.get_copy_of_card_from_hand(option.source_uid).unwrap();
+                match card.get_card_type() {
+                    ECardType::Minion => {
+                        let pc = PlayCard::new(card.get_uid(), on_turn_controller.get_uid(), option_message.board_index as usize, option.target_uid);
+                        self.execute_rune(Box::new(pc));
+                    },  
+                    ECardType::Spell => {
+                        
+                    },
+                    ECardType::Weapon => {
+                        
+                    }
+                }
             }
         }
     }
