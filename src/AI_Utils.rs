@@ -15,6 +15,9 @@ use rand::{thread_rng, Rng};
 use controller::Controller;
 use game_state::GameStateData;
 use minion_card::Minion;
+use rune_vm::rune;
+use runes::play_minion::PlayMinion;
+use runes::play_card::PlayCard;
 
 /*
 *gets how much active AP is on the field for a given 
@@ -45,7 +48,9 @@ fn getHP_field(controller: Controller, game: GameStateData) -> u8{
 	return this_AP;
 }
 //basic for now add taunts later
-fn score_controllers(controller_1: Controller, Controller_2: Controller, game:GameStateData)->f32{
+fn score_controllers(p1Ind: usize, p2Ind: usize, game:GameStateData)->f32{
+	let controller1 = game.get_controller_by_index(p1Ind);
+	let controller2 = game.get_controller_by_index(p2Ind)
 	let mut score = 0;
 	let Con1AP = getAP_field(controller_1, game);
 	let Con2AP = getAP_field(Controller_2, game);
@@ -57,20 +62,24 @@ fn score_controllers(controller_1: Controller, Controller_2: Controller, game:Ga
 #[derive(Clone)]
 pub struct proto_play{
 	Score: f32,
-	Proto_controller_1: Controller,
-	Proto_controller_2: Controller,
 	p1Index: usize,
 	p2Index: usize,
-	Game: GameStateData
+	Game: GameStateData,
+	Runes_Used: Vec<Rune>
 }
 impl proto_play{
-	pub fn new(controller_1:Controller, Controller_2: Controller, p1Ind: usize, p2Ind: usize,game: GameStateData)->proto_play{
-		proto_play{Score = score_controllers(controller_1, Controller_2, game),
-		Proto_controller_1 : controller_1,
-		Proto_controller_2: controller_2,
-		p1Index:p1Ind,
-		p2Index:p2Ind,
-		Game: game}
+	pub fn new(p1Ind: usize, p2Ind: usize,game: GameStateData)->proto_play{
+		let mut sc = score_controllers(p1Ind, p2Ind, game);
+		let mut ga = game;
+		let mut run : Vec<Rune> = Vec::new();
+
+		proto_play{
+			Score = sc,
+			p1Index:p1Ind,
+			p2Index:p2Ind,
+			Game: ga,
+			Runes_Used: run
+		}
 	}
 
 }
@@ -91,6 +100,7 @@ impl play_hand {
 
 	pub fn Summoning_Matrix(controller_1: Controller, Controller_2: Controller, game:GameStateData)->Vec<Vec<proto_play>>{
 		let mut hand = controller_1.get_mut_hand();
+		let controller_1_uid = controller_1.get_uid();
 
 		let mut Play_Matrix : play_hand = play_hand::new(hand.len());
 
@@ -103,7 +113,7 @@ impl play_hand {
 		let locC1 = controllerVector.iter().position(|&b| b==controller_1).unwrap();
 		let locC2 = controllerVector.iter().position(|&b| b==controller_2).unwrap();
 
-		let &mut initialGame : proto_play = proto_play::new(controller_1, controller_2, locC1, locC2, game);
+		let &mut initialGame : proto_play = proto_play::new(locC1, locC2, game);
 		
 		//iterate over the hand elements(columns)
 		for i in 0..hand.len()+1 {
@@ -124,15 +134,26 @@ impl play_hand {
 						Play_Matrix[i][j] = initClone;
 					}
 					//otherwise...
-						//check if j >= hand[i]
+					else{
+						if j >= hand[i].get_cost(){
 							//create playState where minion is played on PlayMatrix[i-1][j-hand[i].cost] 
-							//check if playState.Score >=  Play_Matrix[i-1][j]
-								//playstate is new Play_Matrix[i][j]
-							//otherwise
-								//Play_Matrix[i-1][j] is cloned
-								//Play_Matrix[i][j] is now equal to that clone
-						//otherwise
-							//Play_Matrix[i][j] = Play_Matrix[i][j-1];
+							let mut new_play = Play_Matrix[i-1][j-hand[i].get_cost()].clone();
+							let play_minion : PlayMinion =  PlayMinion::new(hand[i].get_uid(), game.get_controller_by_index(p1Ind), hand.len(), 0);
+							new_play.game.execute_rune(play_minion);
+							new_play.Score = score_controllers(new_play.p1Index, new_play.p2Index, new_play.game);
+							
+							//check if the current score > the score right above
+							if new_play.Score >= Play_Matrix[i-1][j]{
+								Play_Matrix[i][j] = new_play;
+							}
+						}
+						else{
+							
+							let mut repeat = Play_Matrix[i-1][j].clone();
+							Play_Matrix[i][j] = repeat; is now equal to that clone
+							
+						}
+					}
 				}
 			}
 		}
