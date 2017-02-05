@@ -20,11 +20,13 @@ mod tags_list;
 use std::process;
 use std::thread;
 use std::io;
-use game_thread::GameThread;
+use game_thread::{GameThread, ThreadMessage};
 use std::sync::mpsc::channel;
 use player_thread::PlayerThread;
 use std::net::TcpStream;
 use std::net::TcpListener;
+
+
 
 
 
@@ -96,6 +98,21 @@ fn main() {
                                                           rx_server,
                                                           client_id_1,
                                                           client_id_2);
+                    
+                    let payload_message = format!("{{ \"{k}\":\"{v}\"}}", k = "message_type", v = "connection");
+                    
+                    let ready_1 = ThreadMessage {
+                        client_id: new_client_thread_1.client_id.clone(),
+                        payload: payload_message.clone(),
+                    };
+
+                    let ready_2 = ThreadMessage {
+                        client_id: new_client_thread_2.client_id.clone(),
+                        payload: payload_message.clone(),
+                    };
+
+                    let _ = tx_client.send(ready_1);
+                    let _ = tx_client.send(ready_2);
 
                     new_client_thread_1.start_thread(tx_client.clone(), rx_client_1);
                     new_client_thread_2.start_thread(tx_client.clone(), rx_client_2);

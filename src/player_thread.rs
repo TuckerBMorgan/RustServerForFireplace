@@ -3,7 +3,6 @@ use std::io::prelude::*;
 use std::thread;
 use std::thread::JoinHandle;
 use std::net::TcpStream;
-use rustc_serialize::json;
 use rustc_serialize::json::Json;
 
 use std::sync::mpsc::{Sender, Receiver};
@@ -69,15 +68,13 @@ fn player_thread_function(player_thread: PlayerThread,
                           to_server: Sender<ThreadMessage>,
                           from_server: Receiver<ThreadMessage>) {
 
-    let mut payload_message = format!("{{ \"{k}\":\"{v}\"}}", k = "message_type", v = "connection");
-
     match player_thread.stream {
 
         Some(mut stream) => {
             // stream.set_read_timeout(Some(Duration::from_millis(10)));
             let _ = stream.set_nonblocking(true);
             loop {
-
+                /*
                 if !payload_message.is_empty() {
                     let ready = ThreadMessage {
                         client_id: player_thread.client_id,
@@ -86,7 +83,7 @@ fn player_thread_function(player_thread: PlayerThread,
                     let _ = to_server.send(ready);
                     payload_message = "".to_string();
                 }
-
+                */
                 let to_client_message = from_server.try_recv();
 
                 match to_client_message {
@@ -144,11 +141,6 @@ fn player_thread_function(player_thread: PlayerThread,
         }
         // is AI
         None => {
-            let ready = ThreadMessage {
-                client_id: player_thread.client_id,
-                payload: payload_message,
-            };
-            let _ = to_server.send(ready);
             loop {
                 let to_client_message = from_server.try_recv();
 

@@ -14,12 +14,21 @@ pub enum EFileReadResult {
     BadFileRead,
 }
 
+#[derive(Clone, Debug)]
+pub enum EMinionState {
+    NotInPlay,
+    InPlay,
+    Dead
+}
+
 pub struct ProtoMinion {
     pub create_minion_function: String,
     pub battle_cry_function: String,
     pub take_damage_function: String,
     pub generate_options_function: String,
-    pub target_function: String
+    pub target_function: String,
+    pub add_aura_function: String,
+    pub remove_aura_function: String
 }
 
 impl ProtoMinion {
@@ -27,14 +36,18 @@ impl ProtoMinion {
                battle_cry_function: String,
                take_damage_function: String, 
                generate_options_function: String,
-               target_function: String)
+               target_function: String,
+               add_aura_function: String,
+               remove_aura_function: String)
                -> ProtoMinion {
         ProtoMinion {
             create_minion_function: create_minion_function,
             battle_cry_function: battle_cry_function,
             take_damage_function: take_damage_function,
             generate_options_function: generate_options_function,
-            target_function: target_function
+            target_function: target_function,
+            add_aura_function: add_aura_function,
+            remove_aura_function: remove_aura_function
         }
     }
 }
@@ -46,13 +59,17 @@ pub struct Minion {
     uid: UID,
     name: String,
     set: String,
+    state: EMinionState,
 
     tags: HashSet<String>,
+    auras: Vec<UID>,
 
     battle_cry_function: String,//does the minion do something when it is placed into combat
     take_damage_function: String,//does it need to do something special when it takes damage
     generate_option_function: String,//when it is on the field what can it attack
     target_function: String,//when it is in the hand how can I play it
+    add_aura_function: String, //called when a minion needs an aura applied to them
+    remove_aura_function: String, //called when a minion needs a aura removed from them
 
     // the attack varibles, baseAttack is the default value
     // currentAttack is what we use for how much damage we do
@@ -95,7 +112,11 @@ impl Minion {
             battle_cry_function: "null".to_string(),
             take_damage_function: "null".to_string(),
             generate_option_function: "null".to_string(),
-            target_function: "null".to_string()
+            target_function: "null".to_string(),
+            add_aura_function: "null".to_string(),
+            remove_aura_function: "null".to_string(),
+            state: EMinionState::NotInPlay,
+            auras: vec![]
         }
     }
 
@@ -118,8 +139,20 @@ impl Minion {
             battle_cry_function: "default".to_string(),
             take_damage_function: "default".to_string(),
             generate_option_function: "default".to_string(),
-            target_function: "default".to_string()
+            target_function: "default".to_string(),
+            add_aura_function: "default".to_string(),
+            remove_aura_function: "default".to_string(),
+            state: EMinionState::NotInPlay,
+            auras: vec![]
         }
+    }
+
+    pub fn add_aura(&mut self, auras_origin: UID) {
+        self.auras.push(auras_origin);
+    }
+
+    pub fn set_minion_state(&mut self, new_state: EMinionState){
+        self.state = new_state;
     }
 
     pub fn add_tag_to(&mut self, tag: String) {
@@ -182,12 +215,23 @@ impl Minion {
         self.base_health.clone()
     }
 
+    pub fn set_current_health(&mut self, amount: u16) {
+        self.current_health = amount;
+    }
+
     pub fn get_current_health(&self) -> u16 {
         self.current_health.clone()
     }
 
     pub fn get_total_health(&self) -> u16 {
         self.total_health.clone()
+    }
+
+    pub fn set_total_health(&mut self, amount: u16) {
+        self.total_health = amount;
+        if self.current_health > self.total_health {
+            self.current_health = self.total_health.clone();
+        }
     }
 
     // healper function for setting all varibles at one, used in summon minion functions in rhai
@@ -218,16 +262,8 @@ impl Minion {
         self.cost = cost as u16;
     }
 
-    pub fn set_battle_cry(&mut self, battle_cry_function: String) {
-        self.battle_cry_function = battle_cry_function;
-    }
-
     pub fn get_battle_cry(&self) -> String {
         self.battle_cry_function.clone()
-    }
-
-    pub fn set_take_damage(&mut self, take_damage_function: String) {
-        self.take_damage_function = take_damage_function;
     }
 
     pub fn _get_take_damage(&self) -> String {
@@ -235,9 +271,17 @@ impl Minion {
     }
 
     pub fn get_target_function(&self) -> String {
-     self.target_function.clone()   
+        self.target_function.clone()   
     }
 
+    pub fn set_proto_minion_function(&mut self, proto_minion: ProtoMinion){
+        self.battle_cry_function = proto_minion.battle_cry_function;
+        self.take_damage_function = proto_minion.take_damage_function;
+        self.generate_option_function = proto_minion.generate_options_function;
+        self.target_function = proto_minion.target_function;
+        self.add_aura_function = proto_minion.add_aura_function;
+        self.remove_aura_function = proto_minion.remove_aura_function;
+    }
 
     pub fn parse_minion_file(file_contents: String) -> Result<ProtoMinion, EFileReadResult> {
 
@@ -248,6 +292,8 @@ impl Minion {
         let mut take_damage_function: String = "hold".to_string();
         let mut generate_options_function: String = "hold".to_string();
         let mut target_function: String = "hold".to_string();
+        let mut add_aura_function: String = "hold".to_string();
+        let mut remove_aura_function: String = "hold".to_string();
 
         let mut i: u32 = 0;
 
@@ -262,6 +308,10 @@ impl Minion {
                 generate_options_function = String::from(function);
             } else if i == 5 {
                 target_function = String::from(function);
+            } else if i == 6 {
+                add_aura_function = String::from(function);
+            } else if i == 7 {
+                remove_aura_function = String::from(function);
             }
             i += 1;
         }
@@ -270,7 +320,9 @@ impl Minion {
                                      battle_cry_function,
                                      take_damage_function,
                                      generate_options_function,
-                                     target_function);
+                                     target_function,
+                                     add_aura_function,
+                                     remove_aura_function);
         Ok(proto)
     }
 }

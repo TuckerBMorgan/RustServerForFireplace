@@ -20,3 +20,7 @@ create_minion(game_state)
 //generate_options function goes here
 @@
 //target function goes heres
+@@
+//add aura function goes here
+@@
+//remove aura function goes here

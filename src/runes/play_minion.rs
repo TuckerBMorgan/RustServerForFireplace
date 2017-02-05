@@ -37,10 +37,8 @@ impl Rune for PlayMinion {
     fn execute_rune(&self, mut game_state: &mut GameState) {
 
         {
-
-
             let min = game_state.get_minion(self.minion_uid).unwrap().clone();
-
+            
             if min.has_tag(TARGET.to_string()) {
                 //there is no reason for this statment to return anything
                 game_state.run_rhai_statement::<i8>(&min.get_target_function(), true);
@@ -50,13 +48,12 @@ impl Rune for PlayMinion {
                 let at = AddTag::new(self.minion_uid.clone(), SUMMONING_SICKNESS.to_string());
                 game_state.execute_rune(Box::new(at));
             }
-
-            if min.get_battle_cry() != "default".to_string() {
-               game_state.run_rhai_statement::<i8>(&min.get_battle_cry(), true);                
+            if !min.get_battle_cry().contains("default") {
+               game_state.run_rhai_statement::<i8>(&min.get_battle_cry(), true);                    
             }
         }
 
-        let s_r = SummonMinion::new(self.controller_uid, self.minion_uid, self.field_index as u8);
+        let s_r = SummonMinion::new(self.minion_uid, self.controller_uid, self.field_index as u8);
         game_state.process_rune(Box::new(s_r));
     }
 
@@ -65,6 +62,6 @@ impl Rune for PlayMinion {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap()
+        json::encode(self).unwrap().replace("{", "{\"runeType\":\"PlayMinion\",")
     }
 }

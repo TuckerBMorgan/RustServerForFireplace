@@ -22,7 +22,7 @@ impl AddTag {
 
 impl Rune for AddTag {
     fn execute_rune(&self, mut game_state: &mut GameState) {
-        let mut minion = game_state.get_mut_minion(self.minion_uid);
+        let minion = game_state.get_mut_minion(self.minion_uid);
         match minion {
             Some(minion) => {
                 minion.add_tag_to(self.tag.to_string().clone());
