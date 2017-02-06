@@ -6,7 +6,6 @@ use ::process_message;
 use ::game_state::GameState;
 use std::thread::JoinHandle;
 use std::sync::mpsc::{Sender, Receiver};
-use rune_vm::Rune;
 
 
 pub struct ThreadMessage {
@@ -21,7 +20,6 @@ pub struct GameThread {
     pub client_1_id: u32,
     pub client_2_id: u32,
 }
-
 
 impl GameThread {
     pub fn new(client_1: Sender<ThreadMessage>,

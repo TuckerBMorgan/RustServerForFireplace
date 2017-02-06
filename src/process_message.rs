@@ -63,7 +63,7 @@ fn new_connection(client_id: u32, mut game_state: &mut GameState) {
         hero: "hunter".to_string(),
         client_id: client_id,
         deck: "test.deck".to_string(),
-        isMe: false,
+        is_me: false,
     };
 
     game_state.new_connection(new_controller_rune);

@@ -2,39 +2,44 @@
 use ::rune_vm::Rune;
 use rustc_serialize::json;
 use ::game_state::GameState;
-use minion_card::UID;
+use minion_card::{UID, EMinionState};
 
 #[derive(RustcDecodable, RustcEncodable)]
 pub struct SummonMinion {
-    pub card_uid: UID,
+    pub minion_uid: UID,
     pub controller_uid: UID,
     pub field_index: u8,
 }
 
 impl SummonMinion {
-    pub fn new(card_uid: UID, controller_uid: UID, field_index: u8) -> SummonMinion {
+    pub fn new(minion_uid: UID, controller_uid: UID, field_index: u8) -> SummonMinion {
         SummonMinion {
-            card_uid: card_uid,
+            minion_uid: minion_uid,
             controller_uid: controller_uid,
             field_index: field_index,
         }
     }
 }
 
-impl Rune for SummonMinion {
+impl Rune for SummonMinion {    
     fn execute_rune(&self, game_state: &mut GameState) {
+
+        {
+            game_state.get_mut_minion(self.minion_uid).unwrap().set_minion_state(EMinionState::InPlay);
+        }
+        
         let controller = game_state.get_mut_controller_by_uid(self.controller_uid);
         match controller {
             Some(controller) => {
                 if self.field_index == 0 {
-                    controller.move_minion_from_unplayed_into_play(self.card_uid);
+                    controller.move_minion_from_unplayed_into_play(self.minion_uid);
                 }
                 else {
-                    controller.move_minion_from_unplayed_into_play_with_index(self.card_uid, self.field_index as usize);
+                    controller.move_minion_from_unplayed_into_play_with_index(self.minion_uid, self.field_index as usize);
                 }
             }
             None => {
-                println!("Was unable to find controller in SummonMinion with uuid of {}",
+                println!("Was unable to find controller in SummonMinion with uid of {}",
                          self.controller_uid);
             }
         }
@@ -45,6 +50,6 @@ impl Rune for SummonMinion {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap()
+        json::encode(self).unwrap().replace("{", "{\"runeType\":\"SummonMinion\",")
     }
 }

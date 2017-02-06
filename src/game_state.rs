@@ -5,12 +5,12 @@ use std::any::Any;
 use std::net::TcpStream;
 use card::{Card, ECardType};
 use controller::{Controller, EControllerState};
-use minion_card::{Minion, UID};
+use minion_card::{Minion, UID, EMinionState};
 use game_thread::GameThread;
-use client_option::{ClientOption, OptionType};
+use client_option::{ClientOption, OptionType, OptionsPackage};
 use client_message::OptionsMessage;
 
-use rand::{thread_rng, Rng};
+use rand::thread_rng;
 use entity::Entity;
 use rhai::{Engine, FnRegister, Scope};
 
@@ -27,8 +27,9 @@ use runes::rotate_turn::RotateTurn;
 use runes::shuffle_card::ShuffleCard;
 use runes::new_controller::NewController;
 use runes::mulligan::Mulligan;
-use runes::play_minion::PlayMinion;
 use runes::play_card::PlayCard;
+use runes::kill_minion::KillMinion;
+
 
 #[derive(Clone)]
 pub struct GameStateData {
@@ -239,7 +240,6 @@ impl<'a> GameState<'a> {
         println!("executing rune {}", rune.to_json());
         rune.execute_rune(self);
 
-
         let controllers = self.game_state_data.get_controller_uids();
 
         for controller in controllers {
@@ -289,8 +289,8 @@ impl<'a> GameState<'a> {
                                 true);
 
 
-                        minion.set_battle_cry(proto_minion_good.battle_cry_function);
-                        minion.set_take_damage(proto_minion_good.take_damage_function);
+                        minion.set_proto_minion_function(proto_minion_good);
+                        minion.set_minion_state(EMinionState::NotInPlay);
                         let play_card = Card::new(minion.get_cost() as u8,
                                                   ECardType::Minion,
                                                   minion.get_id(),
@@ -362,26 +362,6 @@ impl<'a> GameState<'a> {
         self.players_ready = self.players_ready + 1;
     }
 
-    // get the number of players who are ready
-    pub fn get_players_ready(&self) {
-        self.players_ready;
-    }
-
-    pub fn get_uid(&mut self) -> UID {
-        self.game_state_data.entity_count = self.game_state_data.entity_count + 1;
-        self.game_state_data.entity_count
-    }
-
-    pub fn get_team(&mut self) -> u8 {
-        let ret_team = self.team_count.clone();
-        self.team_count = self.team_count + 1;
-        return ret_team;
-    }
-
-    pub fn get_connection_number(&self) -> u8 {
-        self.connection_number
-    }
-
     pub fn new_connection(&mut self, mut new_controller: NewController) {
         let use_first = self.first_to_connect.clone();
 
@@ -389,16 +369,16 @@ impl<'a> GameState<'a> {
             Some(first_to_connect) => {
                 let mut good_first = self.first_to_connect.clone().unwrap();
 
-                good_first.isMe = true;
+                good_first.is_me = true;
                 self.report_rune_to_client(good_first.client_id.clone(), good_first.to_json());
-                good_first.isMe = false;
+                good_first.is_me = false;
 
                 self.report_rune_to_client(good_first.client_id.clone(), new_controller.to_json());
 
-                new_controller.isMe = true;
+                new_controller.is_me = true;
                 self.report_rune_to_client(new_controller.client_id.clone(),
                                            new_controller.to_json());
-                new_controller.isMe = false;
+                new_controller.is_me = false;
 
                 self.report_rune_to_client(new_controller.client_id.clone(), good_first.to_json());
 
@@ -452,30 +432,44 @@ impl<'a> GameState<'a> {
 
             let rt = RotateTurn::new();
             self.execute_rune(Box::new(rt));
+
+            let options = self.get_mut_controller_by_uid(controller_uid).unwrap().clone().generate_options_from_every_source(self).clone();
+            self.get_mut_controller_by_uid(controller_uid).unwrap().set_client_options(options.clone());
+
+            let op = OptionsPackage{options: options};
+
+            self.report_rune_to_client(client_id.clone(), op.to_json());
         } else {
             self.mulligan_played_out += 1;
         }
 
-
         let mut controller = self.get_mut_controller_by_uid(controller_uid).unwrap();
-        controller.controller_state = EControllerState::WaitingForStart;
+        
+        match controller.controller_state {
+            EControllerState::Mulligan => {
+                controller.controller_state = EControllerState::WaitingForStart;
+            },
+            _ => {
+                
+            }
+        }
     }
 
     pub fn execute_option(&mut self, option_message: OptionsMessage) {
         let index = option_message.index.clone();
         let controller_index = self.get_on_turn_player();
-        let ref on_turn_controller = self.game_state_data.get_controllers()[controller_index as usize];
-        let option = on_turn_controller.get_client_option(index as usize);
 
+        let controller_uid = self.game_state_data.get_controllers()[controller_index as usize].get_uid().clone();
+        let option = self.game_state_data.get_controllers()[controller_index as usize].get_client_option(index as usize).clone();
         match option.option_type {
             OptionType::EAttack => {
                 
             },
             OptionType::EPlayCard => {
-                let card = on_turn_controller.get_copy_of_card_from_hand(option.source_uid).unwrap();
+                let card = self.game_state_data.get_controllers()[controller_index as usize].get_copy_of_card_from_hand(option.source_uid).unwrap();
                 match card.get_card_type() {
                     ECardType::Minion => {
-                        let pc = PlayCard::new(card.get_uid(), on_turn_controller.get_uid(), option_message.board_index as usize, option.target_uid);
+                        let pc = PlayCard::new(card.get_uid(), controller_uid, option_message.board_index as usize, option.target_uid);
                         self.execute_rune(Box::new(pc));
                     },  
                     ECardType::Spell => {
@@ -485,8 +479,74 @@ impl<'a> GameState<'a> {
                         
                     }
                 }
+            },
+            OptionType::EEndTurn => {
+                let rt = RotateTurn::new();
+                self.execute_rune(Box::new(rt));
             }
         }
+
+        self.resolve_state();
+        let controller_index = self.get_on_turn_player();
+
+        let new_op = self.game_state_data.get_controllers()[controller_index as usize].clone().generate_options_from_every_source(self);
+        let mut_uid = self.game_state_data.get_controllers()[controller_index as usize].get_uid();
+        let client_id = self.game_state_data.get_controllers()[controller_index as usize].client_id;
+
+        self.get_mut_controller_by_uid(mut_uid).unwrap().set_client_options(new_op.clone());
+        
+        let op = OptionsPackage{options: new_op};
+        self.report_rune_to_client(client_id, op.to_json());
+
+        let mut resolve = self.resolve_state();
+
+        while resolve {
+            resolve = self.resolve_state();
+        }
+    }
+
+
+    pub fn resolve_state(&mut self) -> bool{
+        // if anything that could touch off a call of the function again, deaths, summons, etc etc, we set this to true
+        let mut redo = false;
+
+        let gsd = self.game_state_data.clone();
+
+        let controllers = gsd.get_controllers().clone();
+
+
+        for controller in controllers.iter() {
+            
+            if controller.get_life() <= 0 {
+                //mark controller for death 
+            }
+            
+            let minions = controller.get_copy_of_in_play();
+            for min in minions {
+                
+                let minion = gsd.get_minion(min).unwrap().clone();
+
+                let mut dead_minions = vec![];
+                if minion.get_current_health() <= 0 {
+                    let km = KillMinion::new(controller.get_uid(), minion.get_uid());
+                    dead_minions.push(Box::new(km));
+                    redo = true;
+                }
+                for rune in dead_minions {
+                    self.execute_rune(rune);
+                }
+            }
+
+
+
+            for min in minions {
+
+            }
+        }
+
+
+
+        redo
     }
 
     pub fn get_controller_number(&self) -> usize {
@@ -499,8 +559,8 @@ impl<'a> GameState<'a> {
 
         if self.game_state_data.get_number_of_controllers() == 2 {
 
-            let mut rng = thread_rng();
-            let first: u16 = rng.gen_range(0, 1);
+            let _rng = thread_rng();
+            let first: u16 = 0;//in the release this has to be a 
 
             let other = 1 - first;
 
@@ -540,13 +600,6 @@ impl<'a> GameState<'a> {
         &mut self.game_state_data.get_mut_controllers()[index]
     }
 
-    // this is the function that is used to apply all passive rules about the game logic after a major event has occured
-    // such as a player action ,or the start and end of turns
-    pub fn resolve_state(&mut self) {
-        // if anything that could touch off a call of the function again, deaths, summons, etc etc, we set this to true
-        let mut redo = false;
-    }
-
     pub fn get_mut_controller_by_uid(&mut self, controller_uid: UID) -> Option<&mut Controller> {
         let index =
             self.game_state_data.controllers.iter().position(|x| x.uid == controller_uid).unwrap();
@@ -576,4 +629,25 @@ impl<'a> GameState<'a> {
             self.game_state_data.controllers.iter().position(|x| x.uid != not_this_controller_uid).unwrap();
         self.game_state_data.controllers.get(index).unwrap()
     }
+
+    // get the number of players who are ready
+    pub fn get_players_ready(&self) {
+        self.players_ready;
+    }
+
+    pub fn get_uid(&mut self) -> UID {
+        self.game_state_data.entity_count = self.game_state_data.entity_count + 1;
+        self.game_state_data.entity_count
+    }
+
+    pub fn get_team(&mut self) -> u8 {
+        let ret_team = self.team_count.clone();
+        self.team_count = self.team_count + 1;
+        return ret_team;
+    }
+
+    pub fn get_connection_number(&self) -> u8 {
+        self.connection_number
+    }
+
 }

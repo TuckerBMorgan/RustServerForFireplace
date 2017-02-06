@@ -1,10 +1,8 @@
 use ::rune_vm::Rune;
 use rustc_serialize::json;
-  use ::game_state::GameState;
+use ::game_state::GameState;
 use minion_card::UID;
-use runes::add_tag::AddTag;
 use runes::play_minion::PlayMinion;
-use tags_list::{CHARGE, SUMMONING_SICKNESS};
 
 // the play_minion rune is called when you play a minion
 // out of your hand. It will call battle_cry if it has one
@@ -35,12 +33,16 @@ impl PlayCard {
 
 impl Rune for PlayCard {
     fn execute_rune(&self, mut game_state: &mut GameState) {
-        let ref controller = game_state.get_controller_by_uid(self.controller_uid).unwrap();
-        let card = controller.get_copy_of_card_from_hand(self.card_uid);
+        let card = game_state.get_controller_by_uid(self.controller_uid).unwrap().get_copy_of_card_from_hand(self.card_uid);
 
-        game_state.get_mut_controller_by_uid(self.controller_uid).unwrap().remove_card_from_hand(card.unwrap().get_content().parse().unwrap().copy());
+        let card_unwrap = card.unwrap();//.get_content().parse().unwrap().copy();
+        let content = card_unwrap.get_content();
+        let parse = content.parse::<UID>();
+        let parse_unwrap = parse.unwrap().clone();
+
+        game_state.get_mut_controller_by_uid(self.controller_uid).unwrap().remove_card_from_hand(parse_unwrap);
         
-        let pm = PlayMinion::new(card.unwrap().get_content().parse().unwrap(), self.controller_uid, self.field_index as usize, self.target_uid);
+        let pm = PlayMinion::new(card_unwrap.get_content().parse().unwrap(), self.controller_uid, self.field_index as usize, self.target_uid);
         game_state.execute_rune(Box::new(pm));
     }
 
@@ -49,6 +51,6 @@ impl Rune for PlayCard {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap()
+        json::encode(self).unwrap().replace("{", "{\"runeType\":\"PlayCard\",")
     }
 }

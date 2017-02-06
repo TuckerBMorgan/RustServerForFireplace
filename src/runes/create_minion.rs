@@ -25,6 +25,7 @@ pub struct CreateMinion {
 }
 
 impl CreateMinion {
+    #[allow(dead_code)]
     pub fn new(cost: u16,
                id: String,
                uid: UID,

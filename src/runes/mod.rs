@@ -12,3 +12,4 @@ pub mod set_base_mana;
 pub mod set_mana;
 pub mod mulligan;
 pub mod play_card;
+pub mod kill_minion;

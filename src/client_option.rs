@@ -1,13 +1,16 @@
 use game_state::GameState;
 use controller::Controller;
 use minion_card::UID;
+use rustc_serialize::json;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, RustcDecodable, RustcEncodable)]
 pub enum OptionType {
     EAttack,
-    EPlayCard
+    EPlayCard,
+    EEndTurn
 }
 
+#[derive(RustcDecodable, RustcEncodable)]
 #[derive(Copy, Clone, Debug)]
 pub struct ClientOption {
     pub option_type: OptionType,
@@ -23,6 +26,21 @@ impl ClientOption {
             source_uid: source_uid,
             target_uid: target_uid,
         }
+    }
+}
+
+#[derive(RustcDecodable, RustcEncodable)]
+pub struct OptionsPackage {
+    pub options: Vec<ClientOption>
+}
+
+impl OptionsPackage {
+    pub fn to_json(&self) -> String {
+        let mut _str = json::encode(self).unwrap();
+        _str.remove(0);
+        let mut added_front = "{\"runeType\":\"optionRune\",".to_string();
+        added_front += &_str[..];
+        added_front
     }
 }
 

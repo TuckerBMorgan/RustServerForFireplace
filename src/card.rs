@@ -6,6 +6,7 @@ use tags_list::{TARGET};
 use controller::Controller;
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub enum ECardType {
     Minion,
     Spell,
@@ -42,7 +43,7 @@ impl Card {
         }
     }
 
-    pub fn get_cost(&self) -> u8 {
+    pub fn _get_cost(&self) -> u8 {
         self.cost.clone()
     }
 
@@ -50,7 +51,7 @@ impl Card {
         self.uid.clone()
     }
 
-    pub fn get_name(&self) -> String {
+    pub fn _get_name(&self) -> String {
         self.name.clone()
     }
 
@@ -58,12 +59,8 @@ impl Card {
         self.card_type
     }
 
-    pub fn get_id(&self) -> String {
+    pub fn _get_id(&self) -> String {
         self.id.clone()
-    }
-
-    pub fn get_play_options(&self, _game_state: &GameState) -> Vec<ClientOption> {
-        vec![]
     }
 
     pub fn get_content(&self) -> String {
@@ -110,6 +107,9 @@ impl OptionGenerator for Card {
                     return co;
                 }
             }
+            let mut co = vec![];
+            co.push(ClientOption::new(self.uid, 0, OptionType::EPlayCard));
+            return co;
         }
         return vec![];
     }
