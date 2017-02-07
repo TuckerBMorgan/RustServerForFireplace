@@ -522,9 +522,9 @@ impl<'a> GameState<'a> {
             }
             
             let minions = controller.get_copy_of_in_play();
-            for min in minions {
+            for min in minions.iter() {
                 
-                let minion = gsd.get_minion(min).unwrap().clone();
+                let minion = gsd.get_minion(*min).unwrap().clone();
 
                 let mut dead_minions = vec![];
                 if minion.get_current_health() <= 0 {
@@ -539,7 +539,7 @@ impl<'a> GameState<'a> {
 
 
 
-            for min in minions {
+            for min in minions.iter() {
 
             }
         }
