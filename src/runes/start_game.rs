@@ -2,7 +2,7 @@ use ::rune_vm::Rune;
 use ::game_state::GameState;
 use minion_card::UID;
 
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct StartGame {
 
 }
@@ -22,5 +22,9 @@ impl Rune for StartGame {
 
     fn to_json(&self) -> String {
         "{\"runeType\":\"StartGame\"}".to_string()
+    }
+
+    fn into_box(&self) -> Box<Rune> {
+        Box::new(self.clone())
     }
 }

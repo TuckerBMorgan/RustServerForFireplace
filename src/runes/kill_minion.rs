@@ -20,7 +20,7 @@ impl KillMinion {
     }
 }
 
-impl Rune for KillMinion{
+impl Rune for KillMinion {
     fn execute_rune(&self, game_state: &mut GameState) {
     
         if game_state.get_minion(self.minion_uid).unwrap().has_tag(DEATH_RATTLE.to_string()) {
@@ -37,5 +37,9 @@ impl Rune for KillMinion{
 
     fn to_json(&self) -> String {
         json::encode(self).unwrap().replace("{", "{\"runeType\":\"KillMinion\",")
+    }
+
+    fn into_box(&self) -> Box<Rune> {
+        Box::new(self.clone())
     }
 }

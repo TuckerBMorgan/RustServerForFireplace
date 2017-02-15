@@ -5,7 +5,7 @@ use minion_card::UID;
 
 
 
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct AddTag {
     pub minion_uid: UID,
     pub tag: String,
@@ -40,5 +40,9 @@ impl Rune for AddTag {
 
     fn to_json(&self) -> String {
         json::encode(self).unwrap().replace("{", "{\"runeType\":\"AddTag\",")
+    }
+
+    fn into_box(&self) -> Box<Rune> {
+        Box::new(self.clone())
     }
 }

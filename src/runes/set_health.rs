@@ -32,4 +32,8 @@ impl Rune for SetHealth {
     fn to_json(&self) -> String {
         json::encode(self).unwrap().replace("{", "{\"runeType\":\"SetHealth\",")
     }
+
+    fn into_box(&self) -> Box<Rune> {
+        Box::new(*self.clone())
+    }
 }

@@ -6,7 +6,7 @@ use ::game_state::GameState;
 use minion_card::UID;
 use runes::create_minion::CreateMinion;
 
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct DealCard {
     pub card_uid: UID,
     pub controller_uid: UID,
@@ -49,7 +49,6 @@ impl Rune for DealCard {
                     game_state.execute_rune(Box::new(c_m));
                 }
 
-
                 game_state.get_mut_controller_by_uid(self.controller_uid)
                     .unwrap()
                     .move_card_from_deck_to_hand(self.card_uid);
@@ -65,5 +64,9 @@ impl Rune for DealCard {
 
     fn to_json(&self) -> String {
         json::encode(self).unwrap().replace("{", "{\"runeType\":\"DealCard\",")
+    }
+
+    fn into_box(&self) -> Box<Rune> {
+        Box::new(self.clone())
     }
 }

@@ -1,6 +1,6 @@
 minion
 @@
-fn create_minion(game_state) {
+create_minion_function**fn create_minion(game_state) {
     var  min = new_minion();
     
     min.set_uid(1);
@@ -13,14 +13,9 @@ fn create_minion(game_state) {
 }
 create_minion(game_state)
 @@
-//battle_cry function goes here
+battle_cry_function**fn battle_cry_function(game_state) {
+    //stuff goes inhere
+}
 @@
-//take_damage function goes here
-@@
-//generate_options function goes here
-@@
-//target function goes heres
-@@
-//add aura function goes here
-@@
-//remove aura function goes here
+//whatever function that card needs, followingthe layout of the above example
+//this is so that we only need to specify special functions for those that need them

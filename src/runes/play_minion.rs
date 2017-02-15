@@ -14,7 +14,7 @@ use tags_list::{CHARGE, SUMMONING_SICKNESS, TARGET};
 //
 
 
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct PlayMinion {
     pub minion_uid: UID,
     pub controller_uid: UID,
@@ -41,15 +41,20 @@ impl Rune for PlayMinion {
             
             if min.has_tag(TARGET.to_string()) {
                 //there is no reason for this statment to return anything
-                game_state.run_rhai_statement::<i8>(&min.get_target_function(), true);
+                game_state.run_rhai_statement::<i8>(&min.get_function("target_function".to_string()).unwrap(), true);
             }
 
             if !min.has_tag(CHARGE.to_string()) {
                 let at = AddTag::new(self.minion_uid.clone(), SUMMONING_SICKNESS.to_string());
                 game_state.execute_rune(Box::new(at));
             }
-            if !min.get_battle_cry().contains("default") {
-               game_state.run_rhai_statement::<i8>(&min.get_battle_cry(), true);                    
+            match min.get_function("battle_cry_function".to_string()) {
+                Some(function) => {
+                    game_state.run_rhai_statement::<i8>(&function, true);
+                },
+                _ => {
+
+                }
             }
         }
 
@@ -63,5 +68,9 @@ impl Rune for PlayMinion {
 
     fn to_json(&self) -> String {
         json::encode(self).unwrap().replace("{", "{\"runeType\":\"PlayMinion\",")
+    }
+
+    fn into_box(&self) -> Box<Rune> {
+        Box::new(self.clone())
     }
 }
