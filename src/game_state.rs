@@ -34,6 +34,10 @@ use runes::new_controller::NewController;
 use runes::mulligan::Mulligan;
 use runes::play_card::PlayCard;
 use runes::kill_minion::KillMinion;
+use runes::modify_health::ModifyHealth;
+use runes::set_health::SetHealth;
+use runes::set_attack::SetAttack;
+
 
 
 #[derive(Clone)]
@@ -42,6 +46,7 @@ pub struct GameStateData {
     minions: HashMap<UID, Minion>,
     controller_uid_to_client_id: HashMap<UID, u32>,
     client_id_to_controller_uid: HashMap<UID, u32>,
+    attacked_this_turn: Vec<UID>,
     entity_count: u32,
     on_turn_player: i8,
 }
@@ -50,11 +55,12 @@ impl GameStateData {
     pub fn new() -> GameStateData {
         GameStateData {
             controllers: vec![],
-            entity_count: 1,//this is really emportant that we start this at 1, beause new UIDS are the current value of this, but we need a value for not a UID, which is 0
+            entity_count: 1, //this is really emportant that we start this at 1, beause new UIDS are the current value of this, but we need a value for not a UID, which is 0
             minions: HashMap::new(),
             controller_uid_to_client_id: HashMap::new(),
             client_id_to_controller_uid: HashMap::new(),
             on_turn_player: 0,
+            attacked_this_turn: vec![],
         }
     }
 
@@ -72,6 +78,10 @@ impl GameStateData {
 
     pub fn get_on_turn_player(&self) -> i8 {
         self.on_turn_player.clone()
+    }
+
+    pub fn add_has_attack(&mut self, uid: UID) {
+        self.attacked_this_turn.push(uid);
     }
 
     pub fn set_on_turn_player(&mut self, on_turn_player: i8) {
@@ -131,7 +141,7 @@ impl GameStateData {
         uids
     }
 
-    pub fn get_all_minions(&self) -> Vec<Minion>{
+    pub fn get_all_minions(&self) -> Vec<Minion> {
         let mut mins = vec![];
         for (_, v) in self.minions.clone() {
             mins.push(v.clone());
@@ -158,8 +168,6 @@ pub struct GameState<'a> {
     entities: HashMap<String, Box<Entity>>,
     // all the streams of the current people connected so we can talk to them again
     connections: Vec<Box<TcpStream>>,
-    // those entities that have attacked this turn
-    attacked_this_turn: Vec<Box<Entity>>,
 
     first_to_connect: Option<NewController>,
 
@@ -176,7 +184,6 @@ impl<'a> GameState<'a> {
             connection_number: 0,
             connections: vec![],
             rune_queue: VecDeque::new(),
-            attacked_this_turn: vec![],
             entities: HashMap::new(),
             script_engine: Engine::new(),
             game_scope: vec![],
@@ -191,20 +198,33 @@ impl<'a> GameState<'a> {
     // this function does that
     pub fn filled_up_scripting_engine(&mut self) {
 
+        //        self.script_engine.register_std_lin();
         self.script_engine.register_type::<GameStateData>();
         self.script_engine.register_type::<UID>();
         self.script_engine.register_type::<Minion>();
         self.script_engine.register_type::<ClientOption>();
         self.script_engine.register_type::<Vec<ClientOption>>();
         self.script_engine.register_type::<Vec<Minion>>();
+        self.script_engine.register_type::<ModifyHealth>();
+        self.script_engine.register_type::<SetHealth>();
+        self.script_engine.register_type::<SetAttack>();
+        self.script_engine.register_type::<&Rune>();
+        self.script_engine.register_type::<Vec<&Rune>>();
+
         self.script_engine.register_fn("new_minion", Minion::new_other);
         self.script_engine.register_fn("minion_basic_info", Minion::set_basic_info);
         self.script_engine.register_fn("minion_attack_health_basic",
                                        Minion::set_attack_and_health_basics);
+        self.script_engine.register_fn("minion_set_spell_damage", Minion::set_spell_damage);
         self.script_engine.register_fn("set_uid", Minion::set_uid);
+        self.script_engine.register_fn("minion_get_uid", Minion::get_uid);
+        self.script_engine.register_fn("minion_get_total_health", Minion::get_total_health);
         self.script_engine.register_fn("minion_add_tag", Minion::add_tag_to);
         self.script_engine.register_fn("get_uid", GameStateData::get_uid);
         self.script_engine.register_fn("print", GameState::print);
+        self.script_engine.register_fn("new_set_health", SetHealth::new);
+        self.script_engine.register_fn("new_modify_health", ModifyHealth::new);
+        self.script_engine.register_fn("new_set_attack", SetAttack::new);
     }
 
     pub fn print(string: String) {
@@ -228,16 +248,17 @@ impl<'a> GameState<'a> {
         self.game_scope.push((name.clone(), Box::new(varible.clone())));
     }
 
-    pub fn add_type_vec_to_game_scope<T: 'static + Clone + fmt::Debug>(&mut self, name: String, varible: Vec<T> ) {
+    pub fn add_type_vec_to_game_scope<T: 'static + Clone + fmt::Debug>(&mut self,
+                                                                       name: String,
+                                                                       varible: Vec<T>) {
         self.game_scope.push((name.clone(), Box::new(varible.clone())));
     }
 
     pub fn run_rhai_statement<T: Any + Clone>(&mut self,
-                                                           rhai_statement: &String,
-                                                           with_write_back: bool)//this last paramater is a odd one, but it "should" insure that the actions taken by the statment do change the current game state
-                                                           //it will also cause the function to execute faster
-                                                           -> T {
-        
+                                              rhai_statement: &String,
+                                              with_write_back: bool)
+                                              -> T {
+
         self.game_scope.push(("game_state".to_string(), Box::new(self.game_state_data.clone())));
 
         let result = self.script_engine
@@ -315,21 +336,24 @@ impl<'a> GameState<'a> {
             if spl[0].contains("minion") {
                 let proto_minion = Minion::parse_minion_file(contents.clone());
 
+                let p_copy = proto_minion.clone();
+
+                let ks = p_copy.keys().clone();
                 let mut minion =
-                    self.run_rhai_statement::<Minion>(
-                        &proto_minion["create_minion_function"],
-                        //HashMap::new(),
-                        true);
+                    self.run_rhai_statement::<Minion>(&proto_minion.get(&"create_minion_function"
+                                                              .to_string())
+                                                          .unwrap(),
+                                                      true);
 
                 minion.set_minion_state(EMinionState::NotInPlay);
-                
+
                 minion.set_functions(proto_minion);
                 let play_card = Card::new(minion.get_cost() as u8,
-                                            ECardType::Minion,
-                                            minion.get_id(),
-                                            self.get_uid(),
-                                            minion.get_name(),
-                                            minion.get_uid().to_string());
+                                          ECardType::Minion,
+                                          minion.get_id(),
+                                          self.get_uid(),
+                                          minion.get_name(),
+                                          minion.get_uid().to_string());
 
                 // we do this because, a minion is not a card,
                 // but something placed into the field BY a card
@@ -428,12 +452,11 @@ impl<'a> GameState<'a> {
                 EControllerState::Mulligan => {
                     let mut counter: usize = 0;
                     for i in indices.iter() {
-                        let card_uid =
-                            self.get_mut_controller_by_uid(controller_uid)
-                                    .unwrap()
-                                    .get_mut_hand()[(*i as usize) -
-                                                                                counter]
-                                .get_uid();
+                        let card_uid = self.get_mut_controller_by_uid(controller_uid)
+                                .unwrap()
+                                .get_mut_hand()
+                                           [(*i as usize) - counter]
+                            .get_uid();
                         counter += 1;
                         let sc = ShuffleCard::new(card_uid.clone(), controller_uid.clone());
                         self.execute_rune(Box::new(sc));
@@ -461,10 +484,16 @@ impl<'a> GameState<'a> {
             let rt = RotateTurn::new();
             self.execute_rune(Box::new(rt));
 
-            let options = self.get_mut_controller_by_uid(controller_uid).unwrap().clone().generate_options_from_every_source(self).clone();
-            self.get_mut_controller_by_uid(controller_uid).unwrap().set_client_options(options.clone());
+            let options = self.get_mut_controller_by_uid(controller_uid)
+                .unwrap()
+                .clone()
+                .generate_options_from_every_source(self)
+                .clone();
+            self.get_mut_controller_by_uid(controller_uid)
+                .unwrap()
+                .set_client_options(options.clone());
 
-            let op = OptionsPackage{options: options};
+            let op = OptionsPackage { options: options };
 
             self.report_rune_to_client(client_id.clone(), op.to_json());
         } else {
@@ -472,14 +501,12 @@ impl<'a> GameState<'a> {
         }
 
         let mut controller = self.get_mut_controller_by_uid(controller_uid).unwrap();
-        
+
         match controller.controller_state {
             EControllerState::Mulligan => {
                 controller.controller_state = EControllerState::WaitingForStart;
-            },
-            _ => {
-                
             }
+            _ => {}
         }
     }
 
@@ -487,27 +514,29 @@ impl<'a> GameState<'a> {
         let index = option_message.index.clone();
         let controller_index = self.get_on_turn_player();
 
-        let controller_uid = self.game_state_data.get_controllers()[controller_index as usize].get_uid().clone();
-        let option = self.game_state_data.get_controllers()[controller_index as usize].get_client_option(index as usize).clone();
+        let controller_uid =
+            self.game_state_data.get_controllers()[controller_index as usize].get_uid().clone();
+        let option = self.game_state_data.get_controllers()[controller_index as usize]
+            .get_client_option(index as usize)
+            .clone();
         match option.option_type {
-            OptionType::EAttack => {
-                
-            },
+            OptionType::EAttack => {}
             OptionType::EPlayCard => {
-                let card = self.game_state_data.get_controllers()[controller_index as usize].get_copy_of_card_from_hand(option.source_uid).unwrap();
+                let card = self.game_state_data.get_controllers()[controller_index as usize]
+                    .get_copy_of_card_from_hand(option.source_uid)
+                    .unwrap();
                 match card.get_card_type() {
                     ECardType::Minion => {
-                        let pc = PlayCard::new(card.get_uid(), controller_uid, option_message.board_index as usize, option.target_uid);
+                        let pc = PlayCard::new(card.get_uid(),
+                                               controller_uid,
+                                               option_message.board_index as usize,
+                                               option.target_uid);
                         self.execute_rune(Box::new(pc));
-                    },  
-                    ECardType::Spell => {
-                        
-                    },
-                    ECardType::Weapon => {
-                        
-                    }
+                    }  
+                    ECardType::Spell => {}
+                    ECardType::Weapon => {}
                 }
-            },
+            }
             OptionType::EEndTurn => {
                 let rt = RotateTurn::new();
                 self.execute_rune(Box::new(rt));
@@ -517,13 +546,15 @@ impl<'a> GameState<'a> {
         self.resolve_state();
         let controller_index = self.get_on_turn_player();
 
-        let new_op = self.game_state_data.get_controllers()[controller_index as usize].clone().generate_options_from_every_source(self);
+        let new_op = self.game_state_data.get_controllers()[controller_index as usize]
+            .clone()
+            .generate_options_from_every_source(self);
         let mut_uid = self.game_state_data.get_controllers()[controller_index as usize].get_uid();
         let client_id = self.game_state_data.get_controllers()[controller_index as usize].client_id;
 
         self.get_mut_controller_by_uid(mut_uid).unwrap().set_client_options(new_op.clone());
-        
-        let op = OptionsPackage{options: new_op};
+
+        let op = OptionsPackage { options: new_op };
         self.report_rune_to_client(client_id, op.to_json());
 
         let mut resolve = self.resolve_state();
@@ -533,7 +564,8 @@ impl<'a> GameState<'a> {
         }
     }
 
-    pub fn resolve_state(&mut self) -> bool{
+    pub fn resolve_state(&mut self) -> bool {
+
         // if anything that could touch off a call of the function again, deaths, summons, etc etc, we set this to true
         let mut redo = false;
 
@@ -543,14 +575,14 @@ impl<'a> GameState<'a> {
 
 
         for controller in controllers.iter() {
-            
+
             if controller.get_life() <= 0 {
-                //mark controller for death 
+                //mark controller for death
             }
-            
+
             let minions = controller.get_copy_of_in_play();
             for min in minions.iter() {
-                
+
                 let minion = gsd.get_minion(*min).unwrap().clone();
 
                 let mut dead_minions = vec![];
@@ -565,10 +597,10 @@ impl<'a> GameState<'a> {
             }
 
 
-            let mut previous_auras : HashMap<UID, Vec<UID>> = HashMap::new();
+            let mut previous_auras: HashMap<UID, Vec<UID>> = HashMap::new();
 
             for min in minions.iter() {
-                
+
                 let minion = self.get_minion(*min).unwrap().clone();
 
                 if minion.get_auras().len() > 0 {
@@ -583,20 +615,29 @@ impl<'a> GameState<'a> {
 
             for min in minions.iter() {
                 let minion = self.get_minion(*min).unwrap().clone();
+                
                 if minion.has_tag(AURA.to_string()) {
 
                     let all_else = self.game_state_data.get_all_minions().clone();
-                    
+
                     self.add_minion_to_game_scope("minion".to_string(), minion.clone());
-                    self.add_type_vec_to_game_scope::<Minion>("minions".to_string(), all_else.clone());
-                    let passed = self.run_rhai_statement::<Vec<Minion>>(minion.get_function("filter_function".to_string()).unwrap(),false);
+                    self.add_type_vec_to_game_scope::<Minion>("minions".to_string(),
+                                                              all_else.clone());
+                    let passed =
+                        self.run_rhai_statement::<Vec<Minion>>(minion.get_function("filter_function"
+                                                                       .to_string())
+                                                                   .unwrap(),
+                                                               false);
+
                     for get_auras in passed {
-                        self.get_mut_minion(get_auras.get_uid()).unwrap().add_aura(minion.get_uid());
+                        self.get_mut_minion(get_auras.get_uid())
+                            .unwrap()
+                            .add_aura(minion.get_uid());
                     }
                 }
             }
-
-            let mut current_auras : HashMap<UID, Vec<UID>> = HashMap::new();
+            
+            let mut current_auras: HashMap<UID, Vec<UID>> = HashMap::new();
             for min in minions.iter() {
                 let minion = self.get_minion(*min).unwrap().clone();
                 if minion.get_auras().len() > 0 {
@@ -604,80 +645,80 @@ impl<'a> GameState<'a> {
                 }
             }
 
-            let old_keys:Vec<UID> = previous_auras.keys().map(|&k| k ).collect();
-            let new_keys:Vec<UID> = current_auras.keys().map(|&k| k ).collect();
-            
+            let old_keys: Vec<UID> = previous_auras.keys().map(|&k| k).collect();
+            let new_keys: Vec<UID> = current_auras.keys().map(|&k| k).collect();
+
             for key in new_keys {
-                
+
                 let olds = previous_auras.get(&key.clone());
-                
+
                 match olds {
                     Some(olds) => {
-                        
-                        let mut adds : Vec<UID> = vec![];
+
+                        let mut adds: Vec<UID> = vec![];
                         let mut removes = vec![];
-                        
-                        let new_auras : Vec<UID> = current_auras.get(&key.clone()).unwrap().clone();
 
-                        adds = new_auras.iter().filter(|x|{
-                                
-                                match olds.iter().position(|y| { *x == y }){
-                                    Some(_) => {
-                                        true
-                                    },
-                                    _ => {
-                                        false
-                                    }
-                                }
-                            
+                        let new_auras: Vec<UID> = current_auras.get(&key.clone()).unwrap().clone();
 
-                        }).map(|&u| u).collect::<Vec<UID>>().clone();
+                        adds = new_auras.iter()
+                            .filter(|x| match olds.iter().position(|y| *x == y) {
+                                Some(_) => true,
+                                _ => false,
+                            })
+                            .map(|&u| u)
+                            .collect::<Vec<UID>>()
+                            .clone();
 
-                        removes = olds.iter().filter(|x| {
-                            match new_auras.iter().position(|y| {*x == y}){
-                                Some(_) => {
-                                    true
-                                },
-                                _ => {
-                                    false
-                                }
-                            }
-                        }).map(|&u| u).collect::<Vec<UID>>().clone();
+                        removes = olds.iter()
+                            .filter(|x| match new_auras.iter().position(|y| *x == y) {
+                                Some(_) => true,
+                                _ => false,
+                            })
+                            .map(|&u| u)
+                            .collect::<Vec<UID>>()
+                            .clone();
 
                         for remove in removes.iter() {
                             let enchanter = self.get_minion(*remove).unwrap().clone();
-                            self.add_minion_to_game_scope("enchanter".to_string(), enchanter.clone());
+                            self.add_minion_to_game_scope("enchanter".to_string(),
+                                                          enchanter.clone());
                             let loser = self.get_minion(key.clone()).unwrap().clone();
                             self.add_minion_to_game_scope("loser".to_string(), loser);
-                            let rhai_statement = enchanter.get_function("remove_aura".to_string()).clone();
-                            
+                            let rhai_statement = enchanter.get_function("remove_aura".to_string())
+                                .clone();
+
                             //because of sized i ssues, this will call the remove runes itself
-                            let runes = self.run_rhai_statement::<Vec<&Rune>>(rhai_statement.unwrap(), false);
-                            
-                            
+                            let runes =
+                                self.run_rhai_statement::<Vec<&Rune>>(rhai_statement.unwrap(),
+                                                                      false);
+
+
                             for rune in runes.iter() {
                                 self.execute_rune(rune.into_box());
+                                redo = true;
                             }
                         }
 
                         for add in adds.iter() {
                             let enchanter = self.get_minion(*add).unwrap().clone();
-                            self.add_minion_to_game_scope("enchanter".to_string(), enchanter.clone());
+                            self.add_minion_to_game_scope("giver".to_string(), enchanter.clone());
                             let getter = self.get_minion(key.clone()).unwrap().clone();
                             self.add_minion_to_game_scope("getter".to_string(), getter);
-                            let rhai_statment = enchanter.get_function("add_aura".to_string()).clone();
+                            let rhai_statment = enchanter.get_function("apply_aura".to_string())
+                                .clone();
 
-                            let runes = self.run_rhai_statement::<Vec<&Rune>>(rhai_statment.unwrap(), false);
+                            let runes =
+                                self.run_rhai_statement::<Vec<&Rune>>(rhai_statment.unwrap(),
+                                                                      false);
 
                             for rune in runes.iter() {
+                                redo = true;
                                 self.execute_rune(rune.into_box());
                             }
                         }
 
-                    },
-                    _=>{
-
                     }
+                    _ => {}
                 }
             }
 
@@ -697,7 +738,7 @@ impl<'a> GameState<'a> {
         if self.game_state_data.get_number_of_controllers() == 2 {
 
             let _rng = thread_rng();
-            let first: u16 = 0;//in the release this has to be a 
+            let first: u16 = 0; //in the release this has to be a
 
             let other = 1 - first;
 
@@ -761,9 +802,12 @@ impl<'a> GameState<'a> {
         self.game_state_data.set_on_turn_player(on_turn_player);
     }
 
-    pub fn get_other_controller(&self, not_this_controller_uid : UID) -> &Controller {
-        let index =
-            self.game_state_data.controllers.iter().position(|x| x.uid != not_this_controller_uid).unwrap();
+    pub fn get_other_controller(&self, not_this_controller_uid: UID) -> &Controller {
+        let index = self.game_state_data
+            .controllers
+            .iter()
+            .position(|x| x.uid != not_this_controller_uid)
+            .unwrap();
         self.game_state_data.controllers.get(index).unwrap()
     }
 
@@ -787,4 +831,7 @@ impl<'a> GameState<'a> {
         self.connection_number
     }
 
+    pub fn add_to_attacked_this_turn(&mut self, uid: UID) {
+        self.game_state_data.add_has_attack(uid);
+    }
 }

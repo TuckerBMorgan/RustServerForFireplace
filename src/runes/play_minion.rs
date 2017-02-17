@@ -1,6 +1,6 @@
-use ::rune_vm::Rune;
+use rune_vm::Rune;
 use rustc_serialize::json;
-use ::game_state::GameState;
+use game_state::GameState;
 use minion_card::UID;
 use runes::add_tag::AddTag;
 use runes::summon_minion::SummonMinion;
@@ -23,12 +23,16 @@ pub struct PlayMinion {
 }
 
 impl PlayMinion {
-    pub fn new(minion_uid: UID, controller_uid: UID, field_index: usize, target_uid: UID) -> PlayMinion {
+    pub fn new(minion_uid: UID,
+               controller_uid: UID,
+               field_index: usize,
+               target_uid: UID)
+               -> PlayMinion {
         PlayMinion {
             minion_uid: minion_uid,
             controller_uid: controller_uid,
             field_index: field_index,
-            target_uid: target_uid
+            target_uid: target_uid,
         }
     }
 }
@@ -38,10 +42,12 @@ impl Rune for PlayMinion {
 
         {
             let min = game_state.get_minion(self.minion_uid).unwrap().clone();
-            
+
             if min.has_tag(TARGET.to_string()) {
                 //there is no reason for this statment to return anything
-                game_state.run_rhai_statement::<i8>(&min.get_function("target_function".to_string()).unwrap(), true);
+                game_state.run_rhai_statement::<i8>(&min.get_function("target_function".to_string())
+                                                  .unwrap(),
+                                              true);
             }
 
             if !min.has_tag(CHARGE.to_string()) {
@@ -51,10 +57,8 @@ impl Rune for PlayMinion {
             match min.get_function("battle_cry_function".to_string()) {
                 Some(function) => {
                     game_state.run_rhai_statement::<i8>(&function, true);
-                },
-                _ => {
-
                 }
+                _ => {}
             }
         }
 

@@ -2,7 +2,7 @@
 use game_state::GameState;
 use minion_card::UID;
 use client_option::{OptionGenerator, ClientOption, OptionType};
-use tags_list::{TARGET};
+use tags_list::TARGET;
 use controller::Controller;
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
@@ -93,14 +93,16 @@ impl Card {
 }
 
 impl OptionGenerator for Card {
-    fn generate_options(&self, game_state : &mut GameState, controller: &Controller) -> Vec<ClientOption> {
+    fn generate_options(&self,
+                        game_state: &mut GameState,
+                        controller: &Controller)
+                        -> Vec<ClientOption> {
         if controller.get_mana() >= self.cost {
             if !self.content.contains("default") {
                 let minion = game_state.get_minion(self.content.parse().unwrap()).unwrap().clone();
                 if minion.has_tag(TARGET.to_string()) {
                     return game_state.run_rhai_statement::<Vec<ClientOption>>(&minion.get_function("target_function".to_string()).unwrap(), false);
-                }
-                else {
+                } else {
                     let mut co = vec![];
                     co.push(ClientOption::new(self.uid, 0, OptionType::EPlayCard));
                     return co;

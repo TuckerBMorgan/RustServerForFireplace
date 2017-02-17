@@ -1,11 +1,9 @@
-use ::rune_vm::Rune;
-use ::game_state::GameState;
+use rune_vm::Rune;
+use game_state::GameState;
 use minion_card::UID;
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
-pub struct Mulligan {
-
-}
+pub struct Mulligan {}
 
 impl Mulligan {
     pub fn new() -> Mulligan {

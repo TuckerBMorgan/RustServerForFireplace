@@ -1,11 +1,11 @@
-use ::rune_vm::Rune;
+use rune_vm::Rune;
 use rustc_serialize::json;
-use ::game_state::GameState;
+use game_state::GameState;
 use minion_card::UID;
 
 
 
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct SetHealth {
     card_uid: UID,
     amount: u8,
@@ -22,7 +22,7 @@ impl SetHealth {
 
 impl Rune for SetHealth {
     fn execute_rune(&self, mut game_state: &mut GameState) {
-        game_state.get_mut_minion(self.card_uid).set_total_health(self.amount);
+        game_state.get_mut_minion(self.card_uid).unwrap().set_total_health(self.amount as i32);
     }
 
     fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {
@@ -34,6 +34,6 @@ impl Rune for SetHealth {
     }
 
     fn into_box(&self) -> Box<Rune> {
-        Box::new(*self.clone())
+        Box::new(self.clone())
     }
 }

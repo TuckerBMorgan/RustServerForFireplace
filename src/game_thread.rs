@@ -2,8 +2,8 @@
 
 use std::str;
 use std::thread;
-use ::process_message;
-use ::game_state::GameState;
+use process_message;
+use game_state::GameState;
 use std::thread::JoinHandle;
 use std::sync::mpsc::{Sender, Receiver};
 
@@ -41,9 +41,9 @@ impl GameThread {
 
     #[allow(dead_code)]
     pub fn start_thread(self) -> JoinHandle<()> {
-        Some(thread::Builder::new().name("game_thread".to_string()).spawn(move || {
-                game_thread_main(self);
-            }))
+        Some(thread::Builder::new()
+                .name("game_thread".to_string())
+                .spawn(move || { game_thread_main(self); }))
             .unwrap()
             .unwrap()
     }

@@ -7,7 +7,7 @@ use rustc_serialize::json;
 pub enum OptionType {
     EAttack,
     EPlayCard,
-    EEndTurn
+    EEndTurn,
 }
 
 #[derive(RustcDecodable, RustcEncodable)]
@@ -31,7 +31,7 @@ impl ClientOption {
 
 #[derive(RustcDecodable, RustcEncodable)]
 pub struct OptionsPackage {
-    pub options: Vec<ClientOption>
+    pub options: Vec<ClientOption>,
 }
 
 impl OptionsPackage {
@@ -45,5 +45,8 @@ impl OptionsPackage {
 }
 
 pub trait OptionGenerator {
-    fn generate_options(&self, game_state : &mut GameState, controller: &Controller) -> Vec<ClientOption>;
+    fn generate_options(&self,
+                        game_state: &mut GameState,
+                        controller: &Controller)
+                        -> Vec<ClientOption>;
 }

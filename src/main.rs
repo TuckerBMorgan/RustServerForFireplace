@@ -98,9 +98,10 @@ fn main() {
                                                           rx_server,
                                                           client_id_1,
                                                           client_id_2);
-                    
-                    let payload_message = format!("{{ \"{k}\":\"{v}\"}}", k = "message_type", v = "connection");
-                    
+
+                    let payload_message =
+                        format!("{{ \"{k}\":\"{v}\"}}", k = "message_type", v = "connection");
+
                     let ready_1 = ThreadMessage {
                         client_id: new_client_thread_1.client_id.clone(),
                         payload: payload_message.clone(),

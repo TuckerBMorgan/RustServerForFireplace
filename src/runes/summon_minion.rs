@@ -1,7 +1,7 @@
 
-use ::rune_vm::Rune;
+use rune_vm::Rune;
 use rustc_serialize::json;
-use ::game_state::GameState;
+use game_state::GameState;
 use minion_card::{UID, EMinionState};
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
@@ -21,21 +21,24 @@ impl SummonMinion {
     }
 }
 
-impl Rune for SummonMinion {    
+impl Rune for SummonMinion {
     fn execute_rune(&self, game_state: &mut GameState) {
 
         {
-            game_state.get_mut_minion(self.minion_uid).unwrap().set_minion_state(EMinionState::InPlay);
+            game_state.get_mut_minion(self.minion_uid)
+                .unwrap()
+                .set_minion_state(EMinionState::InPlay);
         }
-        
+
         let controller = game_state.get_mut_controller_by_uid(self.controller_uid);
         match controller {
             Some(controller) => {
                 if self.field_index == 0 {
                     controller.move_minion_from_unplayed_into_play(self.minion_uid);
-                }
-                else {
-                    controller.move_minion_from_unplayed_into_play_with_index(self.minion_uid, self.field_index as usize);
+                } else {
+                    controller.move_minion_from_unplayed_into_play_with_index(self.minion_uid,
+                                                                              self.field_index as
+                                                                              usize);
                 }
             }
             None => {

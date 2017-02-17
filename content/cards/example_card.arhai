@@ -3,7 +3,6 @@ minion
 create_minion_function**fn create_minion(game_state) {
     var  min = new_minion();
     
-    min.set_uid(1);
     var new_uid = game_state.get_uid();
     min.minion_basic_info("example", new_uid, "basic", "example", 1);
     min.minion_attack_health_basic(1, 1);

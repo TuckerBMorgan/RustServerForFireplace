@@ -1,6 +1,6 @@
-use ::rune_vm::Rune;
+use rune_vm::Rune;
 use rustc_serialize::json;
-use ::game_state::GameState;
+use game_state::GameState;
 use minion_card::UID;
 use minion_card::Minion;
 
@@ -68,9 +68,9 @@ impl CreateMinion {
             base_attack: minion.get_base_attack(),
             current_attack: minion.get_current_attack(),
             total_attack: minion.get_total_attack(),
-            base_health: minion.get_base_health(),
-            current_health: minion.get_current_health(),
-            total_health: minion.get_total_health(),
+            base_health: minion.get_base_health() as u16,
+            current_health: minion.get_current_health() as u16,
+            total_health: minion.get_total_health() as u16,
             controller_uid: controller_uid.clone(),
         }
     }

@@ -1,0 +1,32 @@
+minion
+@@
+create_minion_function**fn create_minion(game_state) {
+    var  min = new_minion();
+    
+    min.set_uid(1);
+    var new_uid = game_state.get_uid();
+    min.minion_basic_info("Stormwind Champion", new_uid, "basic", "stormwindChampion", 0);
+    min.minion_attack_health_basic(6, 6);
+    min.minion_add_tag("Aura");
+    
+    return min;
+}
+create_minion(game_state)
+@@
+filter_function**function filter(game_state, minions){
+
+}
+filter(game_state, minions)
+@@
+apply_aura**function apply_aura(game_state, giver, getter) {
+    
+    var sh = new_set_health(getter.minion_get_uid(), getter.minion_get_total_health() + 1);
+    var mh = new_modify_health(getter.minion_get_uid(), 1);
+
+    var sa = new_set_attack(getter.minion_get_uid(), getter.minion_get_total_attack() + 1); 
+    var ma = new_modify_attack(getter.minion_get_uid(), 1);
+
+    var rets = [sh, mh, sa, ma];
+    rets
+}
+apply_aura(game_state, giver, getter)

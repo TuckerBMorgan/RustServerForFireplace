@@ -1,4 +1,4 @@
-use ::rune_vm::Rune;
+use rune_vm::Rune;
 use minion_card::{UID, EMinionState};
 use tags_list::DEATH_RATTLE;
 use rustc_serialize::json;
@@ -14,20 +14,22 @@ pub struct KillMinion {
 impl KillMinion {
     pub fn new(controller_uid: UID, minion_uid: UID) -> KillMinion {
         KillMinion {
-            controller_uid : controller_uid,
-            minion_uid: minion_uid
+            controller_uid: controller_uid,
+            minion_uid: minion_uid,
         }
     }
 }
 
 impl Rune for KillMinion {
     fn execute_rune(&self, game_state: &mut GameState) {
-    
+
         if game_state.get_minion(self.minion_uid).unwrap().has_tag(DEATH_RATTLE.to_string()) {
-            //preform deathratte    
+            //preform deathratte
         }
 
-        game_state.get_mut_controller_by_uid(self.controller_uid).unwrap().move_minion_from_play_to_graveyard(self.minion_uid);
+        game_state.get_mut_controller_by_uid(self.controller_uid)
+            .unwrap()
+            .move_minion_from_play_to_graveyard(self.minion_uid);
         game_state.get_mut_minion(self.minion_uid).unwrap().set_minion_state(EMinionState::Dead);
     }
 
