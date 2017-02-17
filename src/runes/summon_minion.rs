@@ -4,7 +4,7 @@ use rustc_serialize::json;
 use ::game_state::GameState;
 use minion_card::{UID, EMinionState};
 
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct SummonMinion {
     pub minion_uid: UID,
     pub controller_uid: UID,
@@ -51,5 +51,9 @@ impl Rune for SummonMinion {
 
     fn to_json(&self) -> String {
         json::encode(self).unwrap().replace("{", "{\"runeType\":\"SummonMinion\",")
+    }
+
+    fn into_box(&self) -> Box<Rune> {
+        Box::new(self.clone())
     }
 }

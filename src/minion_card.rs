@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use client_option::{OptionGenerator, ClientOption, OptionType};
 use tags_list::{TAUNT, STEALTH};
 use game_state::GameState;
@@ -64,13 +64,15 @@ pub struct Minion {
     tags: HashSet<String>,
     auras: Vec<UID>,
 
+    functions: HashMap<String, String>,
+    /*
     battle_cry_function: String,//does the minion do something when it is placed into combat
     take_damage_function: String,//does it need to do something special when it takes damage
     generate_option_function: String,//when it is on the field what can it attack
     target_function: String,//when it is in the hand how can I play it
     add_aura_function: String, //called when a minion needs an aura applied to them
     remove_aura_function: String, //called when a minion needs a aura removed from them
-
+    */
     // the attack varibles, baseAttack is the default value
     // currentAttack is what we use for how much damage we do
     // totalAttack is the current ceiling for attack for the minion
@@ -103,18 +105,13 @@ impl Minion {
             name: name,
             set: set,
             tags: HashSet::new(),
+            functions: HashMap::new(),
             base_attack: base_attack,
             current_attack: base_attack,
             total_attack: base_attack,
             base_health: base_health,
             current_health: base_health,
             total_health: base_health,
-            battle_cry_function: "null".to_string(),
-            take_damage_function: "null".to_string(),
-            generate_option_function: "null".to_string(),
-            target_function: "null".to_string(),
-            add_aura_function: "null".to_string(),
-            remove_aura_function: "null".to_string(),
             state: EMinionState::NotInPlay,
             auras: vec![]
         }
@@ -136,12 +133,7 @@ impl Minion {
             base_health: 0,
             current_health: 0,
             total_health: 0,
-            battle_cry_function: "default".to_string(),
-            take_damage_function: "default".to_string(),
-            generate_option_function: "default".to_string(),
-            target_function: "default".to_string(),
-            add_aura_function: "default".to_string(),
-            remove_aura_function: "default".to_string(),
+            functions: HashMap::new(),
             state: EMinionState::NotInPlay,
             auras: vec![]
         }
@@ -149,6 +141,14 @@ impl Minion {
 
     pub fn add_aura(&mut self, auras_origin: UID) {
         self.auras.push(auras_origin);
+    }
+
+    pub fn get_auras(&self) -> Vec<UID>{
+        self.auras.clone()
+    }
+
+    pub fn clear_auras(&mut self) {
+        self.auras.clear();
     }
 
     pub fn set_minion_state(&mut self, new_state: EMinionState){
@@ -216,7 +216,13 @@ impl Minion {
     }
 
     pub fn set_current_health(&mut self, amount: u16) {
-        self.current_health = amount;
+        
+        if self.current_health + amount <= self.total_health {
+            self.current_health += amount;
+        }
+        else if self.current_health + amount > self.total_health {
+            self.current_health = self.total_health;
+        }
     }
 
     pub fn get_current_health(&self) -> u16 {
@@ -262,68 +268,27 @@ impl Minion {
         self.cost = cost as u16;
     }
 
-    pub fn get_battle_cry(&self) -> String {
-        self.battle_cry_function.clone()
+    pub fn set_functions(&mut self, functions: HashMap<String, String>) {
+        self.functions = functions;
     }
 
-    pub fn _get_take_damage(&self) -> String {
-        self.take_damage_function.clone()
-    }
+    pub fn parse_minion_file(file_contents: String) -> HashMap<String, String> {
 
-    pub fn get_target_function(&self) -> String {
-        self.target_function.clone()   
-    }
+        let mut functions: HashMap<String, String> = HashMap::new();
 
-    pub fn set_proto_minion_function(&mut self, proto_minion: ProtoMinion){
-        self.battle_cry_function = proto_minion.battle_cry_function;
-        self.take_damage_function = proto_minion.take_damage_function;
-        self.generate_option_function = proto_minion.generate_options_function;
-        self.target_function = proto_minion.target_function;
-        self.add_aura_function = proto_minion.add_aura_function;
-        self.remove_aura_function = proto_minion.remove_aura_function;
-    }
+        let mut blocks: Vec<&str> = file_contents.split("@@").collect();
+        
+        blocks.remove(0);//have to remove the "minion" from the split as it is just an identifier and not something we need
 
-    pub fn parse_minion_file(file_contents: String) -> Result<ProtoMinion, EFileReadResult> {
-
-        let functions: Vec<&str> = file_contents.split("@@").collect();
-
-        let mut create_minion_function: String = "hold".to_string();
-        let mut battle_cry_function: String = "hold".to_string();
-        let mut take_damage_function: String = "hold".to_string();
-        let mut generate_options_function: String = "hold".to_string();
-        let mut target_function: String = "hold".to_string();
-        let mut add_aura_function: String = "hold".to_string();
-        let mut remove_aura_function: String = "hold".to_string();
-
-        let mut i: u32 = 0;
-
-        for function in functions {
-            if i == 1 {
-                create_minion_function = String::from(function);
-            } else if i == 2 {
-                battle_cry_function = String::from(function);
-            } else if i == 3 {
-                take_damage_function = String::from(function);
-            } else if i == 4 {
-                generate_options_function = String::from(function);
-            } else if i == 5 {
-                target_function = String::from(function);
-            } else if i == 6 {
-                add_aura_function = String::from(function);
-            } else if i == 7 {
-                remove_aura_function = String::from(function);
-            }
-            i += 1;
+        for block in blocks.iter() {
+            let name_function_pair: Vec<&str> = block.split("**").collect();
+            functions.insert(name_function_pair[0].to_string(), name_function_pair[1].to_string());
         }
-
-        let proto = ProtoMinion::new(create_minion_function,
-                                     battle_cry_function,
-                                     take_damage_function,
-                                     generate_options_function,
-                                     target_function,
-                                     add_aura_function,
-                                     remove_aura_function);
-        Ok(proto)
+        functions
+    }
+    
+    pub fn get_function(&self, name: String) -> Option<&String> {
+        self.functions.get(&name)
     }
 }
 
@@ -332,7 +297,7 @@ impl OptionGenerator for Minion {
     fn generate_options(&self, game_state: &mut GameState, current_controller: &Controller) -> Vec<ClientOption> {
         
         //this just means that the minions will follow the standard attack option rules
-        if self.generate_option_function.contains("default") {
+        if !self.functions.contains_key("generate_options_function") {
 
             let other_controller = game_state.get_other_controller(current_controller.get_uid());
 

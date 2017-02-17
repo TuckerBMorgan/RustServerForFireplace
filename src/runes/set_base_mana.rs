@@ -5,7 +5,7 @@ use minion_card::UID;
 
 
 
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct SetBaseMana {
     controller_uid: UID,
     base_mana: u8,
@@ -34,5 +34,9 @@ impl Rune for SetBaseMana {
 
     fn to_json(&self) -> String {
         json::encode(self).unwrap().replace("{", "{\"runeType\":\"SetBaseMana\",")
+    }
+
+    fn into_box(&self) -> Box<Rune> {
+        Box::new(self.clone())
     }
 }

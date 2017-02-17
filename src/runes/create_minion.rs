@@ -5,7 +5,7 @@ use minion_card::UID;
 use minion_card::Minion;
 
 // this is a dummy rune for the client, IS NOT TO BE RUN THROUGH THE RUNE_VM
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct CreateMinion {
     cost: u16,
     id: String,
@@ -86,5 +86,9 @@ impl Rune for CreateMinion {
 
     fn to_json(&self) -> String {
         json::encode(self).unwrap().replace("{", "{\"runeType\":\"CreateMinion\",")
+    }
+
+    fn into_box(&self) -> Box<Rune> {
+        Box::new(self.clone())
     }
 }

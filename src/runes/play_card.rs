@@ -12,7 +12,7 @@ use runes::play_minion::PlayMinion;
 //
 
 
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct PlayCard {
     pub card_uid: UID,
     pub controller_uid: UID,
@@ -52,5 +52,9 @@ impl Rune for PlayCard {
 
     fn to_json(&self) -> String {
         json::encode(self).unwrap().replace("{", "{\"runeType\":\"PlayCard\",")
+    }
+
+    fn into_box(&self) -> Box<Rune> {
+        Box::new(self.clone())
     }
 }

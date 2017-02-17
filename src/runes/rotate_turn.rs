@@ -8,7 +8,7 @@ use runes::set_mana::SetMana;
 use runes::deal_card::DealCard;
 use ::controller::EControllerState;
 
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct RotateTurn {
 
 }
@@ -78,5 +78,9 @@ impl Rune for RotateTurn {
 
     fn to_json(&self) -> String {
         "{\"runeType\":\"RotateTurn\"}".to_string()
+    }
+
+    fn into_box(&self) -> Box<Rune> {
+        Box::new(self.clone())
     }
 }

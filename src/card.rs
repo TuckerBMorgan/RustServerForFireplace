@@ -4,7 +4,6 @@ use minion_card::UID;
 use client_option::{OptionGenerator, ClientOption, OptionType};
 use tags_list::{TARGET};
 use controller::Controller;
-
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub enum ECardType {
@@ -99,7 +98,7 @@ impl OptionGenerator for Card {
             if !self.content.contains("default") {
                 let minion = game_state.get_minion(self.content.parse().unwrap()).unwrap().clone();
                 if minion.has_tag(TARGET.to_string()) {
-                    return game_state.run_rhai_statement::<Vec<ClientOption>>(&minion.get_target_function(), false);
+                    return game_state.run_rhai_statement::<Vec<ClientOption>>(&minion.get_function("target_function".to_string()).unwrap(), false);
                 }
                 else {
                     let mut co = vec![];

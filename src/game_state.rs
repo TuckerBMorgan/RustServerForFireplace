@@ -1,14 +1,18 @@
 #![allow(dead_code)]
 
 use rune_vm::Rune;
-use std::any::Any;
+use std::any::{Any, TypeId};
 use std::net::TcpStream;
 use card::{Card, ECardType};
 use controller::{Controller, EControllerState};
 use minion_card::{Minion, UID, EMinionState};
 use game_thread::GameThread;
 use client_option::{ClientOption, OptionType, OptionsPackage};
+use rustc_serialize::json;
+use rustc_serialize::json::Json;
+use rustc_serialize::Decodable;
 use client_message::OptionsMessage;
+use tags_list::AURA;
 
 use rand::thread_rng;
 use entity::Entity;
@@ -19,6 +23,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::collections::{VecDeque, HashMap};
+use std::slice::Iter;
 
 
 use runes::deal_card::DealCard;
@@ -125,6 +130,14 @@ impl GameStateData {
         }
         uids
     }
+
+    pub fn get_all_minions(&self) -> Vec<Minion>{
+        let mut mins = vec![];
+        for (_, v) in self.minions.clone() {
+            mins.push(v.clone());
+        }
+        mins
+    }
 }
 
 pub struct GameState<'a> {
@@ -183,6 +196,7 @@ impl<'a> GameState<'a> {
         self.script_engine.register_type::<Minion>();
         self.script_engine.register_type::<ClientOption>();
         self.script_engine.register_type::<Vec<ClientOption>>();
+        self.script_engine.register_type::<Vec<Minion>>();
         self.script_engine.register_fn("new_minion", Minion::new_other);
         self.script_engine.register_fn("minion_basic_info", Minion::set_basic_info);
         self.script_engine.register_fn("minion_attack_health_basic",
@@ -197,12 +211,33 @@ impl<'a> GameState<'a> {
         println!("{}", string);
     }
 
-    pub fn run_rhai_statement<T: Any + Clone + fmt::Debug>(&mut self,
+    //PLEASE READ THIS BEFORE USING
+    //this will add the varible with the supplied name into the game Scope/
+    //calling run_rhai_statement will execute a rhai statement with those in its scope, but also remove them in the same cal
+    //also the reason we only support i64s is that that is what all numbers in rhai are
+    pub fn add_i64_to_game_scope(&mut self, name: String, varible: i64) {
+        self.game_scope.push((name.clone(), Box::new(varible.clone())));
+    }
+
+    //this only lasts in game scope until you call run_rhai_statement
+    pub fn add_string_to_game_scope(&mut self, name: String, varible: String) {
+        self.game_scope.push((name.clone(), Box::new(varible.clone())));
+    }
+
+    pub fn add_minion_to_game_scope(&mut self, name: String, varible: Minion) {
+        self.game_scope.push((name.clone(), Box::new(varible.clone())));
+    }
+
+    pub fn add_type_vec_to_game_scope<T: 'static + Clone + fmt::Debug>(&mut self, name: String, varible: Vec<T> ) {
+        self.game_scope.push((name.clone(), Box::new(varible.clone())));
+    }
+
+    pub fn run_rhai_statement<T: Any + Clone>(&mut self,
                                                            rhai_statement: &String,
                                                            with_write_back: bool)//this last paramater is a odd one, but it "should" insure that the actions taken by the statment do change the current game state
                                                            //it will also cause the function to execute faster
                                                            -> T {
-
+        
         self.game_scope.push(("game_state".to_string(), Box::new(self.game_state_data.clone())));
 
         let result = self.script_engine
@@ -280,37 +315,30 @@ impl<'a> GameState<'a> {
             if spl[0].contains("minion") {
                 let proto_minion = Minion::parse_minion_file(contents.clone());
 
-                match proto_minion {
-                    Ok(proto_minion_good) => {
+                let mut minion =
+                    self.run_rhai_statement::<Minion>(
+                        &proto_minion["create_minion_function"],
+                        //HashMap::new(),
+                        true);
 
-                        let mut minion =
-                            self.run_rhai_statement::<Minion>(
-                                &proto_minion_good.create_minion_function,
-                                true);
+                minion.set_minion_state(EMinionState::NotInPlay);
+                
+                minion.set_functions(proto_minion);
+                let play_card = Card::new(minion.get_cost() as u8,
+                                            ECardType::Minion,
+                                            minion.get_id(),
+                                            self.get_uid(),
+                                            minion.get_name(),
+                                            minion.get_uid().to_string());
 
-
-                        minion.set_proto_minion_function(proto_minion_good);
-                        minion.set_minion_state(EMinionState::NotInPlay);
-                        let play_card = Card::new(minion.get_cost() as u8,
-                                                  ECardType::Minion,
-                                                  minion.get_id(),
-                                                  self.get_uid(),
-                                                  minion.get_name(),
-                                                  minion.get_uid().to_string());
-
-                        // we do this because, a minion is not a card,
-                        // but something placed into the field BY a card
-                        // on the client we tell them about the minion
-                        // right before we tell them they can play it
-                        // and so the client can tell what to display based on the uid of the
-                        controller.add_minion_to_unplayed(minion.get_uid());
-                        self.game_state_data.add_minion_to_minions(minion);
-                        controller.add_card_to_deck(play_card);
-                    }
-                    Err(_) => {
-                        println!("Problem loading card file");
-                    }
-                }
+                // we do this because, a minion is not a card,
+                // but something placed into the field BY a card
+                // on the client we tell them about the minion
+                // right before we tell them they can play it
+                // and so the client can tell what to display based on the uid of the
+                controller.add_minion_to_unplayed(minion.get_uid());
+                self.game_state_data.add_minion_to_minions(minion);
+                controller.add_card_to_deck(play_card);
             }
         }
     }
@@ -505,7 +533,6 @@ impl<'a> GameState<'a> {
         }
     }
 
-
     pub fn resolve_state(&mut self) -> bool{
         // if anything that could touch off a call of the function again, deaths, summons, etc etc, we set this to true
         let mut redo = false;
@@ -538,13 +565,123 @@ impl<'a> GameState<'a> {
             }
 
 
+            let mut previous_auras : HashMap<UID, Vec<UID>> = HashMap::new();
 
             for min in minions.iter() {
+                
+                let minion = self.get_minion(*min).unwrap().clone();
 
+                if minion.get_auras().len() > 0 {
+                    previous_auras.insert(minion.get_uid(), minion.get_auras());
+                }
             }
+
+            for min in minions.iter() {
+                let mut minion = self.get_mut_minion(*min).unwrap().clone();
+                minion.clear_auras();
+            }
+
+            for min in minions.iter() {
+                let minion = self.get_minion(*min).unwrap().clone();
+                if minion.has_tag(AURA.to_string()) {
+
+                    let all_else = self.game_state_data.get_all_minions().clone();
+                    
+                    self.add_minion_to_game_scope("minion".to_string(), minion.clone());
+                    self.add_type_vec_to_game_scope::<Minion>("minions".to_string(), all_else.clone());
+                    let passed = self.run_rhai_statement::<Vec<Minion>>(minion.get_function("filter_function".to_string()).unwrap(),false);
+                    for get_auras in passed {
+                        self.get_mut_minion(get_auras.get_uid()).unwrap().add_aura(minion.get_uid());
+                    }
+                }
+            }
+
+            let mut current_auras : HashMap<UID, Vec<UID>> = HashMap::new();
+            for min in minions.iter() {
+                let minion = self.get_minion(*min).unwrap().clone();
+                if minion.get_auras().len() > 0 {
+                    current_auras.insert(minion.get_uid(), minion.get_auras());
+                }
+            }
+
+            let old_keys:Vec<UID> = previous_auras.keys().map(|&k| k ).collect();
+            let new_keys:Vec<UID> = current_auras.keys().map(|&k| k ).collect();
+            
+            for key in new_keys {
+                
+                let olds = previous_auras.get(&key.clone());
+                
+                match olds {
+                    Some(olds) => {
+                        
+                        let mut adds : Vec<UID> = vec![];
+                        let mut removes = vec![];
+                        
+                        let new_auras : Vec<UID> = current_auras.get(&key.clone()).unwrap().clone();
+
+                        adds = new_auras.iter().filter(|x|{
+                                
+                                match olds.iter().position(|y| { *x == y }){
+                                    Some(_) => {
+                                        true
+                                    },
+                                    _ => {
+                                        false
+                                    }
+                                }
+                            
+
+                        }).map(|&u| u).collect::<Vec<UID>>().clone();
+
+                        removes = olds.iter().filter(|x| {
+                            match new_auras.iter().position(|y| {*x == y}){
+                                Some(_) => {
+                                    true
+                                },
+                                _ => {
+                                    false
+                                }
+                            }
+                        }).map(|&u| u).collect::<Vec<UID>>().clone();
+
+                        for remove in removes.iter() {
+                            let enchanter = self.get_minion(*remove).unwrap().clone();
+                            self.add_minion_to_game_scope("enchanter".to_string(), enchanter.clone());
+                            let loser = self.get_minion(key.clone()).unwrap().clone();
+                            self.add_minion_to_game_scope("loser".to_string(), loser);
+                            let rhai_statement = enchanter.get_function("remove_aura".to_string()).clone();
+                            
+                            //because of sized i ssues, this will call the remove runes itself
+                            let runes = self.run_rhai_statement::<Vec<&Rune>>(rhai_statement.unwrap(), false);
+                            
+                            
+                            for rune in runes.iter() {
+                                self.execute_rune(rune.into_box());
+                            }
+                        }
+
+                        for add in adds.iter() {
+                            let enchanter = self.get_minion(*add).unwrap().clone();
+                            self.add_minion_to_game_scope("enchanter".to_string(), enchanter.clone());
+                            let getter = self.get_minion(key.clone()).unwrap().clone();
+                            self.add_minion_to_game_scope("getter".to_string(), getter);
+                            let rhai_statment = enchanter.get_function("add_aura".to_string()).clone();
+
+                            let runes = self.run_rhai_statement::<Vec<&Rune>>(rhai_statment.unwrap(), false);
+
+                            for rune in runes.iter() {
+                                self.execute_rune(rune.into_box());
+                            }
+                        }
+
+                    },
+                    _=>{
+
+                    }
+                }
+            }
+
         }
-
-
 
         redo
     }

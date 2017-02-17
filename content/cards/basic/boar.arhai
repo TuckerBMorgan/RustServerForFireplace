@@ -1,6 +1,6 @@
 minion
 @@
-fn create_minion(game_state) {
+create_minion_function**fn create_minion(game_state) {
     var  min = new_minion();
     
     min.set_uid(1);
@@ -12,11 +12,3 @@ fn create_minion(game_state) {
     return min;
 }
 create_minion(game_state)
-@@
-default
-@@
-default
-@@
-default
-@@
-default
