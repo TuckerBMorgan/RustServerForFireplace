@@ -13,10 +13,10 @@ create_minion_function**fn create_minion(game_state) {
 }
 create_minion(game_state)
 @@
-filter_function**function filter(game_state, minions){
-
+filter_function**function filter(game_state, minions, minions_len){
+    
 }
-filter(game_state, minions)
+filter(game_state, minions, minions_len)
 @@
 apply_aura**function apply_aura(game_state, giver, getter) {
     

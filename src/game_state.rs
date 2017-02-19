@@ -215,6 +215,7 @@ impl<'a> GameState<'a> {
         self.script_engine.register_fn("minion_basic_info", Minion::set_basic_info);
         self.script_engine.register_fn("minion_attack_health_basic",
                                        Minion::set_attack_and_health_basics);
+        self.script_engine.register_fn("minion_vec_push", );
         self.script_engine.register_fn("minion_set_spell_damage", Minion::set_spell_damage);
         self.script_engine.register_fn("set_uid", Minion::set_uid);
         self.script_engine.register_fn("minion_get_uid", Minion::get_uid);
@@ -691,7 +692,6 @@ impl<'a> GameState<'a> {
                             let runes =
                                 self.run_rhai_statement::<Vec<&Rune>>(rhai_statement.unwrap(),
                                                                       false);
-
 
                             for rune in runes.iter() {
                                 self.execute_rune(rune.into_box());
