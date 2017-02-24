@@ -39,12 +39,12 @@ impl Rune for DealCard {
         match card.get_card_type() {
 
             ECardType::Minion => {
-
+                let minion = 
+                game_state.get_minion(card.get_content().parse().unwrap()).unwrap().clone();
                 if !game_state.get_controller_by_uid(self.controller_uid)
                     .unwrap()
-                    .has_seen_card(self.card_uid) {
-                    let minion =
-                        game_state.get_minion(card.get_content().parse().unwrap()).unwrap().clone();
+                    .has_seen_card(minion.get_uid()) {
+                    
                     let c_m = CreateMinion::from_minion(&minion, self.controller_uid);
                     game_state.execute_rune(Box::new(c_m));
                 }

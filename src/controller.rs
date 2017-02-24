@@ -4,7 +4,7 @@ use card::Card;
 use std::collections::HashSet;
 use rand::{thread_rng, Rng, sample};
 use game_state::GameState;
-use client_option::{ClientOption, OptionGenerator};
+use client_option::{ClientOption, OptionGenerator, OptionType};
 
 
 #[derive(RustcDecodable, RustcEncodable, Copy, Clone)]
@@ -142,7 +142,8 @@ impl Controller {
                                               game_state: &mut GameState)
                                               -> Vec<ClientOption> {
         let mut options = vec![];
-
+        self.current_options.clear();
+        self.current_options.push(ClientOption::new(0, 0, OptionType::EEndTurn));
         for card in self.hand.clone().iter() {
 
             options.clear();
@@ -151,6 +152,7 @@ impl Controller {
                 self.add_client_options(*option);
             }
         }
+
 
         options.clear();
         for min_uid in self.in_play_minions.clone().iter() {
@@ -169,12 +171,15 @@ impl Controller {
         self.current_options.push(client_option);
     }
 
+    pub fn clear_options(&mut self) {
+        self.current_options.clear();
+    }
+
     pub fn set_client_options(&mut self, client_options: Vec<ClientOption>) {
         self.current_options = client_options;
     }
 
     pub fn get_client_option(&self, index: usize) -> &ClientOption {
-        println!("{}", self.current_options.len());
         return &self.current_options[index];
     }
 

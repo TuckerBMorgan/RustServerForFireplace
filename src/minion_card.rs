@@ -42,6 +42,7 @@ pub struct Minion {
     base_attack: u16,
     current_attack: u16,
     total_attack: u16,
+    team: i64,
 
     // the health varibles, baseHealth is the default value
     // currentHealth is how much the minion has at the moment, damage included
@@ -81,6 +82,7 @@ impl Minion {
             auras: vec![],
             enchantments: vec![],
             spell_damage: 0,
+            team: 5//cannot have 5 teams so this is a flag value for unassingned team
         }
     }
 
@@ -105,9 +107,10 @@ impl Minion {
             auras: vec![],
             enchantments: vec![],
             spell_damage: 0,
+            team: 5//cannot have 5 teams so this is a flag value for unassingned team
         }
     }
-
+    
     pub fn add_aura(&mut self, auras_origin: UID) {
         self.auras.push(auras_origin);
     }
@@ -168,6 +171,18 @@ impl Minion {
         self.set.clone()
     }
 
+    pub fn set_team(&mut self, team: u8) {
+        self.team = team as i64;
+    }
+
+    pub fn get_team(&self) -> i64{
+        self.team.clone()
+    }
+
+    pub fn get_team_while_mut(&mut self) -> i64 {
+        self.team.clone()
+    }
+ 
     pub fn get_base_attack(&self) -> u16 {
         self.base_attack.clone()
     }
@@ -237,7 +252,7 @@ impl Minion {
     }
 
     pub fn set_uid(&mut self, uid: i64) {
-        self.uid = uid as u32;
+        self.uid = uid.clone() as u32;
     }
 
     // sets name, uid, id, and set, this is to get around the rhais function paramater limit
@@ -282,7 +297,6 @@ impl OptionGenerator for Minion {
                         game_state: &mut GameState,
                         current_controller: &Controller)
                         -> Vec<ClientOption> {
-        println!("I got here");
         //this just means that the minions will follow the standard attack option rules
         if !self.functions.contains_key("generate_options_function") {
 
