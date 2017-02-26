@@ -4,7 +4,7 @@ use card::Card;
 use std::collections::HashSet;
 use rand::{thread_rng, Rng, sample};
 use game_state::GameState;
-use client_option::{ClientOption, OptionGenerator};
+use client_option::{ClientOption, OptionGenerator, OptionType};
 
 
 #[derive(RustcDecodable, RustcEncodable, Copy, Clone)]
@@ -32,7 +32,7 @@ pub struct Controller {
     pub controller_state: EControllerState,
     pub client_id: u32,
     pub life: u8,
-    pub total_life:u8,
+    pub total_life: u8,
 
     pub deck: Vec<Card>,
     pub hand: Vec<Card>,
@@ -48,7 +48,7 @@ pub struct Controller {
     pub in_play_minions: Vec<UID>,
     pub graveyard: Vec<UID>,
     pub current_options: Vec<ClientOption>,
-    pub played_cards: Vec<Card>
+    pub played_cards: Vec<Card>,
 }
 
 impl Controller {
@@ -66,7 +66,9 @@ impl Controller {
         self.in_play_minions.push(val);
     }
 
-    pub fn move_minion_from_unplayed_into_play_with_index(&mut self, minion_uid: UID, index: usize) {
+    pub fn move_minion_from_unplayed_into_play_with_index(&mut self,
+                                                          minion_uid: UID,
+                                                          index: usize) {
         let remove = self.unplayed_minions.iter().position(|x| *x == minion_uid).unwrap();
         let val = self.unplayed_minions.remove(remove);
         self.in_play_minions.insert(index, val);
@@ -98,7 +100,7 @@ impl Controller {
     pub fn move_minion_from_play_to_graveyard(&mut self, uid: UID) {
         let index = self.in_play_minions.iter().position(|x| *x == uid).unwrap();
         let val = self.in_play_minions.remove(index);
-        self.graveyard.push(val);    
+        self.graveyard.push(val);
     }
 
     pub fn set_base_mana(&mut self, base_mana: u8) {
@@ -135,10 +137,13 @@ impl Controller {
 
         }
     }
-    
-    pub fn generate_options_from_every_source(&mut self,  game_state:&mut GameState) -> Vec<ClientOption> {
+
+    pub fn generate_options_from_every_source(&mut self,
+                                              game_state: &mut GameState)
+                                              -> Vec<ClientOption> {
         let mut options = vec![];
-        
+        self.current_options.clear();
+        self.current_options.push(ClientOption::new(0, 0, OptionType::EEndTurn));
         for card in self.hand.clone().iter() {
 
             options.clear();
@@ -147,6 +152,7 @@ impl Controller {
                 self.add_client_options(*option);
             }
         }
+
 
         options.clear();
         for min_uid in self.in_play_minions.clone().iter() {
@@ -165,12 +171,15 @@ impl Controller {
         self.current_options.push(client_option);
     }
 
+    pub fn clear_options(&mut self) {
+        self.current_options.clear();
+    }
+
     pub fn set_client_options(&mut self, client_options: Vec<ClientOption>) {
         self.current_options = client_options;
     }
 
-    pub fn get_client_option(&self, index : usize) -> &ClientOption {
-        println!("{}", self.current_options.len());
+    pub fn get_client_option(&self, index: usize) -> &ClientOption {
         return &self.current_options[index];
     }
 
@@ -196,7 +205,7 @@ impl Controller {
         None
     }
 
-    pub fn get_copy_of_card_from_hand(&self, uid: UID) -> Option<Card>{
+    pub fn get_copy_of_card_from_hand(&self, uid: UID) -> Option<Card> {
         for card in self.hand.iter() {
             if card.get_uid() == uid {
                 return Some(card.clone());
@@ -211,13 +220,13 @@ impl Controller {
 
     pub fn get_n_card_uids_from_deck(&self, n: usize) -> Vec<UID> {
         let mut rng = thread_rng();
-        sample(&mut rng, self.deck.iter(), n).iter().map(|c|{
-            c.get_uid()    
-        }).collect()
+        sample(&mut rng, self.deck.iter(), n)
+            .iter()
+            .map(|c| c.get_uid())
+            .collect()
     }
 
     pub fn get_uid(&self) -> UID {
         self.uid.clone()
     }
-
 }

@@ -6,7 +6,7 @@ use std::net::TcpStream;
 use rustc_serialize::json::Json;
 
 use std::sync::mpsc::{Sender, Receiver};
-use ::game_thread::ThreadMessage;
+use game_thread::ThreadMessage;
 
 pub struct PlayerThread {
     pub client_id: u32,
@@ -28,9 +28,7 @@ impl PlayerThread {
                         to_server: Sender<ThreadMessage>,
                         from_server: Receiver<ThreadMessage>)
                         -> JoinHandle<()> {
-        Some(thread::spawn(move || {
-                player_thread_function(self, to_server, from_server);
-            }))
+        Some(thread::spawn(move || { player_thread_function(self, to_server, from_server); }))
             .unwrap()
     }
     // pub fn from_stream(stream : TcpStream, client_id: u32) -> Result<PlayerThread> {
@@ -168,7 +166,7 @@ fn player_thread_function(player_thread: PlayerThread,
                                 continue;
                             }
                         };
-                        
+
                         if message_type.contains("Mulligan") {
                             let mulligan_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : [] }}",
                                                            k = "message_type",

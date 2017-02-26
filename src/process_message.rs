@@ -1,9 +1,9 @@
 extern crate rustc_serialize;
 
-use ::game_state::GameState;
+use game_state::GameState;
 use rustc_serialize::json;
 use rustc_serialize::json::Json;
-use ::runes::new_controller::NewController;
+use runes::new_controller::NewController;
 use client_message::{MulliganMessage, OptionsMessage};
 
 
@@ -30,25 +30,23 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
         }
     };
 
-    match  message_type.as_ref() {
+    match message_type.as_ref() {
 
         "connection" => {
-                new_connection( client_id, game_state);
-        },
-        
-        "ready" => {
+            new_connection(client_id, game_state);
+        }
 
-        },
+        "ready" => {}
         "option" => {
-            let ops_message : OptionsMessage = json::decode(message.trim()).unwrap();
+            let ops_message: OptionsMessage = json::decode(message.trim()).unwrap();
             game_state.execute_option(ops_message);
-        },
-        
-        "mulligan" =>{
-            let mull_message : MulliganMessage = json::decode(message.trim()).unwrap();
+        }
+
+        "mulligan" => {
+            let mull_message: MulliganMessage = json::decode(message.trim()).unwrap();
             game_state.mulligan(client_id, mull_message.index.clone());
-        },
-        
+        }
+
         _ => {
             println!("{}", message_type);
         }

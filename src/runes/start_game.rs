@@ -1,11 +1,9 @@
-use ::rune_vm::Rune;
-use ::game_state::GameState;
+use rune_vm::Rune;
+use game_state::GameState;
 use minion_card::UID;
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
-pub struct StartGame {
-
-}
+pub struct StartGame {}
 
 impl StartGame {
     pub fn new() -> StartGame {

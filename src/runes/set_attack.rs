@@ -6,23 +6,23 @@ use minion_card::UID;
 
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
-pub struct SetMana {
-    controller_uid: UID,
-    mana: u8,
+pub struct SetAttack {
+    card_uid: UID,
+    amount: u16,
 }
 
-impl SetMana {
-    pub fn new(controller_uid: UID, mana: u8) -> SetMana {
-        SetMana {
-            controller_uid: controller_uid,
-            mana: mana,
+impl SetAttack {
+    pub fn new(card_uid: UID, amount: u16) -> SetAttack {
+        SetAttack {
+            card_uid: card_uid,
+            amount: amount,
         }
     }
 }
 
-impl Rune for SetMana {
+impl Rune for SetAttack {
     fn execute_rune(&self, mut game_state: &mut GameState) {
-        game_state.get_mut_controller_by_uid(self.controller_uid).unwrap().set_mana(self.mana);
+        game_state.get_mut_minion(self.card_uid).unwrap().set_total_attack(self.amount);
     }
 
     fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {
@@ -30,7 +30,7 @@ impl Rune for SetMana {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"SetMana\",")
+        json::encode(self).unwrap().replace("{", "{\"runeType\":\"SetAttack\",")
     }
 
     fn into_box(&self) -> Box<Rune> {

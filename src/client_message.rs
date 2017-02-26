@@ -12,7 +12,7 @@ pub struct MulliganMessage {
 pub struct OptionsMessage {
     pub message_type: String,
     pub index: u8,
-    pub board_index: u8
+    pub board_index: u8,
 }
 
 #[derive(RustcDecodable, RustcEncodable)]

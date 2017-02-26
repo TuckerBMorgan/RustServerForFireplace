@@ -1,6 +1,6 @@
-use ::rune_vm::Rune;
+use rune_vm::Rune;
 use rustc_serialize::json;
-use ::game_state::GameState;
+use game_state::GameState;
 use minion_card::UID;
 
 

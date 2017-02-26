@@ -1,10 +1,10 @@
 
-use ::rune_vm::Rune;
+use rune_vm::Rune;
 use rustc_serialize::json;
 use minion_card::UID;
-use ::game_state::GameState;
+use game_state::GameState;
 use std::collections::HashSet;
-use ::controller::{EControllerState, Controller};
+use controller::{EControllerState, Controller};
 
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
@@ -50,9 +50,9 @@ impl Rune for NewController {
             client_id: self.client_id.clone(),
             seen_cards: HashSet::new(),
             played_cards: vec![],
-            graveyard: vec![]
+            graveyard: vec![],
         };
-        
+
         let card_names = GameState::parse_deck(self.deck.clone());
         game_state.populate_deck(&mut new_controller, card_names);
         game_state.add_player_controller(new_controller);

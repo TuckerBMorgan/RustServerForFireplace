@@ -1,17 +1,15 @@
-use ::rune_vm::Rune;
-use ::game_state::GameState;
+use rune_vm::Rune;
+use game_state::GameState;
 use minion_card::UID;
 use ::tags_list::*;
 use runes::remove_tag::RemoveTag;
 use runes::set_base_mana::SetBaseMana;
 use runes::set_mana::SetMana;
 use runes::deal_card::DealCard;
-use ::controller::EControllerState;
+use controller::EControllerState;
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
-pub struct RotateTurn {
-
-}
+pub struct RotateTurn {}
 
 impl RotateTurn {
     pub fn new() -> RotateTurn {
@@ -65,13 +63,13 @@ impl Rune for RotateTurn {
             .get_n_card_uids_from_deck(1)
             .clone();
 
-        let dc = DealCard::new(uids[0].clone(), 
-                                    game_state.get_controller_by_index(turn_index as usize)
+        let dc = DealCard::new(uids[0].clone(),
+                               game_state.get_controller_by_index(turn_index as usize)
                                    .get_uid()
                                    .clone());
         game_state.execute_rune(Box::new(dc));
     }
-    
+
     fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {
         return true;
     }
