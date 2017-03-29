@@ -3,12 +3,15 @@ use rune_vm::Rune;
 use rustc_serialize::json;
 use game_state::GameState;
 use minion_card::UID;
+use hlua;
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct ShuffleCard {
     pub card_uid: UID,
     pub controller_uid: UID,
 }
+
+implement_for_lua!(ShuffleCard, |mut _metatable| {});
 
 impl ShuffleCard {
     pub fn new(card_uid: UID, controller_uid: UID) -> ShuffleCard {

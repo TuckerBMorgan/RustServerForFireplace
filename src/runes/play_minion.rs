@@ -5,6 +5,7 @@ use minion_card::UID;
 use runes::add_tag::AddTag;
 use runes::summon_minion::SummonMinion;
 use tags_list::{CHARGE, SUMMONING_SICKNESS, TARGET};
+use hlua;
 
 // the play_minion rune is called when you play a minion
 // out of your hand. It will call battle_cry if it has one
@@ -21,6 +22,8 @@ pub struct PlayMinion {
     pub field_index: usize,
     pub target_uid: UID,
 }
+
+implement_for_lua!(PlayMinion, |mut _metatable| {});
 
 impl PlayMinion {
     pub fn new(minion_uid: UID,
@@ -45,7 +48,7 @@ impl Rune for PlayMinion {
 
             if min.has_tag(TARGET.to_string()) {
                 //there is no reason for this statment to return anything
-                game_state.run_rhai_statement::<i8>(&min.get_function("target_function".to_string())
+                game_state.run_lua_statement::<i8>(&min.get_function("target_function".to_string())
                                                   .unwrap(),
                                               true);
             }
@@ -56,7 +59,7 @@ impl Rune for PlayMinion {
             }
             match min.get_function("battle_cry_function".to_string()) {
                 Some(function) => {
-                    game_state.run_rhai_statement::<i8>(&function, true);
+                    game_state.run_lua_statement::<i8>(&function, true);
                 }
                 _ => {}
             }

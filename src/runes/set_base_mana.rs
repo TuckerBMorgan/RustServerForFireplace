@@ -2,7 +2,7 @@ use rune_vm::Rune;
 use rustc_serialize::json;
 use game_state::GameState;
 use minion_card::UID;
-
+use hlua;
 
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
@@ -10,6 +10,8 @@ pub struct SetBaseMana {
     controller_uid: UID,
     base_mana: u8,
 }
+
+implement_for_lua!(SetBaseMana, |mut _metatable| {});
 
 impl SetBaseMana {
     pub fn new(controller_uid: UID, base_mana: u8) -> SetBaseMana {

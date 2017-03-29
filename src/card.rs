@@ -4,6 +4,7 @@ use minion_card::UID;
 use client_option::{OptionGenerator, ClientOption, OptionType};
 use tags_list::TARGET;
 use controller::Controller;
+use hlua;
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub enum ECardType {
@@ -92,6 +93,7 @@ impl Card {
     //
 }
 
+
 impl OptionGenerator for Card {
     fn generate_options(&self,
                         game_state: &mut GameState,
@@ -101,7 +103,15 @@ impl OptionGenerator for Card {
             if !self.content.contains("default") {
                 let minion = game_state.get_minion(self.content.parse().unwrap()).unwrap().clone();
                 if minion.has_tag(TARGET.to_string()) {
-                    return game_state.run_rhai_statement::<Vec<ClientOption>>(&minion.get_function("target_function".to_string()).unwrap(), false);
+                    let start = game_state.run_lua_statement::<hlua::LuaTable<_>>(&minion.get_function("target_function".to_string()).unwrap(), false);
+                    match start {
+                        Some(mut start) => {
+                            return start.iter::<i32, ClientOption>().filter_map(|e| e).map(|(_, v)| v).collect();
+                        },
+                        None => {
+                            return vec![];
+                        }
+                    }
                 } else {
                     let mut co = vec![];
                     co.push(ClientOption::new(self.uid, 0, OptionType::EPlayCard));

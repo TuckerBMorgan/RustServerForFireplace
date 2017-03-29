@@ -31,21 +31,16 @@ filter_function**
 @@
 apply_aura**
     
-    var sh = new_set_health(getter.minion_get_uid(), getter.minion_get_total_health() + 1);
+    var val = getter.minion_get_total_health() + 1;
+    var sh = new_set_health(getter.minion_get_uid(), val);
     var mh = new_modify_health(getter.minion_get_uid(), 1);
-
-    var sa = new_set_attack(getter.minion_get_uid(), getter.minion_get_total_attack() + 1); 
+    var sa = new_set_attack(getter.minion_get_uid(), getter.minion_get_total_attack() + 1);
     var ma = new_modify_attack(getter.minion_get_uid(), 1);
-
     var rets = [sh, mh, sa, ma];
     rets
 @@
 remove_aura**
-    print("SSS");
     var sh = new_set_health(loser.minion_get_uid(), loser.minion_get_total_health() - 1);
-    print("SSS");
     var sa = new_set_attack(loser.minion_get_uid(), loser.minion_get_total_attack() - 1);
-    print("SSS");
     var rets = [sh, sa];
     rets 
-    

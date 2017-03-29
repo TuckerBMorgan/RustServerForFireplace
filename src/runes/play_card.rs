@@ -3,6 +3,7 @@ use rustc_serialize::json;
 use game_state::GameState;
 use minion_card::UID;
 use runes::play_minion::PlayMinion;
+use hlua;
 
 // the play_minion rune is called when you play a minion
 // out of your hand. It will call battle_cry if it has one
@@ -34,6 +35,8 @@ impl PlayCard {
         }
     }
 }
+
+implement_for_lua!(PlayCard, |mut _metatable| {});
 
 impl Rune for PlayCard {
     fn execute_rune(&self, mut game_state: &mut GameState) {

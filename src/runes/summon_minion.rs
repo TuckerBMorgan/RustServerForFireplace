@@ -3,6 +3,7 @@ use rune_vm::Rune;
 use rustc_serialize::json;
 use game_state::GameState;
 use minion_card::{UID, EMinionState};
+use hlua;
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct SummonMinion {
@@ -10,6 +11,9 @@ pub struct SummonMinion {
     pub controller_uid: UID,
     pub field_index: u8,
 }
+
+implement_for_lua!(SummonMinion, |mut _metatable| {});
+
 
 impl SummonMinion {
     pub fn new(minion_uid: UID, controller_uid: UID, field_index: u8) -> SummonMinion {

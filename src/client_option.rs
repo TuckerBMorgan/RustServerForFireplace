@@ -2,6 +2,7 @@ use game_state::GameState;
 use controller::Controller;
 use minion_card::UID;
 use rustc_serialize::json;
+use hlua;
 
 #[derive(Copy, Clone, Debug, RustcDecodable, RustcEncodable)]
 pub enum OptionType {
@@ -28,6 +29,8 @@ impl ClientOption {
         }
     }
 }
+
+implement_for_lua!(ClientOption, |mut _metatable|{});
 
 #[derive(RustcDecodable, RustcEncodable)]
 pub struct OptionsPackage {

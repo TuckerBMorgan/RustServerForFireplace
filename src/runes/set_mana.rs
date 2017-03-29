@@ -2,14 +2,16 @@ use rune_vm::Rune;
 use rustc_serialize::json;
 use game_state::GameState;
 use minion_card::UID;
+use hlua;
 
 
-
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
 pub struct SetMana {
     controller_uid: UID,
     mana: u8,
 }
+
+implement_for_lua!(SetMana, |mut _metatable| {});
 
 impl SetMana {
     pub fn new(controller_uid: UID, mana: u8) -> SetMana {
@@ -17,6 +19,10 @@ impl SetMana {
             controller_uid: controller_uid,
             mana: mana,
         }
+    }
+
+    pub fn to_rune(&self) -> Box<Rune> {
+        Box::new(self.clone())
     }
 }
 

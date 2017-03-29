@@ -2,12 +2,14 @@ use rune_vm::Rune;
 use minion_card::{UID, EMinionState};
 use rustc_serialize::json;
 use game_state::GameState;
-
+use hlua;
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct Destroy {
     target_uid: UID,
 }
+
+implement_for_lua!(Destroy, |mut _metatable| {});
 
 impl Destroy {
     pub fn new(target_uid: UID) -> Destroy {

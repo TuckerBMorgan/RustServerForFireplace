@@ -2,6 +2,7 @@ use rune_vm::Rune;
 use rustc_serialize::json;
 use game_state::GameState;
 use minion_card::UID;
+use hlua;
 
 
 
@@ -19,6 +20,8 @@ impl AddEnchantment {
         }
     }
 }
+
+implement_for_lua!(AddEnchantment, |mut _metatable| {});
 
 impl Rune for AddEnchantment {
     fn execute_rune(&self, mut game_state: &mut GameState) {

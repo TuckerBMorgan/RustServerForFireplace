@@ -2,17 +2,19 @@ use rune_vm::Rune;
 use rustc_serialize::json;
 use game_state::GameState;
 use minion_card::UID;
+use hlua;
 
 
-
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
 pub struct SetAttack {
     card_uid: UID,
-    amount: u16,
+    amount: i64,
 }
 
+implement_for_lua!(SetAttack, |mut _metatable| {});
+
 impl SetAttack {
-    pub fn new(card_uid: UID, amount: u16) -> SetAttack {
+    pub fn new(card_uid: UID, amount: i64) -> SetAttack {
         SetAttack {
             card_uid: card_uid,
             amount: amount,

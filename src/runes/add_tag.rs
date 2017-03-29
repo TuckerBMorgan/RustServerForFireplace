@@ -2,7 +2,7 @@ use rune_vm::Rune;
 use rustc_serialize::json;
 use game_state::GameState;
 use minion_card::UID;
-
+use hlua;
 
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
@@ -19,6 +19,8 @@ impl AddTag {
         }
     }
 }
+
+implement_for_lua!(AddTag, |mut _metatable| {});
 
 impl Rune for AddTag {
     fn execute_rune(&self, mut game_state: &mut GameState) {

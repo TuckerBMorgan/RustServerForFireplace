@@ -3,16 +3,19 @@ use minion_card::UID;
 use rustc_serialize::json;
 use game_state::GameState;
 use runes::modify_health::ModifyHealth;
+use hlua;
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct DamageRune {
     target_uid: UID,
     source_uid: UID,
-    amount: i32,
+    amount: i64,
 }
 
+implement_for_lua!(DamageRune, |mut _metatable| {});
+
 impl DamageRune {
-    pub fn new(target_uid: UID, source_uid: UID, amount: i32) -> DamageRune {
+    pub fn new(target_uid: UID, source_uid: UID, amount: i64) -> DamageRune {
         DamageRune {
             target_uid: target_uid,
             source_uid: source_uid,

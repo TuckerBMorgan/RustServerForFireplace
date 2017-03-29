@@ -2,7 +2,7 @@ use rune_vm::Rune;
 use rustc_serialize::json;
 use game_state::GameState;
 use minion_card::UID;
-
+use hlua;
 
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
@@ -10,6 +10,8 @@ pub struct RemoveTag {
     pub minion_uid: UID,
     pub tag: String,
 }
+
+implement_for_lua!(RemoveTag, |mut _metatable| {});
 
 impl RemoveTag {
     pub fn new(minion_uid: UID, tag: String) -> RemoveTag {

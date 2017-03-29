@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use rand::{thread_rng, Rng, sample};
 use game_state::GameState;
 use client_option::{ClientOption, OptionGenerator, OptionType};
-
+use hlua;
 
 #[derive(RustcDecodable, RustcEncodable, Copy, Clone)]
 pub enum EControllerType {
@@ -28,7 +28,7 @@ pub struct Controller {
     pub uid: UID,
     pub mana: u8,
     pub base_mana: u8,
-    pub team: u8,
+    pub team: u32,
     pub controller_state: EControllerState,
     pub client_id: u32,
     pub life: u8,
@@ -50,6 +50,9 @@ pub struct Controller {
     pub current_options: Vec<ClientOption>,
     pub played_cards: Vec<Card>,
 }
+
+implement_lua_read!(Controller);
+implement_lua_push!(Controller, |mut _metatable|{});
 
 impl Controller {
     pub fn add_minion_to_unplayed(&mut self, minion_uid: UID) {

@@ -1,7 +1,9 @@
 use minion_card::Minion;
+use hlua::LuaTable;
 
 #[derive(Clone)]
 pub struct MinionVec {
+
     data_struct : Vec<Minion>
 }
 
