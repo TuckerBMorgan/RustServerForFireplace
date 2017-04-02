@@ -25,7 +25,7 @@ pub enum EMinionState {
 
 #[derive(Clone, Debug)]
 pub struct Minion {
-    cost: i64,
+    cost: u32,
     id: String,
     uid: UID,
     name: String,
@@ -40,51 +40,55 @@ pub struct Minion {
     // the attack varibles, baseAttack is the default value
     // currentAttack is what we use for how much damage we do
     // totalAttack is the current ceiling for attack for the minion
-    base_attack: i64,
-    current_attack: i64,
-    total_attack: i64,
+    base_attack: u32,
+    current_attack: u32,
+    total_attack: u32,
     team: u32,
 
     // the health varibles, baseHealth is the default value
     // currentHealth is how much the minion has at the moment, damage included
     // totalHealth is the current ceiling for health for the minion
-    base_health: i64,
-    current_health: i64,
-    total_health: i64,
+    base_health: u32,
+    current_health: u32,
+    total_health: u32,
 
-    spell_damage: i64,
+    spell_damage: u32,
 }
 
 implement_for_lua!(Minion, |mut _metatable|{
     let mut index =_metatable.empty_array("__index");
-    index.set("add_tag", hlua::function2(|min: &mut Minion, tag: String| 
-                                            min.add_tag_to(tag)
-    ));
+    
+    index.set("add_tag", hlua::function2(|min: &mut Minion, tag: String| min.add_tag_to(tag)));
     index.set("get_team", hlua::function1(|min: &Minion| min.get_team()));
+    index.set("get_health",hlua::function1(|min: &Minion| min.get_current_health()));
+    index.set("get_total_health", hlua::function1(|min: &Minion| min.get_total_health()));
+    index.set("get_uid", hlua::function1(|min: &Minion| min.get_uid()));
+    index.set("get_total_attack", hlua::function1(|min: &Minion| min.get_total_attack()));
+
 });
 
 impl Minion {
     pub fn lua_new(id: String,//this is a per non instanced look up id for the file structure
                    uid: UID,//this is a perinstance look up ID for the game
-                   cost: u8,
+                   cost: u32,
                    set: String,
-                   base_attack: u8,
-                   base_health: u8,
+                   base_attack: u32,
+                   base_health: u32,
                    name: String) -> Minion {
         Minion{
-            cost: cost as i64,
+            cost: cost ,
             id: id,
             uid: uid,
             name: name,
             set: set,
             tags: HashSet::new(),
             functions: HashMap::new(),
-            base_attack: base_attack as i64,
-            current_attack: base_attack as i64,
-            total_attack: base_attack as i64,
-            base_health: base_health as i64,
-            current_health: base_health as i64,
-            total_health: base_health as i64,
+            base_attack: base_attack ,
+            current_attack: base_attack ,
+            total_attack: base_attack ,
+            base_health: base_health ,
+            current_health: base_health ,
+            total_health: base_health,
             state: EMinionState::NotInPlay,
             auras: vec![],
             enchantments: vec![],
@@ -93,13 +97,13 @@ impl Minion {
         }
     }
 
-    pub fn new(cost: i64,
+    pub fn new(cost: u32,
                id: String,
                uid: UID,
                name: String,
                set: String,
-               base_attack: i64,
-               base_health: i64)
+               base_attack: u32,
+               base_health: u32)
                -> Minion {
 
         Minion {
@@ -189,7 +193,7 @@ impl Minion {
         self.tags.contains(&tag)
     }
 
-    pub fn get_cost(&self) -> i64 {
+    pub fn get_cost(&self) -> u32 {
         self.cost.clone()
     }
 
@@ -214,103 +218,71 @@ impl Minion {
     }
 
     pub fn set_team(&mut self, team: u32) {
-        self.team = team as u32;
+        self.team = team ;
     }
 
     pub fn get_team(&self) -> u32{
         self.team.clone()
     }
     
-    pub fn get_base_attack(&self) -> i64 {
+    pub fn get_base_attack(&self) -> u32 {
         self.base_attack.clone()
     }
 
-    pub fn get_current_attack(&self) -> i64 {
+    pub fn get_current_attack(&self) -> u32 {
         self.current_attack.clone()
     }
 
-    pub fn get_total_attack(&self) -> i64 {
+    pub fn get_total_attack(&self) -> u32 {
         self.total_attack.clone()
     }
 
-    pub fn get_total_attack_while_mut(&mut self) -> i64 {
-        self.total_attack.clone()
-    }
-
-    pub fn set_base_attack(&mut self, attack: i64) {
+    pub fn set_base_attack(&mut self, attack: u32) {
         self.base_attack = attack;
     }
 
-    pub fn set_current_attack(&mut self, attack: i64) {
+    pub fn set_current_attack(&mut self, attack: u32) {
         self.current_attack = attack
     }
 
-    pub fn set_total_attack(&mut self, attack: i64) {
+    pub fn set_total_attack(&mut self, attack: u32) {
         self.total_attack = attack
     }
 
-    pub fn get_base_health(&self) -> i64 {
+    pub fn get_base_health(&self) -> u32 {
         self.base_health.clone()
     }
 
-    pub fn set_current_health(&mut self, amount: i64) {
+    pub fn shift_current_health(&mut self, amount: i32) {
 
-        if self.current_health + amount <= self.total_health {
-            self.current_health += amount;
-        } else if self.current_health + amount > self.total_health {
+        if self.current_health as i32 + amount <= self.total_health as i32 {
+            self.current_health += amount as u32;
+        } else if self.current_health as i32 + amount > self.total_health as i32 {
             self.current_health = self.total_health;
         }
     }
 
-    pub fn get_current_health(&self) -> i64 {
+    pub fn get_current_health(&self) -> u32 {
         self.current_health.clone()
     }
 
-    pub fn get_total_health_while_mut(&mut self) -> i64{
+    pub fn get_total_health(&self) -> u32 {
         self.total_health.clone()
     }
 
-    pub fn get_total_health(&self) -> i64 {
-        self.total_health.clone()
-    }
-
-    pub fn set_total_health(&mut self, amount: i64) {
+    pub fn set_total_health(&mut self, amount: u32) {
         self.total_health = amount;
         if self.current_health > self.total_health {
             self.current_health = self.total_health.clone();
         }
     }
 
-    pub fn set_spell_damage(&mut self, amount: i64) {
-        self.spell_damage = amount as i64;
+    pub fn set_spell_damage(&mut self, amount: u32) {
+        self.spell_damage = amount ;
     }
 
-    // healper function for setting all varibles at one, used in summon minion functions in rhai
-    #[allow(dead_code)]
-    pub fn set_attack_and_health_basics(&mut self, basic_attack: i64, basic_health: i64) {
-        self.base_attack = basic_attack;
-        self.total_attack = basic_attack;
-        self.current_attack = basic_attack;
-
-        self.base_health = basic_health;
-        self.total_health = basic_health;
-        self.current_health = basic_health;
-    }
-
-    pub fn set_uid(&mut self, uid: i64) {
-        self.uid = uid.clone() as u32;
-    }
-
-    // sets name, uid, id, and set, this is to get around the rhais function paramater limit
-    // also for whatever reason magic numbers in rhai as default i64 type, and there is
-    // type conversion within rhai, so we take our u16, and cast them from i64s when we use them
-    #[allow(dead_code)]
-    pub fn set_basic_info(&mut self, name: String, uid: UID, set: String, id: String, cost: i64) {
-        self.name = name;
-        self.uid = uid;
-        self.set = set;
-        self.id = id;
-        self.cost = cost;
+    pub fn set_uid(&mut self, uid: u32) {
+        self.uid = uid.clone() ;
     }
 
     pub fn set_functions(&mut self, functions: HashMap<String, String>) {

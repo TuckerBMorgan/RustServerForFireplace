@@ -22,7 +22,6 @@ mod player_thread;
 mod client_message;
 mod process_message;
 mod tags_list;
-mod minion_vec;
 
 
 use std::process;

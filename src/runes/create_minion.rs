@@ -8,19 +8,19 @@ use hlua;
 // this is a dummy rune for the client, IS NOT TO BE RUN THROUGH THE RUNE_VM
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct CreateMinion {
-    cost: i64,
+    cost: u32,
     id: String,
     uid: UID,
     name: String,
     set: String,
 
-    base_attack: i64,
-    current_attack: i64,
-    total_attack: i64,
+    base_attack: u32,
+    current_attack: u32,
+    total_attack: u32,
 
-    base_health: i64,
-    current_health: i64,
-    total_health: i64,
+    base_health: u32,
+    current_health: u32,
+    total_health: u32,
 
     controller_uid: UID,
 }
@@ -29,19 +29,19 @@ implement_for_lua!(CreateMinion, |mut _metatable| {});
 
 impl CreateMinion {
     #[allow(dead_code)]
-    pub fn new(cost: i64,
+    pub fn new(cost: u32,
                id: String,
                uid: UID,
                name: String,
                set: String,
 
-               base_attack: i64,
-               current_attack: i64,
-               total_attack: i64,
+               base_attack: u32,
+               current_attack: u32,
+               total_attack: u32,
 
-               base_health: i64,
-               current_health: i64,
-               total_health: i64,
+               base_health: u32,
+               current_health: u32,
+               total_health: u32,
                controller_uid: UID)
                -> CreateMinion {
 
@@ -71,9 +71,9 @@ impl CreateMinion {
             base_attack: minion.get_base_attack(),
             current_attack: minion.get_current_attack(),
             total_attack: minion.get_total_attack(),
-            base_health: minion.get_base_health() as i64,
-            current_health: minion.get_current_health() as i64,
-            total_health: minion.get_total_health() as i64,
+            base_health: minion.get_base_health(),
+            current_health: minion.get_current_health() ,
+            total_health: minion.get_total_health(),
             controller_uid: controller_uid.clone(),
         }
     }

@@ -9,13 +9,13 @@ use hlua;
 pub struct DamageRune {
     target_uid: UID,
     source_uid: UID,
-    amount: i64,
+    amount: u32,
 }
 
 implement_for_lua!(DamageRune, |mut _metatable| {});
 
 impl DamageRune {
-    pub fn new(target_uid: UID, source_uid: UID, amount: i64) -> DamageRune {
+    pub fn new(target_uid: UID, source_uid: UID, amount: u32) -> DamageRune {
         DamageRune {
             target_uid: target_uid,
             source_uid: source_uid,
@@ -25,8 +25,9 @@ impl DamageRune {
 }
 
 impl Rune for DamageRune {
+    
     fn execute_rune(&self, game_state: &mut GameState) {
-        let m_h = ModifyHealth::new(self.target_uid, self.amount * -1);
+        let m_h = ModifyHealth::new(self.target_uid, (self.amount as i32) * -1);
         game_state.execute_rune(Box::new(m_h));
     }
 

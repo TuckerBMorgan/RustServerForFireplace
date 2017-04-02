@@ -23,3 +23,29 @@ macro_rules! implement_for_lua {
         implement_lua_push!($ty, $cb);
     }
 }
+
+#[macro_export]
+macro_rules! implement_enum_and_unfold {
+    ($($enum_id:ident,)+) => (
+
+        #[derive(Clone, Debug)]
+        pub enum ERuneType {
+            $(
+                $enum_id($enum_id),
+            )*
+        }
+
+        impl ERuneType {
+            pub fn unfold(&self) -> Box<Rune> {
+                match *self {
+                    $(
+                        ERuneType::$enum_id(ref val) => {
+                            return val.into_box();
+                        },
+                    )*
+                }
+            }
+        }
+        implement_for_lua!(ERuneType, |mut _metatable| {});
+    )
+}

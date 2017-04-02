@@ -6,6 +6,9 @@ use runes::start_game::StartGame;
 use runes::set_mana::SetMana;
 use runes::set_health::SetHealth;
 use runes::set_attack::SetAttack;
+use runes::set_base_mana::SetBaseMana;
+use runes::modify_attack::ModifyAttack;
+use runes::modify_health::ModifyHealth;
 
 pub trait Rune: Send {
     fn execute_rune(&self, game_state: &mut GameState);
@@ -14,30 +17,5 @@ pub trait Rune: Send {
     fn into_box(&self) -> Box<Rune>;
 }
 
-#[derive(Clone, Debug)]
-pub enum ERuneType { 
-    StartGame(StartGame),
-    SetMana(SetMana),
-    SetAttack(SetAttack),
-    SetHealth(SetHealth)
-}
-
-impl ERuneType {
-    pub fn unfold(&self) -> Box<Rune> {
-        match *self {
-            ERuneType::SetAttack(ref start_game_stuff) => {
-                return start_game_stuff.into_box();
-            },
-            ERuneType::SetHealth(ref set_health_rune) => {
-                return set_health_rune.into_box();
-            },
-            ERuneType::SetMana(ref set_mana_rune) => {
-                return set_mana_rune.into_box();
-            },
-            ERuneType::StartGame(ref start_game_rune) => {
-                return start_game_rune.into_box();
-            }
-        }
-    }
-}
-implement_for_lua!(ERuneType, |mut _metatable| {});
+//if we want a rune to work in lua context, just add it to this macro
+implement_enum_and_unfold!(StartGame, SetMana, SetAttack, SetHealth, ModifyHealth, ModifyAttack, SetBaseMana,);

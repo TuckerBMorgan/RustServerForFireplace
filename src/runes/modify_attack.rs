@@ -4,16 +4,16 @@ use rustc_serialize::json;
 use game_state::GameState;
 use hlua;
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
 pub struct ModifyAttack {
     target_uid: UID,
-    amount: i64,
+    amount: u32,
 }
 
 implement_for_lua!(ModifyAttack, |mut _metatable| {});
 
 impl ModifyAttack {
-    pub fn new(target_uid: UID, amount: i64) -> ModifyAttack {
+    pub fn new(target_uid: UID, amount: u32) -> ModifyAttack {
         ModifyAttack {
             target_uid: target_uid,
             amount: amount,

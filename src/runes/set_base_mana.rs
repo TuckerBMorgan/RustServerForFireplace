@@ -5,7 +5,7 @@ use minion_card::UID;
 use hlua;
 
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
 pub struct SetBaseMana {
     controller_uid: UID,
     base_mana: u8,

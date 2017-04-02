@@ -8,13 +8,13 @@ use hlua;
 #[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
 pub struct SetAttack {
     card_uid: UID,
-    amount: i64,
+    amount: u32,
 }
 
 implement_for_lua!(SetAttack, |mut _metatable| {});
 
 impl SetAttack {
-    pub fn new(card_uid: UID, amount: i64) -> SetAttack {
+    pub fn new(card_uid: UID, amount: u32) -> SetAttack {
         SetAttack {
             card_uid: card_uid,
             amount: amount,
