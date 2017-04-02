@@ -3,42 +3,45 @@ use rustc_serialize::json;
 use game_state::GameState;
 use minion_card::UID;
 use minion_card::Minion;
+use hlua;
 
 // this is a dummy rune for the client, IS NOT TO BE RUN THROUGH THE RUNE_VM
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct CreateMinion {
-    cost: u16,
+    cost: u32,
     id: String,
     uid: UID,
     name: String,
     set: String,
 
-    base_attack: u16,
-    current_attack: u16,
-    total_attack: u16,
+    base_attack: u32,
+    current_attack: u32,
+    total_attack: u32,
 
-    base_health: u16,
-    current_health: u16,
-    total_health: u16,
+    base_health: u32,
+    current_health: u32,
+    total_health: u32,
 
     controller_uid: UID,
 }
 
+implement_for_lua!(CreateMinion, |mut _metatable| {});
+
 impl CreateMinion {
     #[allow(dead_code)]
-    pub fn new(cost: u16,
+    pub fn new(cost: u32,
                id: String,
                uid: UID,
                name: String,
                set: String,
 
-               base_attack: u16,
-               current_attack: u16,
-               total_attack: u16,
+               base_attack: u32,
+               current_attack: u32,
+               total_attack: u32,
 
-               base_health: u16,
-               current_health: u16,
-               total_health: u16,
+               base_health: u32,
+               current_health: u32,
+               total_health: u32,
                controller_uid: UID)
                -> CreateMinion {
 
@@ -68,9 +71,9 @@ impl CreateMinion {
             base_attack: minion.get_base_attack(),
             current_attack: minion.get_current_attack(),
             total_attack: minion.get_total_attack(),
-            base_health: minion.get_base_health() as u16,
-            current_health: minion.get_current_health() as u16,
-            total_health: minion.get_total_health() as u16,
+            base_health: minion.get_base_health(),
+            current_health: minion.get_current_health() ,
+            total_health: minion.get_total_health(),
             controller_uid: controller_uid.clone(),
         }
     }

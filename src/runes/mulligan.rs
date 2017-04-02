@@ -1,6 +1,7 @@
 use rune_vm::Rune;
 use game_state::GameState;
 use minion_card::UID;
+use hlua;
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct Mulligan {}
@@ -10,6 +11,8 @@ impl Mulligan {
         Mulligan {}
     }
 }
+
+implement_for_lua!(Mulligan, |mut _metatable| {});
 
 impl Rune for Mulligan {
     fn execute_rune(&self, _game_state: &mut GameState) {}

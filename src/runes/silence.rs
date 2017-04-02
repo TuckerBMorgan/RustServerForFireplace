@@ -5,12 +5,15 @@ use minion_card::UID;
 use tags_list::{FROZEN, CHARGE, WINDFURY, DIVINE_SHIELD, STEALTH, TAUNT, DEATH_RATTLE,
                 TRIGGERED_EFFECT, POISON, SPELL_DAMAGE, TARGET};
 use runes::remove_tag::RemoveTag;
+use hlua;
 
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct Silence {
     pub minion_uid: UID,
 }
+
+implement_for_lua!(Silence, |mut _metatable| {});
 
 impl Silence {
     pub fn new(minion_uid: UID) -> Silence {
@@ -43,6 +46,8 @@ impl Rune for Silence {
         let rt = RemoveTag::new(self.minion_uid, SPELL_DAMAGE.to_string());
         game_state.execute_rune(Box::new(rt));
         let rt = RemoveTag::new(self.minion_uid, TARGET.to_string());
+        game_state.execute_rune(Box::new(rt));
+        let rt = RemoveTag::new(self.minion_uid, STEALTH.to_string());
         game_state.execute_rune(Box::new(rt));
 
     }

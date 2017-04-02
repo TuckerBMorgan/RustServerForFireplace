@@ -1,28 +1,25 @@
 #![allow(dead_code)]
 
-use rune_vm::Rune;
-use std::any::{Any, TypeId};
+use rune_vm::{Rune, ERuneType};
 use std::net::TcpStream;
 use std::fmt::Display;
 use card::{Card, ECardType};
 use controller::{Controller, EControllerState};
 use minion_card::{Minion, UID, EMinionState};
 use game_thread::GameThread;
-use client_option::{ClientOption, OptionType, OptionsPackage};
-use rustc_serialize::json;
+use client_option::{OptionType, OptionsPackage};
 use client_message::OptionsMessage;
 use tags_list::AURA;
+use hlua::{self, Lua};
 
 use rand::thread_rng;
 use entity::Entity;
-use rhai::{Engine, FnRegister, Scope};
+use rhai::{Engine, Scope};
 
-use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::collections::{VecDeque, HashMap, HashSet};
-
 
 use runes::deal_card::DealCard;
 use runes::start_game::StartGame;
@@ -32,11 +29,11 @@ use runes::new_controller::NewController;
 use runes::mulligan::Mulligan;
 use runes::play_card::PlayCard;
 use runes::kill_minion::KillMinion;
-use runes::modify_health::ModifyHealth;
+use runes::set_mana::SetMana;
 use runes::set_health::SetHealth;
 use runes::set_attack::SetAttack;
-use minion_vec::MinionVec;
-
+use runes::modify_attack::ModifyAttack;
+use runes::modify_health::ModifyHealth;
 
 #[derive(Clone)]
 pub struct GameStateData {
@@ -49,6 +46,13 @@ pub struct GameStateData {
     on_turn_player: i8,
 }
 
+//implement_for_lua!(i32, |mut _metatable|{});
+
+implement_for_lua!(GameStateData, |mut _metatable|{
+    let mut index =_metatable.empty_array("__index");
+    index.set("get_uid", hlua::function1(|gsd: &mut GameStateData| gsd.get_uid()));
+});
+
 impl GameStateData {
     pub fn new() -> GameStateData {
         GameStateData {
@@ -58,8 +62,8 @@ impl GameStateData {
             controller_uid_to_client_id: HashMap::new(),
             client_id_to_controller_uid: HashMap::new(),
             on_turn_player: 0,
-            attacked_this_turn: vec![],
-        }
+            attacked_this_turn: vec![]
+            }
     }
 
     pub fn add_player_controller(&mut self, controller: Controller) {
@@ -163,6 +167,7 @@ pub struct GameState<'a> {
     game_thread: Option<&'a GameThread>,
     game_state_data: GameStateData,
     script_engine: Engine,
+    lua: Lua<'a>,
 
     // the current runes waiting to be fired
     rune_queue: VecDeque<Box<Rune>>,
@@ -188,10 +193,13 @@ impl<'a> GameState<'a> {
             rune_queue: VecDeque::new(),
             entities: HashMap::new(),
             script_engine: Engine::new(),
+            lua: Lua::new(),
             game_scope: vec![],
             first_to_connect: None,
-            mulligan_played_out: 0,
+            mulligan_played_out: 0
         };
+
+        //this is required because we have to have to tell lua about all the special types from our game
         gs.filled_up_scripting_engine();
         return gs;
     }
@@ -200,44 +208,96 @@ impl<'a> GameState<'a> {
     // this function does that
     pub fn filled_up_scripting_engine(&mut self) {
 
-        self.script_engine.register_type::<GameStateData>();
-        self.script_engine.register_type::<UID>();
-        self.script_engine.register_type::<Minion>();
-        self.script_engine.register_type::<ClientOption>();
-        self.script_engine.register_type::<Vec<ClientOption>>();
-        self.script_engine.register_type::<Vec<Minion>>();
-        self.script_engine.register_type::<ModifyHealth>();
-        self.script_engine.register_type::<SetHealth>();
-        self.script_engine.register_type::<SetAttack>();
-        self.script_engine.register_type::<&Rune>();
-        self.script_engine.register_type::<Vec<&Rune>>();
-        self.script_engine.register_type::<MinionVec>();
+        //this is for a bunch of the basic functions, like print
+        self.lua.openlibs();
+        {
+            //we do this for each of the major types that lua will deal with
+            let mut minion_namepsace = self.lua.empty_array("Minion");
+            minion_namepsace.set("new", hlua::function7(|id, uid, cost, set, base_attack, base_health, name| 
+                                                    Minion::lua_new(id, uid, cost, set, base_attack, base_health, name)));
+        }
 
-        self.script_engine.register_fn("new_minion", Minion::new_other);
-        self.script_engine.register_fn("minion_basic_info", Minion::set_basic_info);
-        self.script_engine.register_fn("minion_attack_health_basic",
-                                       Minion::set_attack_and_health_basics);
-        self.script_engine.register_fn("minion_get_team", Minion::get_team_while_mut);
-        self.script_engine.register_fn("minion_set_spell_damage", Minion::set_spell_damage);
-        self.script_engine.register_fn("set_uid", Minion::set_uid);
-        self.script_engine.register_fn("minion_get_uid", Minion::get_uid);
-        self.script_engine.register_fn("minion_get_total_health", Minion::get_total_health);
-        self.script_engine.register_fn("minion_add_tag", Minion::add_tag_to);
-        self.script_engine.register_fn("minion_vec_push", MinionVec::push);
-        self.script_engine.register_fn("minion_vec_get", MinionVec::get);
-        self.script_engine.register_fn("minion_vec_new", MinionVec::new);
-        self.script_engine.register_fn("get_uid", GameStateData::get_uid);
-        self.script_engine.register_fn("print", GameState::print as fn(x: &mut String) -> ());
-        self.script_engine.register_fn("new_set_health", SetHealth::new);
-        self.script_engine.register_fn("new_modify_health", ModifyHealth::new);
-        self.script_engine.register_fn("new_set_attack", SetAttack::new);
-        self.script_engine.register_fn("get_minion", GameStateData::get_minion_no_option);
+        {
+            let mut rune_namespace = self.lua.empty_array("Rune");
+            rune_namespace.set("new_start_game", hlua::function0(|| StartGame::new()));
+            rune_namespace.set("new_set_mana", hlua::function2(|uid, amount| SetMana::new(uid, amount)));
+            rune_namespace.set("new_set_health", hlua::function2(|uid, amount| SetHealth::new(uid, amount)));
+            rune_namespace.set("new_set_attack", hlua::function2(|uid, amount| SetAttack::new(uid, amount)));
+            rune_namespace.set("new_modify_attack", hlua::function2(|uid, amount| ModifyAttack::new(uid, amount)));
+            rune_namespace.set("new_modify_health", hlua::function2(|uid, amount| ModifyHealth::new(uid, amount)));
+            
+        }
+
+        {
+            let mut enum_namespace = self.lua.empty_array("RuneTypeEnum");
+            enum_namespace.set("new_start_game", hlua::function1(|sg| ERuneType::StartGame(sg)));
+            enum_namespace.set("new_set_mana", hlua::function1(|sm| ERuneType::SetMana(sm)));
+            enum_namespace.set("new_modify_attack", hlua::function1(|ma| ERuneType::ModifyAttack(ma)));
+            enum_namespace.set("new_modify_health", hlua::function1(|mh| ERuneType::ModifyHealth(mh)));
+            enum_namespace.set("new_set_health", hlua::function1(|sh| ERuneType::SetHealth(sh)));
+            enum_namespace.set("new_set_attack", hlua::function1(|sa| ERuneType::SetAttack(sa)));
+        }
+
+        
+        //this is a common block I use for testing lua, so I prefer to just leave it here
+        /*
+        {
+            let mut m : Minion = Minion::new(0, "Test".to_string(), 1, "test".to_string(), "set".to_string(), 0, 0);
+            m.set_team(0);
+
+            let mut mone : Minion = Minion::new(0, "Test".to_string(), 2, "test".to_string(), "set".to_string(), 0, 0);
+ 
+            mone.set_team(1);
+ 
+            let mut mtwo : Minion = Minion::new(0, "Test".to_string(), 3, "test".to_string(), "set".to_string(), 0, 0);
+            mtwo.set_team(0);
+
+            self.lua.set("enchanter", m);
+
+            let _ = self.lua.execute::<()>("minions = {}");
+            
+            {
+                let mut table: hlua::LuaTable<_> = self.lua.get("minions").unwrap();
+                table.set(1, mone);
+                table.set(2, mtwo);
+                table.set("n", 2);
+                
+            }
+
+            let mut tab = self.run_lua_statement::<hlua::LuaTable<_>>(
+                &r#"count = 1
+                    result = {}
+                    team1 = enchanter:get_team()
+                    index = 1
+                    while count <= minions["n"] do
+                        min = minions[count]
+                        team2 = min:get_team()
+                        if team1 == team2 then
+                            result[index] = min
+                            index = index + 1
+                        end
+                        count = count + 1
+                    end"#.to_string()
+                    ,false).unwrap();
+                    
+            let unfold = tab.iter::<i32, Minion>().filter_map(|e| e).map(|(_, v)| v).collect::<Vec<Minion>>().clone();
+            
+            for run in unfold {
+          //      run.execute();
+                println!("{:?}", run);
+            }
+            
+            panic!("Just dont need anymore");
+
+        }
+        */
+        
     }
 
     fn print<T: Display>(x: &mut T) -> () {
         println!("{}", x);
     }
-
+/*
     //PLEASE READ THIS BEFORE USING
     //this will add the varible with the supplied name into the game Scope/
     //calling run_rhai_statement will execute a rhai statement with those in its scope, but also remove them in the same cal
@@ -245,7 +305,7 @@ impl<'a> GameState<'a> {
         self.game_scope.push((name.clone(), Box::new(varible.clone())));
     }
 
-    pub fn add_i64_to_game_scope(&mut self, name: String, varible: i64) {
+    pub fn add_i32_to_game_scope(&mut self, name: String, varible: i32) {
         self.game_scope.push((name.clone(), Box::new(varible.clone())));    
     }
 
@@ -267,7 +327,8 @@ impl<'a> GameState<'a> {
     pub fn add_minion_vec_to_game_scope(&mut self, name: String, minion_vec: MinionVec) {
         self.game_scope.push((name.clone(), Box::new(minion_vec.clone())));
     }
-
+    */
+/*
     pub fn run_rhai_statement<T: Any + Clone>(&mut self,
                                               rhai_statement: &String,
                                               with_write_back: bool)
@@ -305,7 +366,34 @@ impl<'a> GameState<'a> {
             }
         }
     }
+    */
+    //the only function to use when you want to execute a lua function
+    //you may or may not want a result from this function, if you do, you have to type it, and then also insure that the lua statment you are executing 
+    //places the thing you want into a varible called "result" at the end of your function
+    //TODO: have this auto return the object we want as the type we want (this is a little more difficult and would require several more work per rune)
+    pub fn run_lua_statement<'b, T: hlua::LuaRead<hlua::PushGuard<&'b mut hlua::Lua<'a>>>> (&'b mut self, lua_statement: &String, with_write_back: bool) -> Option<T> {
 
+          self.lua.set("game_state_data", self.game_state_data.clone());
+           
+           let result = self.lua.execute::<()>(&lua_statement[..]);
+           match result {
+               Ok(_) => {
+
+               },
+               Err(e) => {
+                   panic!("{:?}", e);
+               }
+           }
+
+           //this is to speed things up, but also so you can just run something in lua to generate or test something
+           //without needing to worry about effecting the game_state_data
+           if with_write_back == true {
+               self.game_state_data = self.lua.get("game_state_data").unwrap();
+           }
+
+           self.lua.get("result")
+    }
+    
     pub fn execute_rune(&mut self, rune: Box<Rune>) {
 
         if self.is_rune_queue_empty() == false {
@@ -314,7 +402,7 @@ impl<'a> GameState<'a> {
             self.process_rune(rune);
         }
     }
-
+    
     pub fn process_rune(&mut self, rune: Box<Rune>) {
 
         println!("executing rune {}", rune.to_json());
@@ -342,7 +430,7 @@ impl<'a> GameState<'a> {
 
         for card_id in card_ids {
             let mut f = File::open("content/cards/".to_string() + &card_id.clone() +
-                                   &".arhai".to_string())
+                                   &".lua".to_string())
                 .unwrap();
 
             let mut contents = String::new();
@@ -359,11 +447,20 @@ impl<'a> GameState<'a> {
             if spl[0].contains("minion") {
                 let proto_minion = Minion::parse_minion_file(contents.clone());
                 
-                let mut minion =
-                    self.run_rhai_statement::<Minion>(&proto_minion.get(&"create_minion_function"
+                let minion =
+                    self.run_lua_statement::<Minion>(&proto_minion.get(&"create_minion_function"
                                                               .to_string())
                                                           .unwrap(),
                                                       true);
+
+                let mut minion = match minion { 
+                    Some(minion) => {
+                        minion
+                    },
+                    None => {
+                        panic!("Could not parse minion");
+                    }
+                };
 
                 minion.set_minion_state(EMinionState::NotInPlay);
 
@@ -587,6 +684,7 @@ impl<'a> GameState<'a> {
         while resolve {
             resolve = self.resolve_state();
         }
+
     }
 
     pub fn resolve_state(&mut self) -> bool {
@@ -643,29 +741,42 @@ impl<'a> GameState<'a> {
                 if minion.has_tag(AURA.to_string()) {
 
                     let all_else = self.game_state_data.get_all_minions().clone();
-
-                    let minions_vec = MinionVec::from_real_vec(all_else.clone());
-                    self.add_minion_to_game_scope("enchanter".to_string(), minion.clone());
-                    self.add_minion_vec_to_game_scope("minions".to_string(), minions_vec.clone());
-                    self.add_i64_to_game_scope("minions_len".to_string(), minions_vec.len() as i64);
                     
                     match minion.get_function("filter_function".to_string()) {
                         Some(func) =>{
-                            let passed = self.run_rhai_statement::<MinionVec>(func, false);
-                    
-                            for get_auras in passed.get_whole_vec() {
+                            
+                            let ok_passed = {
+                                {
+                                    self.lua.set("enchanter", minion.clone());
+                                    let _ = self.lua.execute::<()>("minions = {}");
+                                    {
+                                        let mut val = 1;
+                                        let mut minions_table : hlua::LuaTable<_> = self.lua.get("minions").unwrap();
+                                        for min in all_else {
+                                            minions_table.set(val, min);
+                                            val+=1;
+                                        }
+                                    }
+                                }
+                                let mut passed = self.run_lua_statement::<hlua::LuaTable<_>>(func, false).unwrap();
+                                
+                                let min_vec = passed.iter::<i32, Minion>().filter_map(|e| e).map(|(_, v)| v).collect::<Vec<Minion>>().clone();
+                                min_vec
+                            };
+
+                            for get_auras in ok_passed {
                                 self.get_mut_minion(get_auras.get_uid())
                                     .unwrap()
                                     .add_aura(minion.get_uid());
                             }
+
+
                         },
                         None => {
                             panic!("Was unable to get a filter function from {}", minion.get_id());
                         }
                     }
-
                 }
-                
             }
             
             let mut current_auras: HashMap<UID, Vec<UID>> = HashMap::new();
@@ -706,17 +817,26 @@ impl<'a> GameState<'a> {
 
 
                         for the_removes in those_that_we_remove {
+                            
                             let loser = self.get_minion(key).unwrap().clone();
-                            self.add_minion_to_game_scope("loser".to_string(), loser);
+                            self.lua.set("loser", loser.clone());
 
                             let enchanter = self.get_minion(**the_removes).unwrap().clone();
-                            self.add_minion_to_game_scope("enchanter".to_string(), enchanter.clone());
+                            self.lua.set("enchanter", enchanter.clone());
+
                             match enchanter.get_function("remove_aura".to_string()) {
                                 Some(function) => {
-                                    let runes = self.run_rhai_statement::<Vec<&Rune>>(function, false);
+
+                                    //we have to wrap in a closure because run_lua_statement holds a referance
+                                    let runes = {
+                                        let mut rune_check = self.run_lua_statement::<hlua::LuaTable<_>>(function, false).unwrap();
+                                        
+                                        let o = rune_check.iter::<i32, ERuneType>().filter_map(|e| e).map(|(_, v)| v).collect::<Vec<ERuneType>>().clone();
+                                        o
+                                    };
+                                    
                                     for rune in runes {
-                                        self.execute_rune(rune.into_box());
-                                        redo = true;
+                                        self.execute_rune(rune.unfold());
                                     }
                                 },
                                 None => {
@@ -726,104 +846,124 @@ impl<'a> GameState<'a> {
                         }
 
                         for the_adds in those_that_we_add {
+
                             let getter = self.get_minion(key).unwrap().clone();
-                            self.add_minion_to_game_scope("getter".to_string(), getter);
+                            self.lua.set("getter", getter.clone());
+
                             let giver = self.get_minion(**the_adds).unwrap().clone();
-                            self.add_minion_to_game_scope("giver".to_string(), )
+                            self.lua.set("giver", giver.clone());
+
+                            match giver.get_function("apply_aura".to_string()) {
+                                Some(function) => {
+                                    
+                                    let runes = {
+                                        let mut rune_check = self.run_lua_statement::<hlua::LuaTable<_>>(function, false).unwrap();
+                                        
+                                        let o = rune_check.iter::<i32, ERuneType>().filter_map(|e| e).map(|(_, v)| v).collect::<Vec<ERuneType>>().clone();
+                                        o
+                                    };
+
+                                    for rune in runes {
+                                        self.execute_rune(rune.unfold());
+                                        redo = true;
+                                    }
+                                },
+                                None => {
+                                    println!("was unable to find a add aura function for {}", giver.get_id());
+                                }
+                            }
+                        }
+                    },
+                    None => {
+                        //remove all the auras that person had, they have gained no new ones, and lost all the ones they used to have
+                        for oa in old_auras {
+
+                            let loser = self.get_minion(key).unwrap().clone();
+                            self.lua.set("loser", loser.clone());
+                            
+                            let enchanter = self.get_minion(*oa).unwrap().clone();
+                            self.lua.set("enchanter", enchanter.clone());
+                            
+                            match enchanter.get_function("remove_aura".to_string()) {
+                                Some(function) => {
+                                    
+                                    let runes = {
+                                        let mut rune_check = self.run_lua_statement::<hlua::LuaTable<_>>(function, false).unwrap();
+                                        
+                                        let o = rune_check.iter::<i32, ERuneType>().filter_map(|e| e).map(|(_, v)| v).collect::<Vec<ERuneType>>().clone();
+                                        o
+                                    };
+
+                                    for rune in runes {
+                                        self.execute_rune(rune.unfold());
+                                        redo = true;
+                                    }
+                                },
+                                None => {
+                                    println!("Was unable to get a function for {}", enchanter.get_id());
+                                }
+                            }
+                        }
+                    }
+                }
+
+            }
+            let mut final_adds  = vec![];
+            let new_keys : Vec<UID> = current_auras.keys().map(|&k| k).collect();
+            for new_key in new_keys {
+                match previous_auras.get(&new_key)  {
+                    Some(_) => {
+
+                    },
+                    None => { 
+                        final_adds.push(new_key.clone());
+                    }
+                }
+            }
+
+            for final_add in final_adds {
+                let adds = current_auras.get(&final_add);
+                match adds {
+                    Some(adds) => {
+                        //final add is the getter, uid is the giver
+                        for uid in adds {
+
+                            let getter = self.get_minion(final_add).unwrap().clone();
+                            self.lua.set("getter", getter.clone());
+
+                            let giver = self.get_minion(*uid).unwrap().clone();
+                            self.lua.set("giver",giver.clone());
+
+                            match giver.get_function("apply_aura".to_string()) {
+                                Some(function) => {
+                                    
+                                    let runes = {
+                                        let mut rune_check = self.run_lua_statement::<hlua::LuaTable<_>>(function, false).unwrap();
+                                        
+                                        let o = rune_check.iter::<i32, ERuneType>().filter_map(|e| e).map(|(_, v)| v).collect::<Vec<ERuneType>>().clone();
+                                        o
+                                    };
+
+                                    for rune in runes {
+                                        self.execute_rune(rune.unfold());
+                                        redo = true;
+                                    }
+                                },
+                                None => {
+                                    println!("was unable to find a add aura function for {}", giver.get_id());
+                                }
+                            }
+
+
+
                         }
 
                     },
                     None => {
-                        //remove all the auras that person had, they have gained no new ones, and lost all the ones they used to have
-                    
+                        println!("Problems with getting keys for {}", final_add);
                     }
                 }
-
-
-                
-
-                /*
-                match olds {
-                    Some(olds) => {
-
-                        let mut adds: Vec<UID> = vec![];
-                        let mut removes = vec![];
-
-                        let new_auras: HashSet<_> = current_auras.get(&key.clone()).into_iter().collect();
-
-
-                        adds = new_auras.iter()
-                            .filter(|x| match olds.iter().position(|y| *x == y) {
-                                
-                                Some(_) => true,
-                                _ => false,
-                            })
-                            .map(|&u| u)
-                            .collect::<Vec<UID>>()
-                            .clone();
-                       
-                        removes = olds.iter()
-                            .filter(|x| match new_auras.iter().position(|y| *x == y) {
-                                Some(_) => true,
-                                _ => false,
-                            })
-                            .map(|&u| u)
-                            .collect::<Vec<UID>>()
-                            .clone();
-
-                        for remove in removes.iter() {
-                            
-                            
-                            let enchanter = self.get_minion(*remove).unwrap().clone();
-                            self.add_u32_to_game_scope("enchanter".to_string(), enchanter.get_uid().clone());
-                            let loser = self.get_minion(key.clone()).unwrap().clone();
-                            self.add_minion_to_game_scope("loser".to_string(), loser);
-
-                                match enchanter.get_function("remove_aura".to_string()) {
-                                    Some(remove_function) => {
-                                        //because of sized i ssues, this will call the remove runes itself
-                                        let runes =
-                                            self.run_rhai_statement::<Vec<&Rune>>(remove_function,
-                                                                                false);
-
-                                        for rune in runes.iter() {
-                                            self.execute_rune(rune.into_box());
-                                            redo = true;
-                                        }
-                                    },
-                                    None => {
-                                        println!("Error getting remove function for {}", enchanter.get_name());
-                                    }
-                                }
-
-
-                            
-                        }
-
-                        for add in adds.iter() {
-                            let enchanter = self.get_minion(*add).unwrap().clone();
-                            self.add_minion_to_game_scope("giver".to_string(), enchanter.clone());
-                            let getter = self.get_minion(key.clone()).unwrap().clone();
-                            self.add_minion_to_game_scope("getter".to_string(), getter);
-                            let rhai_statment = enchanter.get_function("apply_aura".to_string())
-                                .clone();
-
-                            let runes =
-                                self.run_rhai_statement::<Vec<&Rune>>(rhai_statment.unwrap(),
-                                                                      false);
-
-                            for rune in runes.iter() {
-                                redo = true;
-                                self.execute_rune(rune.into_box());
-                            }
-                        }
-
-                    }
-                    _ => {}
-                }
-                */
             }
-
         }
 
         redo

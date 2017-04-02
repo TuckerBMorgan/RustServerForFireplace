@@ -3,7 +3,7 @@ use rustc_serialize::json;
 use game_state::GameState;
 use minion_card::UID;
 use runes::damage_rune::DamageRune;
-
+use hlua;
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct Attack {
@@ -20,6 +20,9 @@ impl Attack {
     }
 }
 
+implement_lua_read!(Attack);
+implement_lua_push!(Attack, |mut _metatable| {});
+
 impl Rune for Attack {
     fn execute_rune(&self, mut game_state: &mut GameState) {
 
@@ -28,10 +31,10 @@ impl Rune for Attack {
 
         let dr_1 = DamageRune::new(self.source_uid,
                                    self.target_uid,
-                                   attacker.get_base_attack() as i32);
+                                   attacker.get_base_attack());
         let dr_2 = DamageRune::new(self.source_uid,
                                    self.source_uid,
-                                   defender.get_base_attack() as i32);
+                                   defender.get_base_attack());
 
         game_state.add_to_attacked_this_turn(self.source_uid);
 

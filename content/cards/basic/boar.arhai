@@ -1,9 +1,0 @@
-minion
-@@
-create_minion_function**
-    var  min = new_minion();
-    var new_uid = game_state.get_uid();
-    min.minion_basic_info("Boar", new_uid, "basic", "boar", 0);
-    min.minion_attack_health_basic(1, 1);
-    min.minion_add_tag("Beast");
-    min

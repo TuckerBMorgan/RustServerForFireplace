@@ -5,7 +5,7 @@ use minion_card::UID;
 use game_state::GameState;
 use std::collections::HashSet;
 use controller::{EControllerState, Controller};
-
+use hlua;
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct NewController {
@@ -29,6 +29,8 @@ impl NewController {
     }
 }
 
+implement_for_lua!(NewController, |mut _metatable| {});
+
 impl Rune for NewController {
     fn execute_rune(&self, game_state: &mut GameState) {
         println!("New Controller with client_id {}", self.client_id.clone());
@@ -40,7 +42,7 @@ impl Rune for NewController {
             mana: 0,
             life: 30,
             total_life: 30,
-            team: game_state.get_team(),
+            team: game_state.get_team() as u32,
             controller_state: EControllerState::WaitingForStart,
             current_options: vec![],
             deck: vec![],

@@ -5,12 +5,15 @@ use rustc_serialize::json;
 use game_state::GameState;
 use minion_card::UID;
 use runes::create_minion::CreateMinion;
+use hlua;
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct DealCard {
     pub card_uid: UID,
     pub controller_uid: UID,
 }
+
+implement_for_lua!(DealCard, |mut _metatable| {});
 
 impl DealCard {
     pub fn new(card_uid: UID, controller_uid: UID) -> DealCard {

@@ -3,13 +3,15 @@ use minion_card::{UID, EMinionState};
 use tags_list::DEATH_RATTLE;
 use rustc_serialize::json;
 use game_state::GameState;
-
+use hlua;
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct KillMinion {
     controller_uid: UID,
     minion_uid: UID,
 }
+
+implement_for_lua!(KillMinion, |mut _metatable| {});
 
 impl KillMinion {
     pub fn new(controller_uid: UID, minion_uid: UID) -> KillMinion {

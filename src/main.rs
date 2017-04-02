@@ -1,7 +1,13 @@
 extern crate rand;
 extern crate rhai;
 extern crate regex;
+#[macro_use]
+extern crate hlua;
 extern crate rustc_serialize;
+
+
+#[macro_use]
+mod macros;
 
 mod card;
 mod runes;
@@ -16,7 +22,7 @@ mod player_thread;
 mod client_message;
 mod process_message;
 mod tags_list;
-mod minion_vec;
+
 
 use std::process;
 use std::thread;

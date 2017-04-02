@@ -1,9 +1,12 @@
 use rune_vm::Rune;
 use game_state::GameState;
 use minion_card::UID;
+use hlua;
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
 pub struct StartGame {}
+
+implement_for_lua!(StartGame, |mut _metatable| {});
 
 impl StartGame {
     pub fn new() -> StartGame {

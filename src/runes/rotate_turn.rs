@@ -7,6 +7,7 @@ use runes::set_base_mana::SetBaseMana;
 use runes::set_mana::SetMana;
 use runes::deal_card::DealCard;
 use controller::EControllerState;
+use hlua;
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct RotateTurn {}
@@ -16,6 +17,8 @@ impl RotateTurn {
         RotateTurn {}
     }
 }
+
+implement_for_lua!(RotateTurn, |mut _metatable| {});
 
 impl Rune for RotateTurn {
     fn execute_rune(&self, mut game_state: &mut GameState) {
