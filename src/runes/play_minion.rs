@@ -1,11 +1,11 @@
-use rune_vm::Rune;
+use rune_vm::{Rune, ERuneType};
 use rustc_serialize::json;
 use game_state::GameState;
 use minion_card::UID;
 use runes::add_tag::AddTag;
 use runes::summon_minion::SummonMinion;
 use tags_list::{CHARGE, SUMMONING_SICKNESS, TARGET};
-use hlua;
+use hlua::{self};
 
 // the play_minion rune is called when you play a minion
 // out of your hand. It will call battle_cry if it has one
@@ -57,10 +57,19 @@ impl Rune for PlayMinion {
                 let at = AddTag::new(self.minion_uid.clone(), SUMMONING_SICKNESS.to_string());
                 game_state.execute_rune(Box::new(at));
             }
+
             match min.get_function("battle_cry_function".to_string()) {
                 Some(function) => {
-                    game_state.run_lua_statement::<i8>(&function, true);
-                }
+                    let rune_vec =  {
+                        let mut resutlt = game_state.run_lua_statement::<hlua::LuaTable<_>>(&function, true).unwrap();
+                        let ret = resutlt.iter::<i32, ERuneType>().filter_map(|e| e).map(|(_, v)| v).collect::<Vec<ERuneType>>().clone();
+                        ret
+                    };
+                    for rune in rune_vec {
+                        game_state.execute_rune(rune.unfold());
+                    }
+                    
+                },
                 _ => {}
             }
         }

@@ -56,7 +56,7 @@ impl Rune for DealCard {
                     .unwrap()
                     .move_card_from_deck_to_hand(self.card_uid);
 
-            }
+            } 
             _ => {}
         }
     }
