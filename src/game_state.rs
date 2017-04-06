@@ -147,10 +147,15 @@ impl GameStateData {
         uids
     }
 
-    pub fn get_all_minions(&self) -> Vec<Minion> {
+    pub fn get_all_minions_in_play(&self) -> Vec<Minion> {
         let mut mins = vec![];
         for (_, v) in self.minions.clone() {
-            mins.push(v.clone());
+            match v.get_minion_state() {
+                EMinionState::InPlay => {
+                        mins.push(v.clone());
+            
+                }, _ => {}
+            }
         }
         mins
     }
@@ -272,7 +277,8 @@ impl<'a> GameState<'a> {
                     while count <= minions["n"] do
                         min = minions[count]
                         team2 = min:get_team()
-                        if team1 == team2 then
+                        if team1 == team2 thenexit
+
                             result[index] = min
                             index = index + 1
                         end
@@ -297,76 +303,7 @@ impl<'a> GameState<'a> {
     fn print<T: Display>(x: &mut T) -> () {
         println!("{}", x);
     }
-/*
-    //PLEASE READ THIS BEFORE USING
-    //this will add the varible with the supplied name into the game Scope/
-    //calling run_rhai_statement will execute a rhai statement with those in its scope, but also remove them in the same cal
-    pub fn add_u32_to_game_scope(&mut self, name: String, varible: u32) {
-        self.game_scope.push((name.clone(), Box::new(varible.clone())));
-    }
 
-    pub fn add_i32_to_game_scope(&mut self, name: String, varible: i32) {
-        self.game_scope.push((name.clone(), Box::new(varible.clone())));    
-    }
-
-    //this only lasts in game scope until you call run_rhai_statement
-    pub fn add_string_to_game_scope(&mut self, name: String, varible: String) {
-        self.game_scope.push((name.clone(), Box::new(varible.clone())));
-    }
-
-    pub fn add_minion_to_game_scope(&mut self, name: String, varible: Minion) {
-        self.game_scope.push((name.clone(), Box::new(varible.clone())));
-    }
-
-    pub fn add_type_vec_to_game_scope<T: 'static + Clone + fmt::Debug>(&mut self,
-                                                                       name: String,
-                                                                       varible: Vec<T>) {
-        self.game_scope.push((name.clone(), Box::new(varible.clone())));
-    }
-
-    pub fn add_minion_vec_to_game_scope(&mut self, name: String, minion_vec: MinionVec) {
-        self.game_scope.push((name.clone(), Box::new(minion_vec.clone())));
-    }
-    */
-/*
-    pub fn run_rhai_statement<T: Any + Clone>(&mut self,
-                                              rhai_statement: &String,
-                                              with_write_back: bool)
-                                              -> T {
-
-        self.game_scope.push(("game_state".to_string(), Box::new(self.game_state_data.clone())));
-
-        let result = self.script_engine
-            .eval_with_scope::<T>(&mut self.game_scope, &rhai_statement[..]);
-        if with_write_back == true {
-            for &mut (_, ref mut val) in &mut self.game_scope.iter_mut().rev() {
-                match val.downcast_mut::<GameStateData>() {
-                    Some(as_down_cast_struct) => {
-                        self.game_state_data = as_down_cast_struct.clone();
-                    }
-                    None => {
-                        //                    println!("problem getting game state back");
-                    }
-                }
-            }
-            // since we have a scope we carry around, we have to do this, because we can have two varibles with the same name in the scope
-        }
-        self.game_scope.clear();
-        //  I like keeping this print statement around so that it I can use it when the rhai system breaks
-        //  println!("{:?}", &result);
-        
-        match result {
-            Ok(res) => {
-                res
-            },
-
-            Err(e) => {
-
-                panic!("Was unable to get result {}", e);
-            }
-        }
-    }
-    */
     //the only function to use when you want to execute a lua function
     //you may or may not want a result from this function, if you do, you have to type it, and then also insure that the lua statment you are executing 
     //places the thing you want into a varible called "result" at the end of your function
@@ -661,7 +598,13 @@ impl<'a> GameState<'a> {
             }
         }
 
-        self.resolve_state();
+
+        let mut resolve = self.resolve_state();
+
+        while resolve {
+            resolve = self.resolve_state();
+        }
+
         let controller_index = self.get_on_turn_player();
 
         self.game_state_data.get_controllers()[controller_index as usize]
@@ -678,12 +621,6 @@ impl<'a> GameState<'a> {
 
         let op = OptionsPackage { options: new_op };
         self.report_rune_to_client(client_id, op.to_json());
-
-        let mut resolve = self.resolve_state();
-
-        while resolve {
-            resolve = self.resolve_state();
-        }
 
     }
 
@@ -718,7 +655,6 @@ impl<'a> GameState<'a> {
                 }
             }
 
-
             let mut previous_auras: HashMap<UID, Vec<UID>> = HashMap::new();
 
             for min in minions.iter() {
@@ -740,7 +676,7 @@ impl<'a> GameState<'a> {
                 
                 if minion.has_tag(AURA.to_string()) {
 
-                    let all_else = self.game_state_data.get_all_minions().clone();
+                    let all_else = self.game_state_data.get_all_minions_in_play().clone();
                     
                     match minion.get_function("filter_function".to_string()) {
                         Some(func) =>{
@@ -752,10 +688,12 @@ impl<'a> GameState<'a> {
                                     {
                                         let mut val = 1;
                                         let mut minions_table : hlua::LuaTable<_> = self.lua.get("minions").unwrap();
+                                        minions_table.set("n", all_else.len() as u32);
                                         for min in all_else {
                                             minions_table.set(val, min);
                                             val+=1;
                                         }
+
                                     }
                                 }
                                 let mut passed = self.run_lua_statement::<hlua::LuaTable<_>>(func, false).unwrap();
@@ -787,11 +725,12 @@ impl<'a> GameState<'a> {
                 }
             }
 
+
+
             let old_keys: Vec<UID> = previous_auras.keys().map(|&k| k).collect();
 
             //the key is a minion that at least used to have an aura
             for key in old_keys {
-                //this is a set of all the ones they used to habe
                 
                 let mut old_auras = HashSet::new();
                 
@@ -849,8 +788,9 @@ impl<'a> GameState<'a> {
 
                             let getter = self.get_minion(key).unwrap().clone();
                             self.lua.set("getter", getter.clone());
-
+                            
                             let giver = self.get_minion(**the_adds).unwrap().clone();
+                            
                             self.lua.set("giver", giver.clone());
 
                             match giver.get_function("apply_aura".to_string()) {
@@ -930,7 +870,7 @@ impl<'a> GameState<'a> {
 
                             let getter = self.get_minion(final_add).unwrap().clone();
                             self.lua.set("getter", getter.clone());
-
+                          
                             let giver = self.get_minion(*uid).unwrap().clone();
                             self.lua.set("giver",giver.clone());
 

@@ -181,6 +181,10 @@ impl Minion {
         self.state = new_state;
     }
 
+    pub fn get_minion_state(&self) -> EMinionState{
+        self.state.clone()
+    }
+
     pub fn add_tag_to(&mut self, tag: String) {
         self.tags.insert(tag.clone());
     }
