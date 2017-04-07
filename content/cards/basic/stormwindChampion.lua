@@ -1,7 +1,7 @@
 minion
 @@
 create_minion_function**
-    m = Minion.new("stormwindChampion", game_state_data:get_uid(), 0, "basic", 6, 6, "Stormwind Champion");
+    m = Minion.new("stormwindChampion", game_state_data:get_uid(), 7, "basic", 6, 6, "Stormwind Champion");
     m:add_tag("Aura")
     result = m
 @@

@@ -6,7 +6,7 @@ use minion_card::Minion;
 use hlua;
 
 // this is a dummy rune for the client, IS NOT TO BE RUN THROUGH THE RUNE_VM
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
 pub struct CreateMinion {
     cost: u32,
     id: String,

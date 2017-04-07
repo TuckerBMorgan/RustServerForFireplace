@@ -7,7 +7,7 @@ use card::{Card, ECardType};
 use controller::{Controller, EControllerState};
 use minion_card::{Minion, UID, EMinionState};
 use game_thread::GameThread;
-use client_option::{OptionType, OptionsPackage};
+use client_option::{OptionType, OptionsPackage, ClientOption};
 use client_message::OptionsMessage;
 use tags_list::AURA;
 use hlua::{self, Lua};
@@ -34,6 +34,8 @@ use runes::set_health::SetHealth;
 use runes::set_attack::SetAttack;
 use runes::modify_attack::ModifyAttack;
 use runes::modify_health::ModifyHealth;
+use runes::create_minion::CreateMinion;
+use runes::summon_minion::SummonMinion;
 
 #[derive(Clone)]
 pub struct GameStateData {
@@ -220,6 +222,7 @@ impl<'a> GameState<'a> {
             let mut minion_namepsace = self.lua.empty_array("Minion");
             minion_namepsace.set("new", hlua::function7(|id, uid, cost, set, base_attack, base_health, name| 
                                                     Minion::lua_new(id, uid, cost, set, base_attack, base_health, name)));
+        
         }
 
         {
@@ -230,7 +233,8 @@ impl<'a> GameState<'a> {
             rune_namespace.set("new_set_attack", hlua::function2(|uid, amount| SetAttack::new(uid, amount)));
             rune_namespace.set("new_modify_attack", hlua::function2(|uid, amount| ModifyAttack::new(uid, amount)));
             rune_namespace.set("new_modify_health", hlua::function2(|uid, amount| ModifyHealth::new(uid, amount)));
-            
+            rune_namespace.set("new_create_minion_from_minion", hlua::function2(|min, uid| CreateMinion::from_minion(min, uid)));
+            rune_namespace.set("new_summon_minion", hlua::function3(|min_uid, controller_uid, index| SummonMinion::new(min_uid, controller_uid, index)));
         }
 
         {
@@ -241,6 +245,8 @@ impl<'a> GameState<'a> {
             enum_namespace.set("new_modify_health", hlua::function1(|mh| ERuneType::ModifyHealth(mh)));
             enum_namespace.set("new_set_health", hlua::function1(|sh| ERuneType::SetHealth(sh)));
             enum_namespace.set("new_set_attack", hlua::function1(|sa| ERuneType::SetAttack(sa)));
+            enum_namespace.set("new_create_minion", hlua::function1(|cm| ERuneType::CreateMinion(cm)));
+            enum_namespace.set("new_summon_minion", hlua::function1(|sm| ERuneType::SummonMinion(sm)));
         }
 
         
@@ -403,6 +409,7 @@ impl<'a> GameState<'a> {
 
                 minion.set_functions(proto_minion);
                 minion.set_team(controller.team);
+
                 let play_card = Card::new(minion.get_cost() as u8,
                                           ECardType::Minion,
                                           minion.get_id(),
@@ -610,10 +617,12 @@ impl<'a> GameState<'a> {
         self.game_state_data.get_controllers()[controller_index as usize]
             .clone()
             .clear_options();
-
-        let new_op = self.game_state_data.get_controllers()[controller_index as usize]
+        
+        let mut new_op = self.game_state_data.get_controllers()[controller_index as usize]
             .clone()
             .generate_options_from_every_source(self);
+
+        new_op.push(ClientOption::new(0, 0, OptionType::EEndTurn));
         let mut_uid = self.game_state_data.get_controllers()[controller_index as usize].get_uid();
         let client_id = self.game_state_data.get_controllers()[controller_index as usize].client_id;
 

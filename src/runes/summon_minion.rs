@@ -5,7 +5,7 @@ use game_state::GameState;
 use minion_card::{UID, EMinionState};
 use hlua;
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
 pub struct SummonMinion {
     pub minion_uid: UID,
     pub controller_uid: UID,
