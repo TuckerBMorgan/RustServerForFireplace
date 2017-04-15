@@ -5,9 +5,8 @@ use minion_card::UID;
 use minion_card::Minion;
 use hlua;
 
-// this is a dummy rune for the client, IS NOT TO BE RUN THROUGH THE RUNE_VM
 #[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
-pub struct CreateMinion {
+pub struct ReportMinionToClient {
     cost: u32,
     id: String,
     uid: UID,
@@ -23,11 +22,12 @@ pub struct CreateMinion {
     total_health: u32,
 
     controller_uid: UID,
+    is_deal: bool,
 }
 
-implement_for_lua!(CreateMinion, |mut _metatable| {});
+implement_for_lua!(ReportMinionToClient, |mut _metatable| {});
 
-impl CreateMinion {
+impl ReportMinionToClient {
     #[allow(dead_code)]
     pub fn new(cost: u32,
                id: String,
@@ -42,10 +42,11 @@ impl CreateMinion {
                base_health: u32,
                current_health: u32,
                total_health: u32,
-               controller_uid: UID)
-               -> CreateMinion {
+               controller_uid: UID,
+               is_deal: bool)
+               -> ReportMinionToClient {
 
-        CreateMinion {
+        ReportMinionToClient {
             cost: cost,
             id: id,
             uid: uid,
@@ -58,11 +59,15 @@ impl CreateMinion {
             current_health: current_health,
             total_health: total_health,
             controller_uid: controller_uid,
+            is_deal: is_deal,
         }
     }
 
-    pub fn from_minion(minion: &Minion, controller_uid: UID) -> CreateMinion {
-        CreateMinion {
+    pub fn from_minion(minion: &Minion,
+                       controller_uid: UID,
+                       is_deal: bool)
+                       -> ReportMinionToClient {
+        ReportMinionToClient {
             cost: minion.get_cost(),
             id: minion.get_id(),
             uid: minion.get_uid(),
@@ -72,23 +77,27 @@ impl CreateMinion {
             current_attack: minion.get_current_attack(),
             total_attack: minion.get_total_attack(),
             base_health: minion.get_base_health(),
-            current_health: minion.get_current_health() ,
+            current_health: minion.get_current_health(),
             total_health: minion.get_total_health(),
             controller_uid: controller_uid.clone(),
+            is_deal: is_deal,
         }
     }
 }
 
-impl Rune for CreateMinion {
+impl Rune for ReportMinionToClient {
     fn execute_rune(&self, _game_state: &mut GameState) {}
 
     fn can_see(&self, controller: UID, _game_state: &GameState) -> bool {
-        let result = controller == self.controller_uid;
-        result
+        if self.is_deal {
+            let result = controller == self.controller_uid;
+            return result;
+        }
+        return true;
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"CreateMinion\",")
+        json::encode(self).unwrap().replace("{", "{\"runeType\":\"ReportMinionToClient\",")
     }
 
     fn into_box(&self) -> Box<Rune> {

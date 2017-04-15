@@ -23,13 +23,13 @@ impl SetHealth {
 
 impl Rune for SetHealth {
     fn execute_rune(&self, mut game_state: &mut GameState) {
-        //TODO: Make this work the way it is supposed to 
+        //TODO: Make this work the way it is supposed to
 
-        
+
         game_state.get_mut_minion(self.card_uid).unwrap().set_total_health(self.amount);
-    
-    
-    
+
+
+
     }
 
     fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {

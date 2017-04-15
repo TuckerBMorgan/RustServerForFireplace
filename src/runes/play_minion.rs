@@ -5,7 +5,7 @@ use minion_card::UID;
 use runes::add_tag::AddTag;
 use runes::summon_minion::SummonMinion;
 use tags_list::{CHARGE, SUMMONING_SICKNESS, TARGET};
-use hlua::{self};
+use hlua;
 
 // the play_minion rune is called when you play a minion
 // out of your hand. It will call battle_cry if it has one
@@ -48,9 +48,10 @@ impl Rune for PlayMinion {
 
             if min.has_tag(TARGET.to_string()) {
                 //there is no reason for this statment to return anything
-                game_state.run_lua_statement::<i8>(&min.get_function("target_function".to_string())
-                                                  .unwrap(),
-                                              true);
+                game_state.run_lua_statement::<i8>(&min.get_function("target_function"
+                                                           .to_string())
+                                                       .unwrap(),
+                                                   true);
             }
 
             if !min.has_tag(CHARGE.to_string()) {
@@ -60,16 +61,24 @@ impl Rune for PlayMinion {
 
             match min.get_function("battle_cry_function".to_string()) {
                 Some(function) => {
-                    let rune_vec =  {
-                        let mut resutlt = game_state.run_lua_statement::<hlua::LuaTable<_>>(&function, true).unwrap();
-                        let ret = resutlt.iter::<i32, ERuneType>().filter_map(|e| e).map(|(_, v)| v).collect::<Vec<ERuneType>>().clone();
+                    let rune_vec = {
+                        game_state.add_number_to_lua("controller_uid".to_string(),
+                                                     self.controller_uid as u32);
+                        game_state.add_number_to_lua("index".to_string(), 0);
+                        let mut resutlt =
+                            game_state.run_lua_statement::<hlua::LuaTable<_>>(&function, true)
+                                .unwrap();
+                        let ret = resutlt.iter::<i32, ERuneType>()
+                            .filter_map(|e| e)
+                            .map(|(_, v)| v)
+                            .collect::<Vec<ERuneType>>()
+                            .clone();
                         ret
                     };
                     for rune in rune_vec {
                         game_state.execute_rune(rune.unfold());
                     }
-                    
-                },
+                }
                 _ => {}
             }
         }

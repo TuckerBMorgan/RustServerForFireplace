@@ -3,6 +3,7 @@ use rustc_serialize::json;
 use game_state::GameState;
 use minion_card::UID;
 use runes::play_minion::PlayMinion;
+use runes::set_mana::SetMana;
 use hlua;
 
 // the play_minion rune is called when you play a minion
@@ -45,6 +46,10 @@ impl Rune for PlayCard {
             .get_copy_of_card_from_hand(self.card_uid);
 
         let card_unwrap = card.unwrap(); //.get_content().parse().unwrap().copy();
+
+        let sm = SetMana::new(self.controller_uid, game_state.get_controller_by_uid(self.controller_uid).unwrap().get_mana() - card_unwrap.get_cost());
+        game_state.execute_rune(sm.into_box());
+
         let content = card_unwrap.get_content();
         let parse = content.parse::<UID>();
         let parse_unwrap = parse.unwrap().clone();
@@ -55,8 +60,9 @@ impl Rune for PlayCard {
 
         let pm = PlayMinion::new(card_unwrap.get_content().parse().unwrap(),
                                  self.controller_uid,
-                                 self.field_index as usize,
+                                 self.field_index as usize,`
                                  self.target_uid);
+
         game_state.execute_rune(Box::new(pm));
     }
 
