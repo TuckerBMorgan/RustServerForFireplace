@@ -15,15 +15,64 @@ use rand::{thread_rng, Rng};
 use controller::Controller;
 use game_state::GameStateData;
 use minion_card::Minion;
-use rune_vm::rune;
+use rune_vm::Rune;
 use runes::play_minion::PlayMinion;
 use runes::play_card::PlayCard;
+use rustc_serialize::json;
+
+#[derive(RustcDecodable, RustcEncodable, Clone)]
+pub struct AI_Request{
+	pub game_state_data : GameStateData,
+	pub rune : String,
+
+}
+impl AI_Request{
+	pub fn new(gsd : GameStateData, rne: String)->AI_Request{
+		AI_Request{
+			game_state_data : gsd,
+			rune: rne,
+		}
+	}
+
+	pub fn toJson(&self)->String{
+		let mut msg : String = json::encode(self).unwrap();
+		let mut front= "{\"message_type\":\"AIPlay\",";
+		let sendMsg = format!("{}{}", front, &msg.clone()[1..msg.len()]);
+		return sendMsg;
+
+	}
+}
+#[derive(RustcDecodable, RustcEncodable, Clone)]
+pub struct AI_Player{
+	pub game_state_data : GameStateData,
+	pub score : f32,
+}
+impl AI_Player{
+	pub fn new()->AI_Player{
+		AI_Player{
+			game_state_data : GameStateData::new(true),
+			score : 0.0 as f32,
+		}
+	}
+
+	/*
+	*Updates the AI_Player using a json string of GameStateData
+	*/
+	pub fn update(&mut self, updateData: String){
+		let response = updateData.clone().replace("{\"message_type\": \"AI_Update\",", "{" );
+        self.game_state_data= json::decode(response.trim()).unwrap();
+	}
+
+	pub fn toJson(&self)->String{
+		return json::encode(&self).unwrap() as String;
+
+	}
+}
 
 /*
 *gets how much active AP is on the field for a given 
 *
 *
-*/
 fn getAP_field(controller: Controller, game: GameStateData) -> u8{
 
 	let mut this_AP = 0;
@@ -50,7 +99,7 @@ fn getHP_field(controller: Controller, game: GameStateData) -> u8{
 //basic for now add taunts later
 fn score_controllers(p1Ind: usize, p2Ind: usize, game:GameStateData)->f32{
 	let controller1 = game.get_controller_by_index(p1Ind);
-	let controller2 = game.get_controller_by_index(p2Ind)
+	let controller2 = game.get_controller_by_index(p2Ind);
 	let mut score = 0;
 	let Con1AP = getAP_field(controller_1, game);
 	let Con2AP = getAP_field(Controller_2, game);
@@ -161,3 +210,4 @@ impl play_hand {
 	}
 }
 
+*/

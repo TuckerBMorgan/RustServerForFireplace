@@ -15,7 +15,7 @@ pub enum EFileReadResult {
     BadFileRead,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, RustcDecodable, RustcEncodable,Debug)]
 pub enum EMinionState {
     NotInPlay,
     InPlay,
@@ -23,7 +23,7 @@ pub enum EMinionState {
     MarkForDestroy,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, RustcDecodable, RustcEncodable,Debug)]
 pub struct Minion {
     cost: u32,
     id: String,

@@ -22,6 +22,8 @@ mod player_thread;
 mod client_message;
 mod process_message;
 mod tags_list;
+mod AI_Utils;
+mod rune_match;
 
 
 use std::process;
@@ -39,10 +41,10 @@ use std::net::TcpListener;
 
 
 fn spawn_new_player(client_id: u32, stream: TcpStream) -> PlayerThread {
-    PlayerThread::new(client_id, Some(stream))
+    PlayerThread::new(client_id, Some(stream), false)
 }
 fn spawn_new_ai(client_id: u32) -> PlayerThread {
-    PlayerThread::new(client_id, None)
+    return PlayerThread::new(client_id, None, true);
 }
 
 fn terminal_commands() {

@@ -8,18 +8,28 @@ use rustc_serialize::json::Json;
 use std::sync::mpsc::{Sender, Receiver};
 use game_thread::ThreadMessage;
 
+use AI_Utils::{AI_Player, AI_Request};
+use std::mem;
+use rune_match::get_rune;
+
 pub struct PlayerThread {
     pub client_id: u32,
     pub stream: Option<TcpStream>,
     pub join_handle: Option<JoinHandle<()>>,
+    pub ai_current_state : Option<AI_Player>,
 }
 
 impl PlayerThread {
-    pub fn new(client_id: u32, stream: Option<TcpStream>) -> PlayerThread {
+    pub fn new(client_id: u32, stream: Option<TcpStream>, ai_state: bool) -> PlayerThread {
+        let mut ai_player = None;
+        if ai_state {
+            ai_player = Some(AI_Player::new());
+        }
         let p_thread = PlayerThread {
             client_id: client_id,
             stream: stream,
             join_handle: None,
+            ai_current_state : ai_player,
         };
         return p_thread;
     }
@@ -30,6 +40,10 @@ impl PlayerThread {
                         -> JoinHandle<()> {
         Some(thread::spawn(move || { player_thread_function(self, to_server, from_server); }))
             .unwrap()
+    }
+
+    pub fn swap_ai(&mut self, ai_state : AI_Player){
+        mem::swap(&mut self.ai_current_state, &mut Some(ai_state))
     }
     // pub fn from_stream(stream : TcpStream, client_id: u32) -> Result<PlayerThread> {
     // let p_thread = PlayerThread {
@@ -62,7 +76,7 @@ impl PlayerThread {
     //
 }
 
-fn player_thread_function(player_thread: PlayerThread,
+fn player_thread_function(mut player_thread: PlayerThread,
                           to_server: Sender<ThreadMessage>,
                           from_server: Receiver<ThreadMessage>) {
 
@@ -145,7 +159,7 @@ fn player_thread_function(player_thread: PlayerThread,
                 match to_client_message {
                     Ok(to_client_message) => {
                         let message = to_client_message.payload.clone();
-
+                        println!("AI JUST GOT {0}", message.clone());
                         let j_message: Json = Json::from_str(message.trim()).unwrap();
                         let obj = j_message.as_object().unwrap();
 
@@ -165,7 +179,7 @@ fn player_thread_function(player_thread: PlayerThread,
                                 continue;
                             }
                         };
-
+                        println!("mt {0}", message_type);
                         if message_type.contains("Mulligan") {
                             let mulligan_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : [] }}",
                                                            k = "message_type",
@@ -185,12 +199,33 @@ fn player_thread_function(player_thread: PlayerThread,
                                                            h = "index",
                                                            l = "board_index",
                                                            j = "timeStamp");
-
                             let to_server_message = ThreadMessage {
                                 client_id: player_thread.client_id,
                                 payload: option_message
                             };
                             let _ = to_server.send(to_server_message);
+                        } 
+                        //this here updates the player_thread ai track
+                        else if message_type.contains("AI_Update"){
+                            
+                            //copy the response, get the GSD give that to the AI 
+                            let mut tmp = player_thread.ai_current_state.clone().unwrap(); 
+                            tmp.update(message.clone());
+                            player_thread.swap_ai(tmp);
+                            println!("AI UPDATED TO {0}", (player_thread.ai_current_state.clone().unwrap().toJson()));
+                        }
+                        else {
+                            println!("AI GONNA TRY AND UPDATE WITH {0}", message.clone());
+                            let ai_request = AI_Request::new(
+                                player_thread.ai_current_state.clone().unwrap().game_state_data, 
+                                message.clone()
+                            );
+                            let t_messsage = ThreadMessage {
+                                    client_id: player_thread.client_id,
+                                    payload: String::from(ai_request.toJson()),
+                                };
+                                println!("AI REQ {0}", t_messsage.payload.clone());
+                                let res = to_server.send(t_messsage);
                         }
                     }
                     Err(_) => {}
@@ -199,4 +234,5 @@ fn player_thread_function(player_thread: PlayerThread,
             }
         }
     }
+    
 }
