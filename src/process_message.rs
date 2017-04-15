@@ -1,10 +1,14 @@
 extern crate rustc_serialize;
 
-use game_state::GameState;
+use game_state::{GameState, GameStateData};
 use rustc_serialize::json;
 use rustc_serialize::json::Json;
 use runes::new_controller::NewController;
 use client_message::{MulliganMessage, OptionsMessage};
+use rune_vm::Rune;
+use rune_match::get_rune;
+use AI_Utils::AI_Request;
+
 
 
 
@@ -45,6 +49,24 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
         "mulligan" => {
             let mull_message: MulliganMessage = json::decode(message.trim()).unwrap();
             game_state.mulligan(client_id, mull_message.index.clone());
+        }
+        "AIPlay"=>{
+            println!("GAME THREAD JUST GOT {0}", message.clone());
+            let mut ai_play : AI_Request = json::decode(message.trim()).unwrap();
+            let mut ai_gsd : GameStateData = ai_play.game_state_data;
+            let mut rune_request : Box<Rune> = get_rune(ai_play.rune.as_ref());
+
+            game_state.swap_gsd(&mut ai_gsd);
+            game_state.execute_rune(rune_request);
+            game_state.swap_gsd(&mut ai_gsd);
+
+            let mut json_response = json::encode(&ai_gsd).unwrap();
+            let mut front= "{\"message_type\":\"AI_Update\",";
+		    let sendMsg = format!("{}{}", front, 
+                    &json_response.clone()[1..json_response.len()]);
+            
+            game_state.send_msg(client_id, sendMsg); 
+
         }
 
         _ => {

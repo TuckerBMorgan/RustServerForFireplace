@@ -5,7 +5,7 @@ use client_option::{OptionGenerator, ClientOption, OptionType};
 use tags_list::TARGET;
 use controller::Controller;
 use hlua;
-#[derive(Copy, Clone)]
+#[derive(Copy, RustcDecodable, RustcEncodable,Clone)]
 #[allow(dead_code)]
 pub enum ECardType {
     Minion,
@@ -13,7 +13,7 @@ pub enum ECardType {
     Weapon,
 }
 
-#[derive(Clone)]
+#[derive(Clone, RustcDecodable, RustcEncodable)]
 pub struct Card {
     cost: u8,
     card_type: ECardType,

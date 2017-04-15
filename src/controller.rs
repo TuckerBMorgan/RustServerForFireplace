@@ -21,7 +21,7 @@ pub enum EControllerState {
     InTurn,
 }
 
-#[derive(Clone)]
+#[derive(Clone, RustcDecodable, RustcEncodable)]
 pub struct Controller {
     pub name: String,
     pub hero: String,
