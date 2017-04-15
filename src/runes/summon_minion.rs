@@ -14,7 +14,6 @@ pub struct SummonMinion {
 
 implement_for_lua!(SummonMinion, |mut _metatable| {});
 
-
 impl SummonMinion {
     pub fn new(minion_uid: UID, controller_uid: UID, field_index: u8) -> SummonMinion {
         SummonMinion {

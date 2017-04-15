@@ -43,7 +43,7 @@ impl Card {
         }
     }
 
-    pub fn _get_cost(&self) -> u8 {
+    pub fn get_cost(&self) -> u8 {
         self.cost.clone()
     }
 
@@ -106,8 +106,11 @@ impl OptionGenerator for Card {
                     let start = game_state.run_lua_statement::<hlua::LuaTable<_>>(&minion.get_function("target_function".to_string()).unwrap(), false);
                     match start {
                         Some(mut start) => {
-                            return start.iter::<i32, ClientOption>().filter_map(|e| e).map(|(_, v)| v).collect();
-                        },
+                            return start.iter::<i32, ClientOption>()
+                                .filter_map(|e| e)
+                                .map(|(_, v)| v)
+                                .collect();
+                        }
                         None => {
                             return vec![];
                         }

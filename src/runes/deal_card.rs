@@ -4,7 +4,7 @@ use rune_vm::Rune;
 use rustc_serialize::json;
 use game_state::GameState;
 use minion_card::UID;
-use runes::create_minion::CreateMinion;
+use runes::report_minion_to_client::ReportMinionToClient;
 use hlua;
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
@@ -27,9 +27,6 @@ impl DealCard {
 impl Rune for DealCard {
     fn execute_rune(&self, game_state: &mut GameState) {
 
-        // would like a better way of doing this, but for now -\_(-.-)_/-, blame the borrow checker
-
-
         // game_state.get_controller_by_uid returns Option<& Controller>
         // controller.get_card_from_deck returns Option<'a Card>
 
@@ -42,20 +39,19 @@ impl Rune for DealCard {
         match card.get_card_type() {
 
             ECardType::Minion => {
-                let minion = 
-                game_state.get_minion(card.get_content().parse().unwrap()).unwrap().clone();
+                let minion =
+                    game_state.get_minion(card.get_content().parse().unwrap()).unwrap().clone();
                 if !game_state.get_controller_by_uid(self.controller_uid)
                     .unwrap()
                     .has_seen_card(minion.get_uid()) {
-                    
-                    let c_m = CreateMinion::from_minion(&minion, self.controller_uid);
-                    game_state.execute_rune(Box::new(c_m));
+
+                    let c_m = ReportMinionToClient::from_minion(&minion, self.controller_uid, true);
+                    game_state.execute_rune(c_m.into_box());
                 }
 
                 game_state.get_mut_controller_by_uid(self.controller_uid)
                     .unwrap()
                     .move_card_from_deck_to_hand(self.card_uid);
-
             } 
             _ => {}
         }

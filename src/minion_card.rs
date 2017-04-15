@@ -55,45 +55,50 @@ pub struct Minion {
     spell_damage: u32,
 }
 
-implement_for_lua!(Minion, |mut _metatable|{
-    let mut index =_metatable.empty_array("__index");
-    
-    index.set("add_tag", hlua::function2(|min: &mut Minion, tag: String| min.add_tag_to(tag)));
+implement_for_lua!(Minion, |mut _metatable| {
+    let mut index = _metatable.empty_array("__index");
+
+    index.set("add_tag",
+              hlua::function2(|min: &mut Minion, tag: String| min.add_tag_to(tag)));
     index.set("get_team", hlua::function1(|min: &Minion| min.get_team()));
-    index.set("get_health",hlua::function1(|min: &Minion| min.get_current_health()));
-    index.set("get_total_health", hlua::function1(|min: &Minion| min.get_total_health()));
+    index.set("get_health",
+              hlua::function1(|min: &Minion| min.get_current_health()));
+    index.set("get_total_health",
+              hlua::function1(|min: &Minion| min.get_total_health()));
     index.set("get_uid", hlua::function1(|min: &Minion| min.get_uid()));
-    index.set("get_total_attack", hlua::function1(|min: &Minion| min.get_total_attack()));
+    index.set("get_total_attack",
+              hlua::function1(|min: &Minion| min.get_total_attack()));
 
 });
 
 impl Minion {
-    pub fn lua_new(id: String,//this is a per non instanced look up id for the file structure
-                   uid: UID,//this is a perinstance look up ID for the game
+    pub fn lua_new(id: String, //this is a per non instanced look up id for the file structure
+                   uid: UID, //this is a perinstance look up ID for the game
                    cost: u32,
                    set: String,
                    base_attack: u32,
                    base_health: u32,
-                   name: String) -> Minion {
-        Minion{
-            cost: cost ,
+                   name: String)
+                   -> Minion {
+        Minion {
+            cost: cost,
             id: id,
             uid: uid,
             name: name,
             set: set,
             tags: HashSet::new(),
             functions: HashMap::new(),
-            base_attack: base_attack ,
-            current_attack: base_attack ,
-            total_attack: base_attack ,
-            base_health: base_health ,
-            current_health: base_health ,
+            base_attack: base_attack,
+            current_attack: base_attack,
+            total_attack: base_attack,
+            base_health: base_health,
+            current_health: base_health,
             total_health: base_health,
             state: EMinionState::NotInPlay,
             auras: vec![],
             enchantments: vec![],
             spell_damage: 0,
-            team: 5
+            team: 5,
         }
     }
 
@@ -124,7 +129,7 @@ impl Minion {
             auras: vec![],
             enchantments: vec![],
             spell_damage: 0,
-            team: 5//cannot have 5 teams so this is a flag value for unassingned team
+            team: 5, //cannot have 5 teams so this is a flag value for unassingned team
         }
     }
 
@@ -149,10 +154,10 @@ impl Minion {
             auras: vec![],
             enchantments: vec![],
             spell_damage: 0,
-            team: 5//cannot have 5 teams so this is a flag value for unassingned team
+            team: 5, //cannot have 5 teams so this is a flag value for unassingned team
         }
     }
-    
+
     pub fn add_aura(&mut self, auras_origin: UID) {
         self.auras.push(auras_origin);
     }
@@ -181,7 +186,7 @@ impl Minion {
         self.state = new_state;
     }
 
-    pub fn get_minion_state(&self) -> EMinionState{
+    pub fn get_minion_state(&self) -> EMinionState {
         self.state.clone()
     }
 
@@ -222,13 +227,13 @@ impl Minion {
     }
 
     pub fn set_team(&mut self, team: u32) {
-        self.team = team ;
+        self.team = team;
     }
 
-    pub fn get_team(&self) -> u32{
+    pub fn get_team(&self) -> u32 {
         self.team.clone()
     }
-    
+
     pub fn get_base_attack(&self) -> u32 {
         self.base_attack.clone()
     }
@@ -282,11 +287,11 @@ impl Minion {
     }
 
     pub fn set_spell_damage(&mut self, amount: u32) {
-        self.spell_damage = amount ;
+        self.spell_damage = amount;
     }
 
     pub fn set_uid(&mut self, uid: u32) {
-        self.uid = uid.clone() ;
+        self.uid = uid.clone();
     }
 
     pub fn set_functions(&mut self, functions: HashMap<String, String>) {

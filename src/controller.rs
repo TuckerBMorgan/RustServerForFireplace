@@ -52,7 +52,7 @@ pub struct Controller {
 }
 
 implement_lua_read!(Controller);
-implement_lua_push!(Controller, |mut _metatable|{});
+implement_lua_push!(Controller, |mut _metatable| {});
 
 impl Controller {
     pub fn add_minion_to_unplayed(&mut self, minion_uid: UID) {
@@ -79,6 +79,10 @@ impl Controller {
 
     pub fn add_card_to_deck(&mut self, card: Card) {
         self.deck.push(card);
+    }
+
+    pub fn get_team(&self) -> u32 {
+        self.team.clone()
     }
 
     pub fn move_card_from_deck_to_hand(&mut self, uid: UID) {

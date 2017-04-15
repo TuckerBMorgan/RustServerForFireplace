@@ -30,7 +30,7 @@ impl ClientOption {
     }
 }
 
-implement_for_lua!(ClientOption, |mut _metatable|{});
+implement_for_lua!(ClientOption, |mut _metatable| {});
 
 #[derive(RustcDecodable, RustcEncodable)]
 pub struct OptionsPackage {

@@ -130,7 +130,6 @@ fn player_thread_function(player_thread: PlayerThread,
                                 println!("Bad message");
                             }
                         }
-
                     }
                     Err(_) => {}
                 }
@@ -179,9 +178,20 @@ fn player_thread_function(player_thread: PlayerThread,
 
                             let _ = to_server.send(to_server_message);
                         } else if message_type.contains("option_rune") {
+              
+                        let option_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : 0, \"{l}\" : 0,  \"{j}\" : 0}}",
+                                                           k = "message_type",
+                                                           v = "option",
+                                                           h = "index",
+                                                           l = "board_index",
+                                                           j = "timeStamp");
 
+                            let to_server_message = ThreadMessage {
+                                client_id: player_thread.client_id,
+                                payload: option_message
+                            };
+                            let _ = to_server.send(to_server_message);
                         }
-
                     }
                     Err(_) => {}
 
