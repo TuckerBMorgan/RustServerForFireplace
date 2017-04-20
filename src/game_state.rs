@@ -402,6 +402,7 @@ impl<'a> GameState<'a> {
             let next_rune = self.remove_rune_from_queue();
             self.process_rune(next_rune);
         }
+        
     }
 
     #[allow(dead_code)]
