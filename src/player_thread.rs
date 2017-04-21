@@ -11,25 +11,21 @@ use game_thread::ThreadMessage;
 use AI_Utils::{AI_Player, AI_Request};
 use std::mem;
 use rune_match::get_rune;
+use game_state::GameStateData;
 
 pub struct PlayerThread {
     pub client_id: u32,
     pub stream: Option<TcpStream>,
     pub join_handle: Option<JoinHandle<()>>,
-    pub ai_current_state : Option<AI_Player>,
 }
 
 impl PlayerThread {
-    pub fn new(client_id: u32, stream: Option<TcpStream>, ai_state: bool) -> PlayerThread {
-        let mut ai_player = None;
-        if ai_state {
-            ai_player = Some(AI_Player::new());
-        }
+    pub fn new(client_id: u32, stream: Option<TcpStream>) -> PlayerThread {
+        
         let p_thread = PlayerThread {
             client_id: client_id,
             stream: stream,
             join_handle: None,
-            ai_current_state : ai_player,
         };
         return p_thread;
     }
@@ -42,9 +38,11 @@ impl PlayerThread {
             .unwrap()
     }
 
-    pub fn swap_ai(&mut self, ai_state : AI_Player){
-        mem::swap(&mut self.ai_current_state, &mut Some(ai_state))
+    /*
+    pub fn swap_ai(&mut self, mut ai_state : GameStateData){
+        mem::swap(&mut self.ai_current_state.unwrap().game_state_data, &mut (ai_state))
     }
+    */
     // pub fn from_stream(stream : TcpStream, client_id: u32) -> Result<PlayerThread> {
     // let p_thread = PlayerThread {
     // client_id: client_id,
@@ -76,7 +74,7 @@ impl PlayerThread {
     //
 }
 
-fn player_thread_function(mut player_thread: PlayerThread,
+fn player_thread_function(player_thread: PlayerThread,
                           to_server: Sender<ThreadMessage>,
                           from_server: Receiver<ThreadMessage>) {
 
@@ -152,6 +150,7 @@ fn player_thread_function(mut player_thread: PlayerThread,
         }
         // is AI
         None => {
+            let mut ai_current_state = AI_Player::new();
             loop {
                 let to_client_message = from_server.try_recv();
 
@@ -159,7 +158,7 @@ fn player_thread_function(mut player_thread: PlayerThread,
                 match to_client_message {
                     Ok(to_client_message) => {
                         let message = to_client_message.payload.clone();
-                        println!("AI JUST GOT {0}", message.clone());
+                        //println!("AI JUST GOT {0}", message.clone());
                         let j_message: Json = Json::from_str(message.trim()).unwrap();
                         let obj = j_message.as_object().unwrap();
 
@@ -186,11 +185,11 @@ fn player_thread_function(mut player_thread: PlayerThread,
                                                            v = "mulligan",
                                                            h = "index");
                             let to_server_message = ThreadMessage {
-                                client_id: player_thread.client_id,
+                                client_id: player_thread.client_id.clone(),
                                 payload: mulligan_message,
                             };
 
-                            let _ = to_server.send(to_server_message);
+                            let _ = &to_server.send(to_server_message);
                         } else if message_type.contains("option_rune") {
               
                         let option_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : 0, \"{l}\" : 0,  \"{j}\" : 0}}",
@@ -200,32 +199,48 @@ fn player_thread_function(mut player_thread: PlayerThread,
                                                            l = "board_index",
                                                            j = "timeStamp");
                             let to_server_message = ThreadMessage {
-                                client_id: player_thread.client_id,
+                                client_id: player_thread.client_id.clone(),
                                 payload: option_message
                             };
-                            let _ = to_server.send(to_server_message);
+                            let _ = &to_server.send(to_server_message);
                         } 
                         //this here updates the player_thread ai track
                         else if message_type.contains("AI_Update"){
                             
                             //copy the response, get the GSD give that to the AI 
-                            let mut tmp = player_thread.ai_current_state.clone().unwrap(); 
-                            tmp.update(message.clone());
-                            player_thread.swap_ai(tmp);
-                            println!("AI UPDATED TO {0}", (player_thread.ai_current_state.clone().unwrap().toJson()));
+                            ai_current_state.update(message.clone());
+                            
+                            println!("AI UPDATED {0}", ai_current_state.update_count);
+                            let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
+                            queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
+                        }
+                        //else if message_type.contains("DealCard"){
+
+                        //}
+                        else if message_type.contains("ReportMinionToClient"){
+
                         }
                         else {
                             println!("AI GONNA TRY AND UPDATE WITH {0}", message.clone());
-                            let ai_request = AI_Request::new(
-                                player_thread.ai_current_state.clone().unwrap().game_state_data, 
-                                message.clone()
-                            );
-                            let t_messsage = ThreadMessage {
-                                    client_id: player_thread.client_id,
-                                    payload: String::from(ai_request.toJson()),
-                                };
-                                println!("AI REQ {0}", t_messsage.payload.clone());
-                                let res = to_server.send(t_messsage);
+                            let uDcount = ai_current_state.update_count;
+                            if (uDcount) == ai_current_state.public_runes.len() as u32 && ai_current_state.public_runes.len() as u32 > 1  
+                            {         
+                                println!("SENDING UPDATE {} {}", uDcount, ai_current_state.public_runes.len());
+                                let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
+                                queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
+                                ai_current_state.queue_update(message.clone());
+                            }
+                            else if (uDcount) == ai_current_state.public_runes.len() as u32 && ai_current_state.public_runes.len() as u32 == 0
+                            {
+                                println!("SENDING UPDATE {} {}", uDcount, ai_current_state.public_runes.len());
+                                let rne = message.clone();
+                                queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
+                                ai_current_state.queue_update(message.clone());
+                            }
+                            else{
+                                println!("QUEUEING UPDATE {} {}", uDcount, ai_current_state.public_runes.len());
+                                ai_current_state.queue_update(message.clone());
+                            }
                         }
                     }
                     Err(_) => {}
@@ -235,4 +250,17 @@ fn player_thread_function(mut player_thread: PlayerThread,
         }
     }
     
+}
+fn queue_ai_update(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, message : String, gsd : GameStateData){
+    let ai_request = AI_Request::new(
+        gsd, 
+        message.clone()
+    );
+    println!("AI ATTEMPTING TO SEND {}", message.clone());
+    let t_messsage = ThreadMessage {
+        client_id: player_thread.client_id,
+        payload: String::from(ai_request.toJson()),
+    };
+    to_server.send(t_messsage);
+
 }

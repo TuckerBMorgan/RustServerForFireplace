@@ -15,7 +15,7 @@ use runes::set_health::SetHealth;
 use runes::set_attack::SetAttack;
 use runes::modify_attack::ModifyAttack;
 use runes::modify_health::ModifyHealth;
-use runes::create_minion::CreateMinion;
+//use runes::create_minion::CreateMinion;
 use runes::summon_minion::SummonMinion;
 use rustc_serialize::json;
 use rustc_serialize::json::Json;
@@ -43,6 +43,7 @@ pub fn get_rune(json_obj : &str)->Box<Rune>{
             let dc : NewController = json::decode(ns.trim()).unwrap();
             return dc.into_box();
         },
+        /*
         ref x if x == "\"CreateMinion\"" =>{
             println!("CreateMinion found");
             let ns = json_obj.replace("{\"runeType\":\"CreateMinion\",","{");
@@ -50,25 +51,26 @@ pub fn get_rune(json_obj : &str)->Box<Rune>{
             let dc : CreateMinion = json::decode(ns.trim()).unwrap();
             return dc.into_box();
         },
+        */
         ref x if x == "\"StartGame\"" =>{
             println!("StartGame found");
             let ns = json_obj.replace("{\"runeType\":\"StartGame\",","{");
             //let obj = j_message.as_object().unwrap();
-            let dc : CreateMinion = json::decode(ns.trim()).unwrap();
+            let dc : StartGame = json::decode(ns.trim()).unwrap();
             return dc.into_box();
         },
         ref x if x == "\"ShuffleCard\"" =>{
             println!("ShuffleCard found");
             let ns = json_obj.replace("{\"runeType\":\"ShuffleCard\",","{");
             //let obj = j_message.as_object().unwrap();
-            let dc : CreateMinion = json::decode(ns.trim()).unwrap();
+            let dc : ShuffleCard = json::decode(ns.trim()).unwrap();
             return dc.into_box();
         },
         _=>{
-            println!("UNKNOWN");
-            let ns = json_obj.replace("{\"runeType\":\"NewController\",","{");
+            println!("ShuffleCard found");
+            let ns = json_obj.replace("{\"runeType\":\"ShuffleCard\",","{");
             //let obj = j_message.as_object().unwrap();
-            let dc : NewController = json::decode(ns.trim()).unwrap();
+            let dc : ShuffleCard = json::decode(ns.trim()).unwrap();
             return dc.into_box();
         }
 
