@@ -41,10 +41,10 @@ use std::net::TcpListener;
 
 
 fn spawn_new_player(client_id: u32, stream: TcpStream) -> PlayerThread {
-    PlayerThread::new(client_id, Some(stream), false)
+    PlayerThread::new(client_id, Some(stream))
 }
 fn spawn_new_ai(client_id: u32) -> PlayerThread {
-    return PlayerThread::new(client_id, None, true);
+    return PlayerThread::new(client_id, None);
 }
 
 fn terminal_commands() {

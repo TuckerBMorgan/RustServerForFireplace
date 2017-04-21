@@ -42,16 +42,23 @@ impl AI_Request{
 
 	}
 }
-#[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct AI_Player{
 	pub game_state_data : GameStateData,
 	pub score : f32,
+	pub public_runes : Vec<String>,
+	pub  update_count : u32,
 }
 impl AI_Player{
 	pub fn new()->AI_Player{
+		let mut gsd = GameStateData::new(true);
+		let mut scre = 0.0 as f32;
+		let mut pr = Vec::new();
+		let mut uc = 0;
 		AI_Player{
-			game_state_data : GameStateData::new(true),
-			score : 0.0 as f32,
+			game_state_data : gsd ,
+			score : scre,
+			public_runes : pr ,
+			update_count : uc,
 		}
 	}
 
@@ -61,11 +68,11 @@ impl AI_Player{
 	pub fn update(&mut self, updateData: String){
 		let response = updateData.clone().replace("{\"message_type\": \"AI_Update\",", "{" );
         self.game_state_data= json::decode(response.trim()).unwrap();
+		self.update_count = self.update_count + 1; 
 	}
 
-	pub fn toJson(&self)->String{
-		return json::encode(&self).unwrap() as String;
-
+	pub fn queue_update(&mut self, rune : String){
+		self.public_runes.push(rune)
 	}
 }
 

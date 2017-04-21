@@ -37,6 +37,7 @@ use runes::modify_health::ModifyHealth;
 use runes::create_card::CreateCard;
 use runes::summon_minion::SummonMinion;
 use std::mem;
+use rustc_serialize::json;
 
 #[derive(Clone, RustcDecodable, RustcEncodable,)]
 pub struct GameStateData {
@@ -153,6 +154,10 @@ impl GameStateData {
         uids
     }
 
+    pub fn get_is_ai_copy(&self)->bool{
+        return self.ai_player_copy.clone();
+    }
+
     pub fn get_all_minions_in_play(&self) -> Vec<Minion> {
         let mut mins = vec![];
         for (_, v) in self.minions.clone() {
@@ -165,6 +170,9 @@ impl GameStateData {
             }
         }
         mins
+    }
+    pub fn to_json(&self)->String{
+        return json::encode(self).unwrap();
     }
 }
 
@@ -1071,11 +1079,11 @@ impl<'a> GameState<'a> {
     pub fn add_to_attacked_this_turn(&mut self, uid: UID) {
         self.game_state_data.add_has_attack(uid);
     }
-    /*
+    
     pub fn get_game_state_data(&self)->GameStateData{
-        return self.game_state_data;
+        return self.game_state_data.clone();
     }
-    */
+    
     pub fn swap_gsd(&mut self, gsd: &mut GameStateData){
         mem::swap(&mut self.game_state_data, gsd);
     }

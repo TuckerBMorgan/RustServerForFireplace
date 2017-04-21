@@ -61,7 +61,7 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
             game_state.swap_gsd(&mut ai_gsd);
 
             let mut json_response = json::encode(&ai_gsd).unwrap();
-            let mut front= "{\"message_type\":\"AI_Update\",";
+            let mut front= "{\"runeType\":\"AI_Update\",";
 		    let sendMsg = format!("{}{}", front, 
                     &json_response.clone()[1..json_response.len()]);
             
