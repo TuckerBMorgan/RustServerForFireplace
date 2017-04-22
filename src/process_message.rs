@@ -51,7 +51,6 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
             game_state.mulligan(client_id, mull_message.index.clone());
         }
         "AIPlay"=>{
-            println!("GAME THREAD JUST GOT {0}", message.clone());
             let mut ai_play : AI_Request = json::decode(message.trim()).unwrap();
             let mut ai_gsd : GameStateData = ai_play.game_state_data;
             let mut rune_request : Box<Rune> = get_rune(ai_play.rune.as_ref());
