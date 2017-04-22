@@ -12,6 +12,8 @@ use AI_Utils::{AI_Player, AI_Request};
 use std::mem;
 use rune_match::get_rune;
 use game_state::GameStateData;
+use runes::new_controller::NewController;
+use rustc_serialize::json;
 
 pub struct PlayerThread {
     pub client_id: u32,
@@ -38,11 +40,7 @@ impl PlayerThread {
             .unwrap()
     }
 
-    /*
-    pub fn swap_ai(&mut self, mut ai_state : GameStateData){
-        mem::swap(&mut self.ai_current_state.unwrap().game_state_data, &mut (ai_state))
-    }
-    */
+    
     // pub fn from_stream(stream : TcpStream, client_id: u32) -> Result<PlayerThread> {
     // let p_thread = PlayerThread {
     // client_id: client_id,
@@ -161,7 +159,7 @@ fn player_thread_function(player_thread: PlayerThread,
                         //println!("AI JUST GOT {0}", message.clone());
                         let j_message: Json = Json::from_str(message.trim()).unwrap();
                         let obj = j_message.as_object().unwrap();
-
+                        println!("AI RUNE RECIEVER {}", message.clone());
                         let message_type = match obj.get("runeType") {
                             Some(message_type) => {
                                 match *message_type {
@@ -178,7 +176,7 @@ fn player_thread_function(player_thread: PlayerThread,
                                 continue;
                             }
                         };
-                        println!("mt {0}", message_type);
+                        //println!("mt {0}", message_type);
                         if message_type.contains("Mulligan") {
                             let mulligan_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : [] }}",
                                                            k = "message_type",
@@ -211,8 +209,10 @@ fn player_thread_function(player_thread: PlayerThread,
                             ai_current_state.update(message.clone());
                             
                             println!("AI UPDATED {0}", ai_current_state.update_count);
-                            let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
-                            queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
+                            if(ai_current_state.update_count < ai_current_state.public_runes.len() as u32){
+                                let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
+                                queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
+                            }
                         }
                         //else if message_type.contains("DealCard"){
 
@@ -220,9 +220,23 @@ fn player_thread_function(player_thread: PlayerThread,
                         else if message_type.contains("ReportMinionToClient"){
 
                         }
+                        else if message_type.contains("NewController"){
+                            //let run = &get_rune(message.clone().as_str()) as NewController;
+                            let ns = message.clone().replace("{\"runeType\":\"NewController\",","{");
+                            let run : NewController = json::decode(ns.trim()).unwrap();
+                            if run.is_me {
+                                ai_current_state.queue_update(message.clone());
+                            }
+                            else{
+                                ai_current_state.public_runes.insert(0, message.clone());
+                                let rne = message.clone();
+                                queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
+                            }
+                        }
                         else {
-                            println!("AI GONNA TRY AND UPDATE WITH {0}", message.clone());
+                            //println!("AI GONNA TRY AND UPDATE WITH {0}", message.clone());
                             let uDcount = ai_current_state.update_count;
+                            
                             if (uDcount) == ai_current_state.public_runes.len() as u32 && ai_current_state.public_runes.len() as u32 > 1  
                             {         
                                 println!("SENDING UPDATE {} {}", uDcount, ai_current_state.public_runes.len());
@@ -232,13 +246,13 @@ fn player_thread_function(player_thread: PlayerThread,
                             }
                             else if (uDcount) == ai_current_state.public_runes.len() as u32 && ai_current_state.public_runes.len() as u32 == 0
                             {
-                                println!("SENDING UPDATE {} {}", uDcount, ai_current_state.public_runes.len());
+                                //println!("SENDING UPDATE {} {}", uDcount, ai_current_state.public_runes.len());
                                 let rne = message.clone();
                                 queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
                                 ai_current_state.queue_update(message.clone());
                             }
                             else{
-                                println!("QUEUEING UPDATE {} {}", uDcount, ai_current_state.public_runes.len());
+                                //println!("QUEUEING UPDATE {} {}", uDcount, ai_current_state.public_runes.len());
                                 ai_current_state.queue_update(message.clone());
                             }
                         }
