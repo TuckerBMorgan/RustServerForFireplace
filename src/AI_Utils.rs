@@ -54,6 +54,8 @@ impl AI_Player{
 		let mut scre = 0.0 as f32;
 		let mut pr = Vec::new();
 		let mut uc = 0;
+		gsd.get_uid();
+		gsd.get_uid();
 		AI_Player{
 			game_state_data : gsd ,
 			score : scre,
