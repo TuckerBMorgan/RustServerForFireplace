@@ -159,7 +159,6 @@ fn player_thread_function(player_thread: PlayerThread,
                         //println!("AI JUST GOT {0}", message.clone());
                         let j_message: Json = Json::from_str(message.trim()).unwrap();
                         let obj = j_message.as_object().unwrap();
-                        println!("AI RUNE RECIEVER {}", message.clone());
                         let message_type = match obj.get("runeType") {
                             Some(message_type) => {
                                 match *message_type {
@@ -209,7 +208,7 @@ fn player_thread_function(player_thread: PlayerThread,
                             ai_current_state.update(message.clone());
                             
                             println!("AI UPDATED {0}", ai_current_state.update_count);
-                            if(ai_current_state.update_count < ai_current_state.public_runes.len() as u32){
+                            if ai_current_state.update_count < ai_current_state.public_runes.len() as u32){
                                 let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
                                 queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
                             }
@@ -221,7 +220,9 @@ fn player_thread_function(player_thread: PlayerThread,
 
                         }
                         else if message_type.contains("NewController"){
-                            //let run = &get_rune(message.clone().as_str()) as NewController;
+                            //get a new controller object so we can have the boolean
+                            //theres a better way to do this
+                            //probably
                             let ns = message.clone().replace("{\"runeType\":\"NewController\",","{");
                             let run : NewController = json::decode(ns.trim()).unwrap();
                             if run.is_me {
@@ -233,18 +234,22 @@ fn player_thread_function(player_thread: PlayerThread,
                                 queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
                             }
                         }
+                        //any of the runes which do not require special rules are executed below
                         else {
-                            //println!("AI GONNA TRY AND UPDATE WITH {0}", message.clone());
+                            //borrow the update count
                             let uDcount = ai_current_state.update_count;
                             
-                            if (uDcount) == ai_current_state.public_runes.len() as u32 && ai_current_state.public_runes.len() as u32 > 1  
+                            //if the update count is the same as the length of the 
+                            if (uDcount) == ai_current_state.public_runes.len() as u32 
+                                    && ai_current_state.public_runes.len() as u32 > 1  
                             {         
                                 println!("SENDING UPDATE {} {}", uDcount, ai_current_state.public_runes.len());
-                                let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
-                                queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
+                                //let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
+                                queue_ai_update(&player_thread, &to_server, message.clone(), ai_current_state.game_state_data.clone());
                                 ai_current_state.queue_update(message.clone());
                             }
-                            else if (uDcount) == ai_current_state.public_runes.len() as u32 && ai_current_state.public_runes.len() as u32 == 0
+                            else if (uDcount) == ai_current_state.public_runes.len() as u32 
+                                    && ai_current_state.public_runes.len() as u32 == 0
                             {
                                 //println!("SENDING UPDATE {} {}", uDcount, ai_current_state.public_runes.len());
                                 let rne = message.clone();

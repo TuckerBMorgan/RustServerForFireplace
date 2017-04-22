@@ -2,6 +2,7 @@ use rune_vm::Rune;
 
 use std::*;
 
+use runes::add_tag::AddTag;
 use runes::deal_card::DealCard;
 use runes::start_game::StartGame;
 use runes::rotate_turn::RotateTurn;
@@ -15,6 +16,7 @@ use runes::set_health::SetHealth;
 use runes::set_attack::SetAttack;
 use runes::modify_attack::ModifyAttack;
 use runes::modify_health::ModifyHealth;
+use runes::set_base_mana::*;
 //use runes::create_minion::CreateMinion;
 use runes::summon_minion::SummonMinion;
 use rustc_serialize::json;
@@ -26,7 +28,7 @@ pub fn get_rune(json_obj : &str)->Box<Rune>{
     let obj = j_message.as_object().unwrap();
     let message_type : String = obj.get("runeType").unwrap().to_string();
 
-    println!("AI SEES : {0}", json_obj);
+    println!("Decoding to Boxed Struct : {0}", json_obj);
 
     match message_type {
         ref x if x == "\"DealCard\"" =>{
@@ -43,15 +45,6 @@ pub fn get_rune(json_obj : &str)->Box<Rune>{
             let dc : NewController = json::decode(ns.trim()).unwrap();
             return dc.into_box();
         },
-        /*
-        ref x if x == "\"CreateMinion\"" =>{
-            println!("CreateMinion found");
-            let ns = json_obj.replace("{\"runeType\":\"CreateMinion\",","{");
-            //let obj = j_message.as_object().unwrap();
-            let dc : CreateMinion = json::decode(ns.trim()).unwrap();
-            return dc.into_box();
-        },
-        */
         ref x if x == "\"StartGame\"" =>{
             println!("StartGame found");
             let ns = json_obj.replace("{\"runeType\":\"StartGame\",","{");
@@ -64,6 +57,24 @@ pub fn get_rune(json_obj : &str)->Box<Rune>{
             let ns = json_obj.replace("{\"runeType\":\"ShuffleCard\",","{");
             //let obj = j_message.as_object().unwrap();
             let dc : ShuffleCard = json::decode(ns.trim()).unwrap();
+            return dc.into_box();
+        },
+        ref x if x ==  "\"SetBaseMana\""=>{
+            println!("SetBaseMana found");
+            let ns = json_obj.replace("{\"runeType\":\"SetBaseMana\",","{");
+            let dc : SetBaseMana = json::decode(ns.trim()).unwrap();
+            return dc.into_box();
+        },
+        ref x if x ==  "\"SetMana\""=>{
+            println!("SetMana found");
+            let ns = json_obj.replace("{\"runeType\":\"SetMana\",","{");
+            let dc : SetMana = json::decode(ns.trim()).unwrap();
+            return dc.into_box();
+        },
+        ref x if x ==  "\"RotateTurn\""=>{
+            println!("RotateTurn found");
+            let ns = json_obj.replace("{\"runeType\":\"RotateTurn\",","{");
+            let dc : RotateTurn = json::decode(ns.trim()).unwrap();
             return dc.into_box();
         },
         _=>{
