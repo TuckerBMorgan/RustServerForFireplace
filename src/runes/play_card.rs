@@ -60,7 +60,7 @@ impl Rune for PlayCard {
 
         let pm = PlayMinion::new(card_unwrap.get_content().parse().unwrap(),
                                  self.controller_uid,
-                                 self.field_index as usize,`
+                                 self.field_index as usize,
                                  self.target_uid);
 
         game_state.execute_rune(Box::new(pm));
