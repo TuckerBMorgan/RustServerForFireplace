@@ -4,6 +4,7 @@ use rustc_serialize::json;
 use game_state::GameState;
 use minion_card::{UID, EMinionState};
 use hlua;
+use runes::report_minion_to_client::ReportMinionToClient;
 
 #[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
 pub struct SummonMinion {
@@ -34,6 +35,11 @@ impl Rune for SummonMinion {
         }
 
         let controller = game_state.get_mut_controller_by_uid(self.controller_uid);
+
+        if !controller.has_seen_card(self.minion_uid) {
+            let rmtc = ReportMinionToClient::new(game_state.get_minion(self.minion_uid).unwrap());
+            game_state.execute_rune(rmtc);
+        }
         match controller {
             Some(controller) => {
                 if self.field_index == 0 {

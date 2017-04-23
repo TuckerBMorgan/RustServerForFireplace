@@ -46,7 +46,7 @@ pub struct GameStateData {
     client_id_to_controller_uid: HashMap<UID, u32>,
     attacked_this_turn: Vec<UID>,
     entity_count: u32,
-    on_turn_player: i8,
+    on_turn_player: i8, 
 }
 
 //implement_for_lua!(i32, |mut _metatable|{});

@@ -86,7 +86,9 @@ impl ReportMinionToClient {
 }
 
 impl Rune for ReportMinionToClient {
-    fn execute_rune(&self, _game_state: &mut GameState) {}
+    fn execute_rune(&self, game_state: &mut GameState) {
+        game_state.get_mut_controller_by_uid(self.controller_uid).add_card_to_seen(self.uid);
+    }
 
     fn can_see(&self, controller: UID, _game_state: &GameState) -> bool {
         if self.is_deal {
