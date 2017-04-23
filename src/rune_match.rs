@@ -103,6 +103,30 @@ pub fn get_rune(json_obj : &str)->Box<Rune>{
             let dc : RemoveTag = json::decode(ns.trim()).unwrap();
             return dc.into_box();
         },
+        ref x if x ==  "\"SetHealth\""=>{
+            println!("SetHealth found");
+            let ns = json_obj.replace("{\"runeType\":\"SetHealth\",","{");
+            let dc : SetHealth = json::decode(ns.trim()).unwrap();
+            return dc.into_box();
+        },
+        ref x if x ==  "\"ModifyHealth\""=>{
+            println!("ModifyHealth found");
+            let ns = json_obj.replace("{\"runeType\":\"ModifyHealth\",","{");
+            let dc : ModifyHealth = json::decode(ns.trim()).unwrap();
+            return dc.into_box();
+        },
+        ref x if x ==  "\"SetAttack\""=>{
+            println!("SetAttack found");
+            let ns = json_obj.replace("{\"runeType\":\"SetAttack\",","{");
+            let dc : SetAttack = json::decode(ns.trim()).unwrap();
+            return dc.into_box();
+        },
+        ref x if x ==  "\"ModifyAttack\""=>{
+            println!("ModifyAttack found");
+            let ns = json_obj.replace("{\"runeType\":\"ModifyAttack\",","{");
+            let dc : ModifyAttack = json::decode(ns.trim()).unwrap();
+            return dc.into_box();
+        },
         _=>{
             println!("ShuffleCard found");
             let ns = json_obj.replace("{\"runeType\":\"ShuffleCard\",","{");
