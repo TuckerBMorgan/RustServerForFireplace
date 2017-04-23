@@ -17,6 +17,8 @@ use runes::set_attack::SetAttack;
 use runes::modify_attack::ModifyAttack;
 use runes::modify_health::ModifyHealth;
 use runes::set_base_mana::*;
+use runes::play_minion::PlayMinion;
+use runes::remove_tag::RemoveTag;
 //use runes::create_minion::CreateMinion;
 use runes::summon_minion::SummonMinion;
 use rustc_serialize::json;
@@ -75,6 +77,30 @@ pub fn get_rune(json_obj : &str)->Box<Rune>{
             println!("RotateTurn found");
             let ns = json_obj.replace("{\"runeType\":\"RotateTurn\",","{");
             let dc : RotateTurn = json::decode(ns.trim()).unwrap();
+            return dc.into_box();
+        },
+        ref x if x ==  "\"AddTag\""=>{
+            println!("AddTag found");
+            let ns = json_obj.replace("{\"runeType\":\"AddTag\",","{");
+            let dc : AddTag = json::decode(ns.trim()).unwrap();
+            return dc.into_box();
+        },
+        ref x if x ==  "\"SummonMinion\""=>{
+            println!("SummonMinion found");
+            let ns = json_obj.replace("{\"runeType\":\"SummonMinion\",","{");
+            let dc : SummonMinion = json::decode(ns.trim()).unwrap();
+            return dc.into_box();
+        },
+        ref x if x ==  "\"PlayMinion\""=>{
+            println!("PlayMinion found");
+            let ns = json_obj.replace("{\"runeType\":\"PlayMinion\",","{");
+            let dc : PlayMinion = json::decode(ns.trim()).unwrap();
+            return dc.into_box();
+        },
+        ref x if x ==  "\"RemoveTag\""=>{
+            println!("RemoveTag found");
+            let ns = json_obj.replace("{\"runeType\":\"RemoveTag\",","{");
+            let dc : RemoveTag = json::decode(ns.trim()).unwrap();
             return dc.into_box();
         },
         _=>{

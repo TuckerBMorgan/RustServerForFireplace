@@ -15,7 +15,9 @@ use AI_Utils::AI_Request;
 #[allow(dead_code)]
 pub fn process_client_message(message: String, client_id: u32, game_state: &mut GameState) {
 
-    println!("processing message {}", message);
+    if !message.contains("AIPlay"){
+        println!("processing message {}", message);
+    }
     let j_message: Json = Json::from_str(message.trim()).unwrap();
     let obj = j_message.as_object().unwrap();
 

@@ -187,7 +187,7 @@ fn player_thread_function(player_thread: PlayerThread,
                             };
 
                             let _ = &to_server.send(to_server_message);
-                        } else if message_type.contains("option_rune") {
+                        } else if message_type.contains("optionRune") {
               
                         let option_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : 0, \"{l}\" : 0,  \"{j}\" : 0}}",
                                                            k = "message_type",
@@ -208,16 +208,24 @@ fn player_thread_function(player_thread: PlayerThread,
                             ai_current_state.update(message.clone());
                             
                             println!("AI UPDATED {0}", ai_current_state.update_count);
-                            if ai_current_state.update_count < ai_current_state.public_runes.len() as u32){
+                            if ai_current_state.update_count < ai_current_state.public_runes.len() as u32 {
                                 let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
                                 queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
                             }
                         }
-                        //else if message_type.contains("DealCard"){
+                        //LOGIC FOR RUNNING A TURN GOES HERE
+                        //else if message_type.contains("optionRune"){
 
                         //}
+                        //ANY THAT ARE EMPTY RUNES ARE IGNORE CONDITIONS
                         else if message_type.contains("ReportMinionToClient"){
-
+                            //IGNORE
+                        }
+                        else if message_type.contains("AddTag"){
+                            //IGNORE
+                        }
+                        else if message_type.contains("SummonMinion"){
+                            //IGNORE
                         }
                         else if message_type.contains("NewController"){
                             //get a new controller object so we can have the boolean
