@@ -29,6 +29,8 @@ impl Rune for DealCard {
 
         // game_state.get_controller_by_uid returns Option<& Controller>
         // controller.get_card_from_deck returns Option<'a Card>
+        //println!("DC to {}", json::encode(&game_state.get_game_state_data().get_is_ai_copy()).unwrap());
+        //println!("DC to {}", json::encode(&game_state.get_controller_by_uid(self.controller_uid).unwrap().deck).unwrap());
 
         let card = game_state.get_controller_by_uid(self.controller_uid)
             .unwrap()

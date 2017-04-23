@@ -979,7 +979,7 @@ impl<'a> GameState<'a> {
 
 
 
-        if self.game_state_data.get_number_of_controllers() == 2 {
+        if self.game_state_data.get_number_of_controllers() == 2 && !self.game_state_data.get_is_ai_copy(){
 
             let _rng = thread_rng();
             let first: u16 = 0; //in the release this has to be a
