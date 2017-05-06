@@ -19,7 +19,16 @@ use rune_vm::Rune;
 use runes::play_minion::PlayMinion;
 use runes::play_card::PlayCard;
 use rustc_serialize::json;
+use client_option::{ClientOption, OptionType, OptionsPackage};
 
+
+/**
+*Formats a known gamestate and a rune that should run into a json friendly
+*	string that can be sent to the game thread to be updated
+**************************************************************************
+*will be updated and renamed											 *
+**************************************************************************
+*/
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct AI_Request{
 	pub game_state_data : GameStateData,
@@ -42,11 +51,78 @@ impl AI_Request{
 
 	}
 }
+
+
+/**
+*Formats a known gamestate and an option that should run into a json friendly
+*	string that can be sent to the game thread to be updated
+**************************************************************************
+*will be updated and renamed											 *
+**************************************************************************
+*/
+#[derive(RustcDecodable, RustcEncodable, Clone)]
+pub struct AIOptionSetRequest{
+	pub game_state_data : GameStateData,
+	pub theo_options : Vec<Vec<ClientOption>>,
+}
+impl AIOptionSetRequest{
+	pub fn new(gsd : GameStateData, ops : Vec<Vec<ClientOption>>)->AIOptionSetRequest{
+		AIOptionSetRequest{
+			game_state_data: gsd,
+			theo_options : ops,
+		}
+	}
+	pub fn toJson(&self)->String{
+		let msg : String = json::encode(self).unwrap();
+		let front= "{\"message_type\":\"OptionsSimulation\",";
+		let sendMsg = format!("{}{}", front, &msg.clone()[1..msg.len()]);
+		return sendMsg;
+	}
+}
+
+/*
+*Takes in a given&known set of options and splits them by type
+*	This allows other processes to operate on different option
+*	sets in parallel
+*/
+#[derive(RustcDecodable, RustcEncodable, Clone)]
+pub struct OpsClassify {
+	pub end : ClientOption,
+	pub plays : Vec<ClientOption>,
+	pub attacks  : Vec<ClientOption>,
+}
+
+impl OpsClassify {
+	pub fn new(ops_list : OptionsPackage)->OpsClassify{
+
+		let mut end_op : ClientOption = ops_list.options[0].clone();
+
+		let mut play_ops : Vec<ClientOption> = Vec::new();
+		let mut attack_ops : Vec<ClientOption> = Vec::new();
+		for i in 0..(ops_list.options.len()-1){
+			match ops_list.options[i].option_type{
+				OptionType::EPlayCard=> play_ops.push(ops_list.options[i].clone()),
+				OptionType::EAttack=> attack_ops.push(ops_list.options[i].clone()),
+				OptionType::EEndTurn=> end_op = ops_list.options[i].clone(),
+			}		
+		}
+
+		OpsClassify{
+			end : end_op,
+			plays : play_ops,
+			attacks : attack_ops,
+		}
+	}
+}
+
+
 pub struct AI_Player{
 	pub game_state_data : GameStateData,
 	pub score : f32,
 	pub public_runes : Vec<String>,
-	pub  update_count : u32,
+	pub update_count : u32,
+	pub options_order : Vec<ClientOption>,
+	pub options_test_recieved : bool,
 }
 impl AI_Player{
 	pub fn new()->AI_Player{
@@ -54,6 +130,8 @@ impl AI_Player{
 		let mut scre = 0.0 as f32;
 		let mut pr = Vec::new();
 		let mut uc = 0;
+		let options_order_empty : Vec<ClientOption> = Vec::new();
+		let options_test_recieved_false = false;
 		gsd.get_uid();
 		gsd.get_uid();
 		AI_Player{
@@ -61,62 +139,85 @@ impl AI_Player{
 			score : scre,
 			public_runes : pr ,
 			update_count : uc,
+			options_order : options_order_empty,
+			options_test_recieved : options_test_recieved_false,
 		}
+	}
+
+	pub fn gsd_from_json(json_message : String)->GameStateData{
+		let response = json_message.clone().replace("{\"message_type\": \"AI_Update\",", "{" );
+        return json::decode(response.trim()).unwrap();
 	}
 
 	/*
 	*Updates the AI_Player using a json string of GameStateData
 	*/
 	pub fn update(&mut self, updateData: String){
-		let response = updateData.clone().replace("{\"message_type\": \"AI_Update\",", "{" );
-        self.game_state_data= json::decode(response.trim()).unwrap();
-		self.update_count = self.update_count + 1; 
+        self.game_state_data = AI_Player::gsd_from_json(updateData); 
+		self.update_count = self.update_count + 1;
+		if self.update_count > 1{
+			self.score = score_controllers(&self.game_state_data);
+			println!("UPDATED SCORE: {}", self.score.clone());
+		}
 	}
-
+	/**
+	*Enqueues a rune to the update list
+	*/
 	pub fn queue_update(&mut self, rune : String){
 		self.public_runes.push(rune)
+	}
+
+	/*
+	*Takes an options package given by the server and generates responses
+	*/
+	pub fn option_engine(&mut self, ops_list : OptionsPackage){
+		println!("AI options action");
+		let ops_classi = OpsClassify::new(ops_list);
 	}
 }
 
 /*
-*gets how much active AP is on the field for a given 
+*gets how much active AP is on the field for a given board. 
 *
 *
-fn getAP_field(controller: Controller, game: GameStateData) -> u8{
+*/
+fn getAP_field(ref controller: &Controller, game: &GameStateData) -> u32{
 
 	let mut this_AP = 0;
 	//get the vectors of uuids of the minions on this part of the field.
 	let field = controller.get_copy_of_in_play();
 	//iterate through the list of uids detected.
-	for i in &field{
-		this_AP += game.get_minion().get_current_attack();
+	for i in field{
+		this_AP += game.get_minion(i).unwrap().get_current_attack();
 	}
 	return this_AP;
 }
 
-fn getHP_field(controller: Controller, game: GameStateData) -> u8{
+fn getHP_field(ref controller: &Controller, game: &GameStateData) -> u32{
 
 	let mut this_AP = 0;
 	//get the vectors of uuids of the minions on this part of the field.
 	let field = controller.get_copy_of_in_play();
 	//iterate through the list of uids detected.
-	for i in &field{
-		this_AP += game.get_minion().get_current_health();
+	for i in field{
+		this_AP += game.get_minion(i).unwrap().get_current_health();
 	}
 	return this_AP;
 }
 //basic for now add taunts later
-fn score_controllers(p1Ind: usize, p2Ind: usize, game:GameStateData)->f32{
-	let controller1 = game.get_controller_by_index(p1Ind);
-	let controller2 = game.get_controller_by_index(p2Ind);
+fn score_controllers(game: &GameStateData)->f32{
+	let ctrlrs = game.get_controllers();
+	let controller_1 = &ctrlrs[0];
+	let controller_2 = &ctrlrs[1];
 	let mut score = 0;
-	let Con1AP = getAP_field(controller_1, game);
-	let Con2AP = getAP_field(Controller_2, game);
-	let Con1HP = getHP_field(controller_1, game);
-	let Con2HP = getHP_field(controller_2, game);
-	return ((Con1HP)/(Con2AP+1))-((Con2HP)/(Con1AP+1));
+	let Con1AP = getAP_field(controller_1, game) as f32;
+	let Con2AP = getAP_field(controller_2, game) as f32;
+	let Con1HP = getHP_field(controller_1, game) as f32;
+	let Con2HP = getHP_field(controller_2, game) as f32;
+	return ((Con1HP)/(Con2AP+1.0))-((Con2HP)/(Con1AP+1.0));
 }
 
+/*
 #[derive(Clone)]
 pub struct proto_play{
 	Score: f32,
