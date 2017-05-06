@@ -12,6 +12,7 @@ use AI_Utils::{AI_Player, AI_Request};
 use std::mem;
 use rune_match::get_rune;
 use game_state::GameStateData;
+use client_option::{OptionsPackage};
 use runes::new_controller::NewController;
 use rustc_serialize::json;
 
@@ -188,18 +189,36 @@ fn player_thread_function(player_thread: PlayerThread,
 
                             let _ = &to_server.send(to_server_message);
                         } else if message_type.contains("optionRune") {
-              
-                        let option_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : 0, \"{l}\" : 0,  \"{j}\" : 0}}",
+                            println!("OPTIONS : {}", message.clone());
+                            //here we will test what options are available, all options
+                            //must be exhausted before we pass end turn
+                            //after generating our options selection we send the first one
+                            //then we iterate over the selected options list as options updates come in
+                            //we only calculate effect of options once, this keeps resources focused on
+                            //selecting the best set of options from the initial set in 2 phases:
+                            //phase1 : play minions/spells/weapons
+                            //phase2 : attacks
+                            //each of these phases can be threaded and calculated separately. 
+                            //each phase thread calculation can run concurrently with the other 3 threads
+                            let ops_msg = message.clone().replace("{\"runeType\":\"optionRune\",", "{"); 
+                            let ops : OptionsPackage = json::decode(&ops_msg).unwrap();
+                            //if ops.options.len() as u32 > 1{
+                                //&ai_current_state.option_engine(ops);
+                           // }
+                            //else{
+
+                                let option_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : 0, \"{l}\" : 0,  \"{j}\" : 0}}",
                                                            k = "message_type",
                                                            v = "option",
                                                            h = "index",
                                                            l = "board_index",
                                                            j = "timeStamp");
-                            let to_server_message = ThreadMessage {
-                                client_id: player_thread.client_id.clone(),
-                                payload: option_message
-                            };
-                            let _ = &to_server.send(to_server_message);
+                                    let to_server_message = ThreadMessage {
+                                        client_id: player_thread.client_id.clone(),
+                                        payload: option_message
+                                    };
+                                    let _ = &to_server.send(to_server_message);
+                            //}
                         } 
                         //this here updates the player_thread ai track
                         else if message_type.contains("AI_Update"){
@@ -228,6 +247,9 @@ fn player_thread_function(player_thread: PlayerThread,
                             //IGNORE
                         }
                         else if message_type.contains("RotateTurn"){
+                            //IGNORE
+                        }
+                        else if message_type.contains("PlayCard"){
                             //IGNORE
                         }
                         else if message_type.contains("NewController"){
