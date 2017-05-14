@@ -20,24 +20,22 @@ use runes::play_minion::PlayMinion;
 use runes::play_card::PlayCard;
 use rustc_serialize::json;
 use client_option::{ClientOption, OptionType, OptionsPackage};
+use std::collections::HashMap;
 
 
 /**
 *Formats a known gamestate and a rune that should run into a json friendly
 *	string that can be sent to the game thread to be updated
-**************************************************************************
-*will be updated and renamed											 *
-**************************************************************************
 */
 #[derive(RustcDecodable, RustcEncodable, Clone)]
-pub struct AI_Request{
+pub struct AI_Update_Request{
 	pub game_state_data : GameStateData,
 	pub rune : String,
 
 }
-impl AI_Request{
-	pub fn new(gsd : GameStateData, rne: String)->AI_Request{
-		AI_Request{
+impl AI_Update_Request{
+	pub fn new(gsd : GameStateData, rne: String)->AI_Update_Request{
+		AI_Update_Request{
 			game_state_data : gsd,
 			rune: rne,
 		}
@@ -54,20 +52,17 @@ impl AI_Request{
 
 
 /**
-*Formats a known gamestate and an option that should run into a json friendly
+*Formats a known gamestate and an option set that should run into a json friendly
 *	string that can be sent to the game thread to be updated
-**************************************************************************
-*will be updated and renamed											 *
-**************************************************************************
 */
 #[derive(RustcDecodable, RustcEncodable, Clone)]
-pub struct AIOptionSetRequest{
+pub struct AI_Option_Set_Request{
 	pub game_state_data : GameStateData,
-	pub theo_options : Vec<Vec<ClientOption>>,
+	pub theo_options : Vec<ClientOption>,
 }
-impl AIOptionSetRequest{
-	pub fn new(gsd : GameStateData, ops : Vec<Vec<ClientOption>>)->AIOptionSetRequest{
-		AIOptionSetRequest{
+impl AI_Option_Set_Request{
+	pub fn new(gsd : GameStateData, ops : Vec<ClientOption>)->AI_Option_Set_Request{
+		AI_Option_Set_Request{
 			game_state_data: gsd,
 			theo_options : ops,
 		}
@@ -77,6 +72,11 @@ impl AIOptionSetRequest{
 		let front= "{\"message_type\":\"OptionsSimulation\",";
 		let sendMsg = format!("{}{}", front, &msg.clone()[1..msg.len()]);
 		return sendMsg;
+	}
+	pub fn from_json(json_message: String)->AI_Option_Set_Request{
+		let msg = json_message.replace("{\"message_type\":\"OptionsSimulation\",", "{");
+		let ops_set : AI_Option_Set_Request = json::decode(msg.trim()).unwrap();
+		return ops_set;
 	}
 }
 
@@ -210,115 +210,112 @@ fn score_controllers(game: &GameStateData)->f32{
 	let controller_1 = &ctrlrs[0];
 	let controller_2 = &ctrlrs[1];
 	let mut score = 0;
-	let Con1AP = getAP_field(controller_1, game) as f32;
-	let Con2AP = getAP_field(controller_2, game) as f32;
-	let Con1HP = getHP_field(controller_1, game) as f32;
-	let Con2HP = getHP_field(controller_2, game) as f32;
-	return ((Con1HP)/(Con2AP+1.0))-((Con2HP)/(Con1AP+1.0));
+	let con1_ap = getAP_field(controller_1, game) as f32;
+	let con2_ap = getAP_field(controller_2, game) as f32;
+	let con1_hp = controller_1.get_life().clone() as f32;
+	let con2_hp = controller_2.get_life().clone() as f32;
+	return ((con2_hp)/(con1_ap+1.0))-((con1_hp)/(con2_ap+1.0));
 }
+
+fn perspective_score(ops : Vec<ClientOption>, game : &GameStateData)->f32{
+	let ctrlrs = game.get_controllers();
+	let controller_1 = &ctrlrs[0];
+	let controller_2 = &ctrlrs[1];
+	let mut score = 0;
+	let con1_ap = getAP_field(controller_1, game) as f32;
+	let mut con2_ap = getAP_field(controller_2, game) as f32;
+	let con1_hp = controller_1.get_life().clone() as f32;
+	let mut con2_hp = controller_2.get_life().clone() as f32;
+	//get the HP and AP for the AI minions that we will play and use those as scores
+	for i in &ops{
+		con2_ap = con2_ap + (game.get_minion(i.source_uid.clone()).unwrap().get_current_attack() as f32);
+	}
+	return ((con2_hp)/(con1_ap+1.0))-((con1_hp)/(con2_ap+1.0));
+}
+
 
 /*
-#[derive(Clone)]
-pub struct proto_play{
-	Score: f32,
-	p1Index: usize,
-	p2Index: usize,
-	Game: GameStateData,
-	Runes_Used: Vec<Rune>
+*Data structure to keep track of individual
+*
+*
+*/
+#[derive(RustcDecodable, RustcEncodable, Clone)]
+pub struct PlayRuneSquare{
+	pub ops_sel : Vec<ClientOption>,
+	pub score : f32,
+}
+impl PlayRuneSquare{
+	fn new(gsd : &GameStateData,ops : Vec<ClientOption>)->PlayRuneSquare{
+		PlayRuneSquare{
+			ops_sel: ops.clone(),
+			score: perspective_score(ops.clone(), gsd),
+		}
+	}
 }
 
-impl proto_play{
-	pub fn new(p1Ind: usize, p2Ind: usize,game: GameStateData)->proto_play{
-		let mut sc = score_controllers(p1Ind, p2Ind, game);
-		let mut ga = game;
-		let mut run : Vec<Rune> = Vec::new();
-
-		proto_play{
-			Score = sc,
-			p1Index:p1Ind,
-			p2Index:p2Ind,
-			Game: ga,
-			Runes_Used: run
+struct CardPlayMatrix {
+	pub mana : u8,
+	pub start_gsd : GameStateData,
+	pub seen_gsds : Vec<String>,
+	pub matrix_tiles : Vec<Vec<PlayRuneSquare>>,
+	pub ops : Vec<ClientOption>
+}
+impl CardPlayMatrix {
+	fn new(ops_sel: Vec<ClientOption>, gsd : GameStateData)->CardPlayMatrix { 
+		CardPlayMatrix{
+			mana: gsd.get_controllers()[1].get_base_mana(),
+			start_gsd: gsd.clone(),
+			seen_gsds: Vec::new(),
+			matrix_tiles: Vec::new(),
+			ops: ops_sel,
 		}
 	}
 
-}
-
-pub struct play_hand{
-	Matrix: Vec<Vec<proto_play>>
-}
-
-impl play_hand {
-	pub fn new(size: usize) -> play_hand{
-		let mut N_V : Vec::new();
-		for i in 0 .. size+1{
-			let mut m : Vec<proto_play> = Vec::new();
-			N_V.push(m)
+	fn run_matrix(&mut self)->Vec<ClientOption>{
+		//first step generate the row length of the matrix, this is done by adding copies of the GSD and their scores to a vec
+			//this is done for every mana given+1 for a 0 mana available
+		let mut initRow : Vec<PlayRuneSquare> =  Vec::new();
+		let emptOps : Vec<ClientOption>= Vec::new();
+		let initsqr = PlayRuneSquare::new(&self.start_gsd, emptOps);
+		for i in 0..self.mana{
+			initRow.push(initsqr.clone());
 		}
-		play_hand{Matrix: N_V};
-	}
-
-	pub fn Summoning_Matrix(controller_1: Controller, Controller_2: Controller, game:GameStateData)->Vec<Vec<proto_play>>{
-		let mut hand = controller_1.get_mut_hand();
-		let controller_1_uid = controller_1.get_uid();
-
-		let mut Play_Matrix : play_hand = play_hand::new(hand.len());
-
-		//sort hand by cost here
-		hand = hand.sort_by(|a,b| a.get_cost().cmp(b.get_cost()));
-		let mana = controller_1.get_mana();
-
-		//get starting position here; 
-		let controllerVector = game.get_controllers();
-		let locC1 = controllerVector.iter().position(|&b| b==controller_1).unwrap();
-		let locC2 = controllerVector.iter().position(|&b| b==controller_2).unwrap();
-
-		let &mut initialGame : proto_play = proto_play::new(locC1, locC2, game);
-		
-		//iterate over the hand elements(columns)
-		for i in 0..hand.len()+1 {
-			let &mut initClone = initialGame.clone();
-			//if we are at the 0th for hand-level
-			if Play_Matrix.Matrix[i].is_empty(){
-				Play_Matrix[i].push(initClone);
-			}
-			else{
-				Play_Matrix[i][0] = initClone;
-			}
-			//otherwise we need to checkout the cards 
-			else{
-				//iterate over the mana size
-				for j in 1..mana+1{
-					//if we are at the 0th index of mana 
-					if j==0{
-						Play_Matrix[i][j] = initClone;
+		self.matrix_tiles.push(initRow);
+		//second step generate the column length of the matrix, this is done by adding a copy of 0,0 to 0,x where x<#of ops
+		for i in 1..self.ops.len(){
+			let mut colStart = self.matrix_tiles[0][0].clone();
+			self.matrix_tiles.push(vec![colStart]);
+		}
+		//Third step is to initialize the optimization engine which is a hashmap between seen optionsets and gsd's 
+		//fourth is to run the matrix using the knapsack solution
+		for i in 1..self.ops.len(){
+			for j in 1..self.mana{
+				let min = &self.start_gsd.get_minion(self.ops[i].source_uid);
+				let index_min1 = (j-1) as usize;
+				let i_j_min1 = self.matrix_tiles[i][index_min1].clone();
+				if min.unwrap().get_cost() >= (j as u32){
+					let costSel = (j-(min.unwrap().get_cost() as u8)) as usize;
+					let above = (i-1) as usize;
+					let i_j = self.matrix_tiles[above][costSel].clone();
+					let mut getOps = i_j.ops_sel.clone();
+					getOps.push(self.ops[i]);
+					let square = PlayRuneSquare::new(&self.start_gsd, getOps);
+					if square.score > i_j_min1.score {
+						self.matrix_tiles[i].push(square);
 					}
-					//otherwise...
 					else{
-						if j >= hand[i].get_cost(){
-							//create playState where minion is played on PlayMatrix[i-1][j-hand[i].cost] 
-							let mut new_play = Play_Matrix[i-1][j-hand[i].get_cost()].clone();
-							let play_minion : PlayMinion =  PlayMinion::new(hand[i].get_uid(), game.get_controller_by_index(p1Ind), hand.len(), 0);
-							new_play.game.execute_rune(play_minion);
-							new_play.Score = score_controllers(new_play.p1Index, new_play.p2Index, new_play.game);
-							
-							//check if the current score > the score right above
-							if new_play.Score >= Play_Matrix[i-1][j]{
-								Play_Matrix[i][j] = new_play;
-							}
-						}
-						else{
-							
-							let mut repeat = Play_Matrix[i-1][j].clone();
-							Play_Matrix[i][j] = repeat; is now equal to that clone
-							
-						}
+						self.matrix_tiles[i].push(i_j_min1.clone());
 					}
 				}
+				//if you cant play anything then add the i,j-1 solution
+				else{
+					self.matrix_tiles[i].push(i_j_min1.clone());
+				}
+				//get score from [i][j-1] the immediate left position
+				
 			}
 		}
-		return Play_Matrix;	
+		//return the max position in (mana,options#)
+		return self.matrix_tiles[(self.mana as usize)][self.ops.len()].ops_sel.clone();
 	}
 }
-
-*/
