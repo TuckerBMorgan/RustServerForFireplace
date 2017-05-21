@@ -20,6 +20,7 @@ use runes::play_minion::PlayMinion;
 use runes::play_card::PlayCard;
 use rustc_serialize::json;
 use client_option::{ClientOption, OptionType, OptionsPackage};
+use client_message::OptionsMessage;
 use std::collections::HashMap;
 
 
@@ -121,8 +122,9 @@ pub struct AI_Player{
 	pub score : f32,
 	pub public_runes : Vec<String>,
 	pub update_count : u32,
-	pub options_order : Vec<ClientOption>,
+	pub options_order : CardPlayMatrix,
 	pub options_test_recieved : bool,
+	pub ops_recieved : OptionsPackage,
 }
 impl AI_Player{
 	pub fn new()->AI_Player{
@@ -130,17 +132,17 @@ impl AI_Player{
 		let mut scre = 0.0 as f32;
 		let mut pr = Vec::new();
 		let mut uc = 0;
-		let options_order_empty : Vec<ClientOption> = Vec::new();
 		let options_test_recieved_false = false;
 		gsd.get_uid();
 		gsd.get_uid();
 		AI_Player{
-			game_state_data : gsd ,
+			game_state_data : gsd.clone() ,
 			score : scre,
 			public_runes : pr ,
 			update_count : uc,
-			options_order : options_order_empty,
+			options_order : CardPlayMatrix::new(Vec::new(), gsd.clone()),
 			options_test_recieved : options_test_recieved_false,
+			ops_recieved : OptionsPackage{options : Vec::new()},
 		}
 	}
 
@@ -171,8 +173,15 @@ impl AI_Player{
 	*Takes an options package given by the server and generates responses
 	*/
 	pub fn option_engine(&mut self, ops_list : OptionsPackage){
-		println!("AI options action");
+		println!("AI options selections");
 		let ops_classi = OpsClassify::new(ops_list);
+		self.options_test_recieved = true;
+		let mut matr = CardPlayMatrix::new(ops_classi.plays, self.game_state_data.clone());
+		matr.run_matrix();
+		self.options_order = matr;
+	}
+	pub fn prep_option(){
+		
 	}
 }
 
@@ -252,12 +261,14 @@ impl PlayRuneSquare{
 	}
 }
 
-struct CardPlayMatrix {
+pub struct CardPlayMatrix {
 	pub mana : u8,
 	pub start_gsd : GameStateData,
 	pub seen_gsds : Vec<String>,
 	pub matrix_tiles : Vec<Vec<PlayRuneSquare>>,
-	pub ops : Vec<ClientOption>
+	pub ops : Vec<ClientOption>,
+	pub selected_ops: Vec<ClientOption>,
+	pub iterative : usize,
 }
 impl CardPlayMatrix {
 	fn new(ops_sel: Vec<ClientOption>, gsd : GameStateData)->CardPlayMatrix { 
@@ -267,10 +278,15 @@ impl CardPlayMatrix {
 			seen_gsds: Vec::new(),
 			matrix_tiles: Vec::new(),
 			ops: ops_sel,
+			selected_ops: Vec::new(),
+			iterative: 0,
 		}
 	}
+	pub fn iter_up(&mut self){
+		self.iterative = self.iterative + 1;
+	}
 
-	fn run_matrix(&mut self)->Vec<ClientOption>{
+	fn run_matrix(&mut self){
 		//first step generate the row length of the matrix, this is done by adding copies of the GSD and their scores to a vec
 			//this is done for every mana given+1 for a 0 mana available
 		let mut initRow : Vec<PlayRuneSquare> =  Vec::new();
@@ -288,17 +304,29 @@ impl CardPlayMatrix {
 		//Third step is to initialize the optimization engine which is a hashmap between seen optionsets and gsd's 
 		//fourth is to run the matrix using the knapsack solution
 		for i in 1..self.ops.len(){
+			//loop through mana level
 			for j in 1..self.mana{
+				//get the minion data
 				let min = &self.start_gsd.get_minion(self.ops[i].source_uid);
+				//get the index of one level left 
 				let index_min1 = (j-1) as usize;
+				//get the square that is immediately left of the current operating square
 				let i_j_min1 = self.matrix_tiles[i][index_min1].clone();
+				//if the cost is greaterthan or = to the current mana lvl
 				if min.unwrap().get_cost() >= (j as u32){
+					//get the mana lvl - cost as an index
 					let costSel = (j-(min.unwrap().get_cost() as u8)) as usize;
+					//get the index for the row directly above the current row
 					let above = (i-1) as usize;
+					//get the square that is the (one row above, mana lvl - cost)
 					let i_j = self.matrix_tiles[above][costSel].clone();
+					//get the options list for that square and append the current option to it
 					let mut getOps = i_j.ops_sel.clone();
 					getOps.push(self.ops[i]);
+					//create our new square & compare the scores
 					let square = PlayRuneSquare::new(&self.start_gsd, getOps);
+					//if the score is bigger then push the new square to i,j
+					//otherwise copy the square at i,j-1 and use that again
 					if square.score > i_j_min1.score {
 						self.matrix_tiles[i].push(square);
 					}
@@ -314,7 +342,7 @@ impl CardPlayMatrix {
 				
 			}
 		}
-		//return the max position in (mana,options#)
-		return self.matrix_tiles[(self.mana as usize)][self.ops.len()].ops_sel.clone();
+		//set the selected options to run to the max position in (mana,options#)
+		self.selected_ops = self.matrix_tiles[(self.mana as usize)][self.ops.len()].ops_sel.clone();
 	}
 }

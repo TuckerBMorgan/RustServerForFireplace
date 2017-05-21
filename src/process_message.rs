@@ -7,7 +7,7 @@ use runes::new_controller::NewController;
 use client_message::{MulliganMessage, OptionsMessage};
 use rune_vm::Rune;
 use rune_match::get_rune;
-use AI_Utils::AI_Request;
+use AI_Utils::{AI_Update_Request,AI_Option_Set_Request};
 
 
 
@@ -53,7 +53,7 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
             game_state.mulligan(client_id, mull_message.index.clone());
         }
         "AIPlay"=>{
-            let mut ai_play : AI_Request = json::decode(message.trim()).unwrap();
+            let mut ai_play : AI_Update_Request = json::decode(message.trim()).unwrap();
             let mut ai_gsd : GameStateData = ai_play.game_state_data;
             let mut rune_request : Box<Rune> = get_rune(ai_play.rune.as_ref());
 
@@ -67,6 +67,20 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
                     &json_response.clone()[1..json_response.len()]);
             
             game_state.send_msg(client_id, sendMsg); 
+
+        },
+        "OptionsSimulation"=>{
+            let mut ai_play : AI_Option_Set_Request  = AI_Option_Set_Request::from_json(message.clone());
+            let mut ai_gsd : GameStateData = ai_play.game_state_data;
+            /*let mut options_request : Vec<ClientOption> = ai_play.theo_options;
+
+            game_state.swap_gsd(&mut ai_gsd);
+            for i in &options_request{
+                game_state.execute_option();
+            }
+
+            game_state.swap_gsd(&mut ai_gsd);
+            */
 
         }
 

@@ -4,7 +4,7 @@ use minion_card::UID;
 use rustc_serialize::json;
 use hlua;
 
-#[derive(Copy, Clone, Debug, RustcDecodable, RustcEncodable)]
+#[derive(Copy, Clone, Debug, RustcDecodable, RustcEncodable, PartialEq)]
 pub enum OptionType {
     EAttack,
     EPlayCard,
@@ -12,7 +12,7 @@ pub enum OptionType {
 }
 
 #[derive(RustcDecodable, RustcEncodable)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ClientOption {
     pub option_type: OptionType,
     pub source_uid: UID,
@@ -32,7 +32,7 @@ impl ClientOption {
 
 implement_for_lua!(ClientOption, |mut _metatable| {});
 
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct OptionsPackage {
     pub options: Vec<ClientOption>,
 }
