@@ -175,9 +175,12 @@ impl AI_Player{
 	pub fn option_engine(&mut self, ops_list : OptionsPackage){
 		println!("AI options selections");
 		let ops_classi = OpsClassify::new(ops_list);
+		println!("Options classified");
 		self.options_test_recieved = true;
 		let mut matr = CardPlayMatrix::new(ops_classi.plays, self.game_state_data.clone());
+		println!("Running matrix");
 		matr.run_matrix();
+		matr.selected_ops.push(ops_classi.end);
 		self.options_order = matr;
 	}
 	pub fn prep_option(){
@@ -272,14 +275,28 @@ pub struct CardPlayMatrix {
 }
 impl CardPlayMatrix {
 	fn new(ops_sel: Vec<ClientOption>, gsd : GameStateData)->CardPlayMatrix { 
-		CardPlayMatrix{
-			mana: gsd.get_controllers()[1].get_base_mana(),
-			start_gsd: gsd.clone(),
-			seen_gsds: Vec::new(),
-			matrix_tiles: Vec::new(),
-			ops: ops_sel,
-			selected_ops: Vec::new(),
-			iterative: 0,
+
+		if gsd.get_controllers().len() > 0{
+			return CardPlayMatrix{
+				mana: gsd.get_controllers()[1].get_base_mana(),
+				start_gsd: gsd.clone(),
+				seen_gsds: Vec::new(),
+				matrix_tiles: Vec::new(),
+				ops: ops_sel,
+				selected_ops: Vec::new(),
+				iterative: 0,
+			}
+		}
+		else{
+			return CardPlayMatrix{
+				mana: 0,
+				start_gsd: gsd.clone(),
+				seen_gsds: Vec::new(),
+				matrix_tiles: Vec::new(),
+				ops: ops_sel,
+				selected_ops: Vec::new(),
+				iterative: 0,
+			}
 		}
 	}
 	pub fn iter_up(&mut self){
@@ -292,27 +309,31 @@ impl CardPlayMatrix {
 		let mut initRow : Vec<PlayRuneSquare> =  Vec::new();
 		let emptOps : Vec<ClientOption>= Vec::new();
 		let initsqr = PlayRuneSquare::new(&self.start_gsd, emptOps);
-		for i in 0..self.mana{
+		for i in 0..self.mana+1{
 			initRow.push(initsqr.clone());
 		}
+		println!("mana to manaSpots {0} : {1}", self.mana ,initRow.len());
+		
 		self.matrix_tiles.push(initRow);
 		//second step generate the column length of the matrix, this is done by adding a copy of 0,0 to 0,x where x<#of ops
-		for i in 1..self.ops.len(){
+		for i in 1..self.ops.len()+1{
 			let mut colStart = self.matrix_tiles[0][0].clone();
 			self.matrix_tiles.push(vec![colStart]);
 		}
+		println!("ops to cols {0} : {1}", self.ops.len(), self.matrix_tiles.len());
 		//Third step is to initialize the optimization engine which is a hashmap between seen optionsets and gsd's 
 		//fourth is to run the matrix using the knapsack solution
-		for i in 1..self.ops.len(){
+		for i in 1..self.ops.len()+1{
 			//loop through mana level
-			for j in 1..self.mana{
+			for j in 1..self.mana+1{
 				//get the minion data
-				let min = &self.start_gsd.get_minion(self.ops[i].source_uid);
+				let min = &self.start_gsd.get_minion(self.ops[i-1].source_uid);
 				//get the index of one level left 
 				let index_min1 = (j-1) as usize;
 				//get the square that is immediately left of the current operating square
 				let i_j_min1 = self.matrix_tiles[i][index_min1].clone();
 				//if the cost is greaterthan or = to the current mana lvl
+				println!("Cost analysis {0}:{1}", min.unwrap().get_cost(), (j as u32));
 				if min.unwrap().get_cost() >= (j as u32){
 					//get the mana lvl - cost as an index
 					let costSel = (j-(min.unwrap().get_cost() as u8)) as usize;
@@ -322,11 +343,12 @@ impl CardPlayMatrix {
 					let i_j = self.matrix_tiles[above][costSel].clone();
 					//get the options list for that square and append the current option to it
 					let mut getOps = i_j.ops_sel.clone();
-					getOps.push(self.ops[i]);
+					getOps.push(self.ops[i-1]);
 					//create our new square & compare the scores
 					let square = PlayRuneSquare::new(&self.start_gsd, getOps);
 					//if the score is bigger then push the new square to i,j
 					//otherwise copy the square at i,j-1 and use that again
+					println!("Score analysis {0}:{1}", square.score, i_j_min1.score);
 					if square.score > i_j_min1.score {
 						self.matrix_tiles[i].push(square);
 					}
@@ -343,6 +365,9 @@ impl CardPlayMatrix {
 			}
 		}
 		//set the selected options to run to the max position in (mana,options#)
-		self.selected_ops = self.matrix_tiles[(self.mana as usize)][self.ops.len()].ops_sel.clone();
+		println!("{0} : {1} ", (self.mana as usize), self.ops.len());
+		println!("Matrix size {0}:{1}", self.matrix_tiles.len(), self.matrix_tiles[0].len());
+		//println("cols {0} : rows : {}");
+		self.selected_ops = self.matrix_tiles[self.ops.len()][(self.mana as usize)].ops_sel.clone();
 	}
 }
