@@ -203,16 +203,19 @@ fn player_thread_function(player_thread: PlayerThread,
                             let ops_msg = message.clone().replace("{\"runeType\":\"optionRune\",", "{"); 
                             let ops : OptionsPackage = json::decode(&ops_msg).unwrap();
                             //if we have any options we can run, otherwise we just end it all
-                            if ops.options.len() as u32 > 1{
+                            if ops.options.len() as u32 > 2{
+                                println!("TEST REC{}",ai_current_state.options_test_recieved );
                                 if !ai_current_state.options_test_recieved{
+                                    println!("Checking if the update count is equal to the ");
                                     if ai_current_state.update_count == ai_current_state.public_runes.len() as u32{
                                         ai_current_state.option_engine(ops.clone());
+                                        run_option(&player_thread, &to_server, &mut ai_current_state, ops.clone());
                                     }
                                     else{
                                         ai_current_state.ops_recieved = ops.clone();
                                     }
                                 }
-                                run_option(&player_thread, &to_server, &mut ai_current_state, ops.clone());
+                                
                             }
                             else{
 
@@ -241,10 +244,18 @@ fn player_thread_function(player_thread: PlayerThread,
                                 queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
                             }
                             else{
-                               if ai_current_state.ops_recieved.options.len() > 0 && ai_current_state.options_test_recieved{
+                                println!("AI Checking if recieved options exist and runs if they are");
+                                if ai_current_state.ops_recieved.options.len() > 0 {
                                     let t_ops = ai_current_state.ops_recieved.clone();
-                                    &ai_current_state.option_engine(t_ops.clone());
-                                    run_option(&player_thread, &to_server, &mut ai_current_state, t_ops.clone());
+                                    if !ai_current_state.options_test_recieved {
+                                        &ai_current_state.option_engine(t_ops.clone());
+                                    }
+                                    if ai_current_state.options_order.iterative < ai_current_state.options_order.selected_ops.len(){
+                                        run_option(&player_thread, &to_server, &mut ai_current_state, t_ops.clone());
+                                    }
+                                    else{
+                                        ai_current_state.options_test_recieved = false;
+                                    }
                                 }
                             }
                         }
@@ -335,6 +346,7 @@ fn queue_ai_update(player_thread : &PlayerThread, to_server: &Sender<ThreadMessa
 
 fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, ai_current_state : &mut AI_Player, ops : OptionsPackage){
     let iter = ai_current_state.options_order.iterative.clone();
+    println!("opsPack {}", ops.to_json());
     let current_op  = ai_current_state.options_order.selected_ops[iter].clone();
     let ind = ops.options.iter().position(|&r| r==current_op).unwrap();
     let option_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : {i}, \"{l}\" : 0,  \"{j}\" : 0}}",
@@ -344,6 +356,7 @@ fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, 
         i=ind,
         l = "board_index",
         j = "timeStamp");
+    println!("SENDING OPTION {0}", option_message.clone());
     let to_server_message = ThreadMessage {
         client_id: player_thread.client_id.clone(),
         payload: option_message
