@@ -6,22 +6,22 @@
 	assist in those purposes.
 *
 */
+use std::cmp::Ordering;
+use std::cmp::Ordering::*;
+use std::iter::Iterator;
 
-
-use minion_card::UID;
+use minion_card::{UID, Minion};
 use card::Card;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap, BinaryHeap};
 use rand::{thread_rng, Rng};
 use controller::Controller;
 use game_state::GameStateData;
-use minion_card::Minion;
 use rune_vm::Rune;
 use runes::play_minion::PlayMinion;
 use runes::play_card::PlayCard;
 use rustc_serialize::json;
 use client_option::{ClientOption, OptionType, OptionsPackage};
 use client_message::OptionsMessage;
-use std::collections::HashMap;
 
 
 /**
@@ -177,10 +177,20 @@ impl AI_Player{
 		let ops_classi = OpsClassify::new(ops_list);
 		println!("Options classified");
 		self.options_test_recieved = true;
-		let mut matr = CardPlayMatrix::new(ops_classi.plays, self.game_state_data.clone());
+		let mut matr = CardPlayMatrix::new(ops_classi.plays.clone(), self.game_state_data.clone());
 		println!("Running matrix");
-		matr.run_matrix();
+		if ops_classi.plays.len() > 0{
+			matr.run_matrix();
+		}
+		println!("Running attack Heap");
+		if ops_classi.attacks.len() > 0{
+			let mut att_heap = AttackHeap::new(self.game_state_data.clone(), ops_classi.attacks);
+		
+			matr.selected_ops.push(att_heap.pop_attack());
+		}
 		matr.selected_ops.push(ops_classi.end);
+		let n_pack = OptionsPackage{options: matr.selected_ops.clone()};
+		println!("OPS SELECTED {}", n_pack.to_json());
 		self.options_order = matr;
 	}
 	pub fn prep_option(){
@@ -245,6 +255,41 @@ fn perspective_score(ops : Vec<ClientOption>, game : &GameStateData)->f32{
 	return ((con2_hp)/(con1_ap+1.0))-((con1_hp)/(con2_ap+1.0));
 }
 
+pub fn attack_score(game : &GameStateData, attacker: UID, defender: UID)->f32{
+	let mut copy_game = game.clone();
+
+	let mut attacker_min :Minion = copy_game.get_mut_minion(attacker).unwrap().clone();
+	let mut defender_min :Minion = copy_game.get_mut_minion(defender).unwrap().clone();
+
+	
+	{
+		let mut ctrls = copy_game.get_mut_controllers();
+		let mut attacker_ctrl : usize = 0;
+		let mut defender_ctrl : usize = 0;
+		for i in 0..ctrls.len(){
+			if ctrls[i].get_team() == attacker_min.get_team(){
+				attacker_ctrl = i;
+			}
+			if ctrls[i].get_team() == defender_min.get_team(){
+				defender_ctrl = i;
+			}
+		}
+		
+
+		attacker_min.shift_current_health((defender_min.get_current_attack()as i32)*-1);
+		defender_min.shift_current_health((attacker_min.get_current_attack()as i32)*-1);
+		//check if minions are dead, then remove that minion from play
+
+		if attacker_min.get_current_health() <= 0{
+			ctrls[attacker_ctrl].move_minion_from_play_to_graveyard(attacker);
+		}
+		if defender_min.get_current_health() <=0{
+			ctrls[defender_ctrl].move_minion_from_play_to_graveyard(defender);
+		}
+	}
+	return score_controllers(&copy_game);
+}
+
 
 /*
 *Data structure to keep track of individual
@@ -262,6 +307,30 @@ impl PlayRuneSquare{
 			ops_sel: ops.clone(),
 			score: perspective_score(ops.clone(), gsd),
 		}
+	}
+	fn new_attack_sq(gsd : &GameStateData,ops : Vec<ClientOption>)->PlayRuneSquare{
+		PlayRuneSquare{
+			ops_sel: ops.clone(),
+			score: attack_score(&gsd, ops[0].source_uid, ops[0].target_uid),
+		}
+	}
+}
+
+impl Eq for PlayRuneSquare{}
+
+impl Ord for PlayRuneSquare{
+	fn cmp(&self, other: &PlayRuneSquare) -> Ordering {
+		self.partial_cmp(&other).unwrap()
+	}
+}
+impl PartialEq for PlayRuneSquare{
+	fn eq(&self, other: &PlayRuneSquare) -> bool{
+		return self.score==other.score
+	}
+}
+impl PartialOrd for PlayRuneSquare{
+	fn partial_cmp(&self, other: &PlayRuneSquare)->Option<Ordering>{
+		self.score.partial_cmp(&other.score)
 	}
 }
 
@@ -371,4 +440,30 @@ impl CardPlayMatrix {
 		//println("cols {0} : rows : {}");
 		self.selected_ops = self.matrix_tiles[self.ops.len()][(self.mana as usize)].ops_sel.clone();
 	}
+}
+
+pub struct AttackHeap{
+	pub ops : Vec<ClientOption>,
+	pub current_gsd: GameStateData,
+	pub attack_heap : BinaryHeap<PlayRuneSquare>,
+}
+
+impl AttackHeap{
+	pub fn new(current_gsd: GameStateData, ops: Vec<ClientOption>)->AttackHeap{
+		let mut a_heap = BinaryHeap::new();
+		for i in ops{
+			a_heap.push(PlayRuneSquare::new_attack_sq(&current_gsd, vec![i]));
+		}
+
+		AttackHeap{
+			ops: vec![],
+			current_gsd : current_gsd.clone(),
+			attack_heap: a_heap,
+		}
+	}
+
+	pub fn pop_attack(&mut self)->ClientOption{
+		return self.attack_heap.pop().unwrap().ops_sel[0];
+	}
+
 }
