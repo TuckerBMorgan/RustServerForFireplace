@@ -265,6 +265,9 @@ impl Minion {
     pub fn shift_current_health(&mut self, amount: i32) {
 
         if self.current_health as i32 + amount <= self.total_health as i32 {
+            if self.current_health as i32 + amount <= 0{
+                self.current_health = 0;    
+            }
             self.current_health += amount as u32;
         } else if self.current_health as i32 + amount > self.total_health as i32 {
             self.current_health = self.total_health;
