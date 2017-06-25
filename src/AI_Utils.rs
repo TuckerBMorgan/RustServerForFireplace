@@ -122,9 +122,10 @@ pub struct AI_Player{
 	pub score : f32,
 	pub public_runes : Vec<String>,
 	pub update_count : u32,
-	pub options_order : CardPlayMatrix,
+	pub options_order : Vec<ClientOption>,
 	pub options_test_recieved : bool,
 	pub ops_recieved : OptionsPackage,
+	pub iterative : usize,
 }
 impl AI_Player{
 	pub fn new()->AI_Player{
@@ -140,9 +141,10 @@ impl AI_Player{
 			score : scre,
 			public_runes : pr ,
 			update_count : uc,
-			options_order : CardPlayMatrix::new(Vec::new(), gsd.clone()),
+			options_order : Vec::new(),
 			options_test_recieved : options_test_recieved_false,
 			ops_recieved : OptionsPackage{options : Vec::new()},
+			iterative: 0,
 		}
 	}
 
@@ -181,20 +183,26 @@ impl AI_Player{
 		println!("Running matrix");
 		if ops_classi.plays.len() > 0{
 			matr.run_matrix();
+			for i in matr.selected_ops{
+				self.options_order.push(i)
+			}
 		}
 		println!("Running attack Heap");
 		if ops_classi.attacks.len() > 0{
 			let mut att_heap = AttackHeap::new(self.game_state_data.clone(), ops_classi.attacks);
-		
-			matr.selected_ops.push(att_heap.pop_attack());
+			self.options_order.push(att_heap.pop_attack());
 		}
-		matr.selected_ops.push(ops_classi.end);
-		let n_pack = OptionsPackage{options: matr.selected_ops.clone()};
+		self.options_order.push(ops_classi.end);
+		let n_pack = OptionsPackage{options: self.options_order.clone()};
 		println!("OPS SELECTED {}", n_pack.to_json());
-		self.options_order = matr;
+		self.iterative = 0;
 	}
 	pub fn prep_option(){
 		
+	}
+
+	pub fn iter_up(&mut self){
+		self.iterative = self.iterative + 1;
 	}
 }
 
@@ -341,7 +349,6 @@ pub struct CardPlayMatrix {
 	pub matrix_tiles : Vec<Vec<PlayRuneSquare>>,
 	pub ops : Vec<ClientOption>,
 	pub selected_ops: Vec<ClientOption>,
-	pub iterative : usize,
 }
 impl CardPlayMatrix {
 	fn new(ops_sel: Vec<ClientOption>, gsd : GameStateData)->CardPlayMatrix { 
@@ -354,7 +361,6 @@ impl CardPlayMatrix {
 				matrix_tiles: Vec::new(),
 				ops: ops_sel,
 				selected_ops: Vec::new(),
-				iterative: 0,
 			}
 		}
 		else{
@@ -365,12 +371,8 @@ impl CardPlayMatrix {
 				matrix_tiles: Vec::new(),
 				ops: ops_sel,
 				selected_ops: Vec::new(),
-				iterative: 0,
 			}
 		}
-	}
-	pub fn iter_up(&mut self){
-		self.iterative = self.iterative + 1;
 	}
 
 	fn run_matrix(&mut self){

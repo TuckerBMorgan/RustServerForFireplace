@@ -250,7 +250,7 @@ fn player_thread_function(player_thread: PlayerThread,
                                     if !ai_current_state.options_test_recieved {
                                         &ai_current_state.option_engine(t_ops.clone());
                                     }
-                                    if ai_current_state.options_order.iterative < ai_current_state.options_order.selected_ops.len(){
+                                    if ai_current_state.iterative < ai_current_state.options_order.len(){
                                         run_option(&player_thread, &to_server, &mut ai_current_state, t_ops.clone());
                                     }
                                     else{
@@ -345,9 +345,9 @@ fn queue_ai_update(player_thread : &PlayerThread, to_server: &Sender<ThreadMessa
 }
 
 fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, ai_current_state : &mut AI_Player, ops : OptionsPackage){
-    let iter = ai_current_state.options_order.iterative.clone();
+    let iter = ai_current_state.iterative.clone();
     println!("opsPack {}", ops.to_json());
-    let current_op  = ai_current_state.options_order.selected_ops[iter].clone();
+    let current_op  = ai_current_state.options_order[iter].clone();
     let ind = ops.options.iter().position(|&r| r==current_op).unwrap();
     let option_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : {i}, \"{l}\" : 0,  \"{j}\" : 0}}",
         k = "message_type",
@@ -362,5 +362,5 @@ fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, 
         payload: option_message
     };
     let _ = &to_server.send(to_server_message);
-    ai_current_state.options_order.iter_up();
+    ai_current_state.iter_up();
 }
