@@ -8,11 +8,11 @@ use rustc_serialize::json::Json;
 use std::sync::mpsc::{Sender, Receiver};
 use game_thread::ThreadMessage;
 
-use AI_Utils::{AI_Player, AI_Update_Request,CardPlayMatrix};
+use AI_Utils::{AI_Player, AI_Update_Request};
 use std::mem;
 use rune_match::get_rune;
 use game_state::GameStateData;
-use client_option::{OptionsPackage, ClientOption};
+use client_option::{OptionsPackage, ClientOption, OptionType};
 use runes::new_controller::NewController;
 use rustc_serialize::json;
 
@@ -188,35 +188,37 @@ fn player_thread_function(player_thread: PlayerThread,
                             };
 
                             let _ = &to_server.send(to_server_message);
-                        } else if message_type.contains("optionRune") {
+                        } 
+                        //if we have just recieved an options package
+                        else if message_type.contains("optionRune") {
+                            //dump the options
                             println!("OPTIONS : {}", message.clone());
-                            //here we will test what options are available, all options
-                            //must be exhausted before we pass end turn
-                            //after generating our options selection we send the first one
-                            //then we iterate over the selected options list as options updates come in
-                            //we only calculate effect of options once, this keeps resources focused on
-                            //selecting the best set of options from the initial set in 2 phases:
-                            //phase1 : play minions/spells/weapons
-                            //phase2 : attacks
-                            //each of these phases can be threaded and calculated separately. 
-                            //each phase thread calculation can run concurrently with the other 3 threads
+                            //decode into an options package
                             let ops_msg = message.clone().replace("{\"runeType\":\"optionRune\",", "{"); 
                             let ops : OptionsPackage = json::decode(&ops_msg).unwrap();
                             //if we have any options we can run, otherwise we just end it all
                             if ops.options.len() as u32 > 2{
-                                println!("TEST REC{}",ai_current_state.options_test_recieved );
+                                //get those options and clone them into the ai to track
+                                ai_current_state.ops_recieved = ops.clone();
+                                //have we already built an options strategy?
+                                println!("TEST REC {}",ai_current_state.options_test_recieved );
+                                //if we havent we need to test if we even can, if we can then we will
+                                //we can only under the condition that we are up to date with our game_state
                                 if !ai_current_state.options_test_recieved{
-                                    println!("Checking if the update count is equal to the ");
+                                    println!("Checking if the update count is equal to the rune count");
                                     if ai_current_state.update_count == ai_current_state.public_runes.len() as u32{
-                                        ai_current_state.option_engine(ops.clone());
-                                        run_option(&player_thread, &to_server, &mut ai_current_state, ops.clone());
+                                        //there is no options plan and so we build an options plan and then run the first one we can
+                                        ai_current_state.option_engine();
+                                        run_option(&player_thread, &to_server, &mut ai_current_state);
                                     }
-                                    else{
-                                        ai_current_state.ops_recieved = ops.clone();
-                                    }
+                                }
+                                //the ai has an options plan we run the next one we can
+                                else{
+                                    run_option(&player_thread, &to_server, &mut ai_current_state);
                                 }
                                 
                             }
+                            //only 2 options came accross, just send an end turn signal
                             else{
 
                                 let option_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : 0, \"{l}\" : 0,  \"{j}\" : 0}}",
@@ -234,24 +236,26 @@ fn player_thread_function(player_thread: PlayerThread,
                         } 
                         //this here updates the player_thread ai track
                         else if message_type.contains("AI_Update"){
-                            
                             //copy the response, get the GSD give that to the AI 
                             ai_current_state.update(message.clone());
-                            
+                            //we just updated the AI, announce what number update this is
                             println!("AI UPDATED {0}", ai_current_state.update_count);
+                            //if the update count is less than the number of rune updates, continue updating
                             if ai_current_state.update_count < ai_current_state.public_runes.len() as u32 {
                                 let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
                                 queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
                             }
+                            //otherwise we know they are equal and we can run option requests
                             else{
                                 println!("AI Checking if recieved options exist and runs if they are");
+                                //first we check and see if there are even options to run
                                 if ai_current_state.ops_recieved.options.len() > 0 {
-                                    let t_ops = ai_current_state.ops_recieved.clone();
+                                    //if there is yet to be a decision on how to run these things
                                     if !ai_current_state.options_test_recieved {
-                                        &ai_current_state.option_engine(t_ops.clone());
+                                        &ai_current_state.option_engine();
                                     }
                                     if ai_current_state.iterative < ai_current_state.options_order.len(){
-                                        run_option(&player_thread, &to_server, &mut ai_current_state, t_ops.clone());
+                                        run_option(&player_thread, &to_server, &mut ai_current_state);
                                     }
                                     else{
                                         ai_current_state.options_test_recieved = false;
@@ -298,7 +302,6 @@ fn player_thread_function(player_thread: PlayerThread,
                         else {
                             //borrow the update count
                             let uDcount = ai_current_state.update_count;
-                            
                             //if the update count is the same as the length of the 
                             if (uDcount) == ai_current_state.public_runes.len() as u32 
                                     && ai_current_state.public_runes.len() as u32 > 1  
@@ -344,11 +347,11 @@ fn queue_ai_update(player_thread : &PlayerThread, to_server: &Sender<ThreadMessa
 
 }
 
-fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, ai_current_state : &mut AI_Player, ops : OptionsPackage){
+fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, ai_current_state : &mut AI_Player){
     let iter = ai_current_state.iterative.clone();
-    println!("opsPack {}", ops.to_json());
-    let current_op  = ai_current_state.options_order[iter].clone();
-    let ind = ops.options.iter().position(|&r| r==current_op).unwrap();
+    println!("opsPack {}", ai_current_state.ops_recieved.to_json());
+    let current_op : ClientOption  = ai_current_state.options_order[iter].clone();
+    let ind =  ai_current_state.ops_recieved.options.iter().position(|&r| r==current_op).unwrap();
     let option_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : {i}, \"{l}\" : 0,  \"{j}\" : 0}}",
         k = "message_type",
         v = "option",
@@ -362,5 +365,17 @@ fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, 
         payload: option_message
     };
     let _ = &to_server.send(to_server_message);
+
     ai_current_state.iter_up();
+
+    match current_op.option_type {
+        OptionType::EEndTurn=>{
+            ai_current_state.options_test_recieved = false;
+            ai_current_state.iterative = 0;
+            ai_current_state.ops_recieved.options = vec![];
+        },
+        OptionType::EAttack=>{},
+        OptionType::EPlayCard=>{},
+    }
+    println!("AI ITER : {}", ai_current_state.iterative);
 }
