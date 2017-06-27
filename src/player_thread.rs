@@ -283,6 +283,9 @@ fn player_thread_function(player_thread: PlayerThread,
                         else if message_type.contains("PlayCard"){
                             //IGNORE
                         }
+                        else if message_type.contains("Attack"){
+                            //IGNORE
+                        }
                         else if message_type.contains("NewController"){
                             //get a new controller object so we can have the boolean
                             //theres a better way to do this
