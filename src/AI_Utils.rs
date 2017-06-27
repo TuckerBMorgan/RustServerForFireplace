@@ -174,9 +174,10 @@ impl AI_Player{
 	/*
 	*Takes an options package given by the server and generates responses
 	*/
-	pub fn option_engine(&mut self, ops_list : OptionsPackage){
+	pub fn option_engine(&mut self){
+		self.options_order = vec![];
 		println!("AI options selections");
-		let ops_classi = OpsClassify::new(ops_list);
+		let ops_classi = OpsClassify::new(self.ops_recieved.clone());
 		println!("Options classified");
 		self.options_test_recieved = true;
 		let mut matr = CardPlayMatrix::new(ops_classi.plays.clone(), self.game_state_data.clone());
@@ -406,8 +407,10 @@ impl CardPlayMatrix {
 				let i_j_min1 = self.matrix_tiles[i][index_min1].clone();
 				//if the cost is greaterthan or = to the current mana lvl
 				println!("Cost analysis {0}:{1}", min.unwrap().get_cost(), (j as u32));
-				if min.unwrap().get_cost() >= (j as u32){
+
+				if min.unwrap().get_cost() <= (j as u32){
 					//get the mana lvl - cost as an index
+					println!();
 					let costSel = (j-(min.unwrap().get_cost() as u8)) as usize;
 					//get the index for the row directly above the current row
 					let above = (i-1) as usize;
