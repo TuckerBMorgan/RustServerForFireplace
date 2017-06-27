@@ -36,6 +36,7 @@ use runes::modify_attack::ModifyAttack;
 use runes::modify_health::ModifyHealth;
 use runes::create_card::CreateCard;
 use runes::summon_minion::SummonMinion;
+use runes::attack::Attack;
 use std::mem;
 use rustc_serialize::json;
 
@@ -606,7 +607,10 @@ impl<'a> GameState<'a> {
             .get_client_option(index as usize)
             .clone();
         match option.option_type {
-            OptionType::EAttack => {}
+            OptionType::EAttack => {
+                let attack = Attack::new(option.source_uid, option.target_uid);
+                self.execute_rune(attack.into_box());
+            }
             OptionType::EPlayCard => {
                 let card = self.game_state_data.get_controllers()[controller_index as usize]
                     .get_copy_of_card_from_hand(option.source_uid)
