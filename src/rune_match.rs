@@ -21,6 +21,7 @@ use runes::play_minion::PlayMinion;
 use runes::remove_tag::RemoveTag;
 //use runes::create_minion::CreateMinion;
 use runes::summon_minion::SummonMinion;
+use runes::damage_rune::DamageRune;
 use rustc_serialize::json;
 use rustc_serialize::json::Json;
 
@@ -125,6 +126,18 @@ pub fn get_rune(json_obj : &str)->Box<Rune>{
             println!("ModifyAttack found");
             let ns = json_obj.replace("{\"runeType\":\"ModifyAttack\",","{");
             let dc : ModifyAttack = json::decode(ns.trim()).unwrap();
+            return dc.into_box();
+        },
+        ref x if x ==  "\"DamageRune\""=>{
+            println!("ModifyAttack found");
+            let ns = json_obj.replace("{\"runeType\":\"DamageRune\",","{");
+            let dc : DamageRune = json::decode(ns.trim()).unwrap();
+            return dc.into_box();
+        },
+        ref x if x ==  "\"KillMinion\""=>{
+            println!("DamageRune found");
+            let ns = json_obj.replace("{\"runeType\":\"KillMinion\",","{");
+            let dc : KillMinion = json::decode(ns.trim()).unwrap();
             return dc.into_box();
         },
         _=>{
