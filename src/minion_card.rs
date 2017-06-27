@@ -269,7 +269,8 @@ impl Minion {
                 self.current_health = 0;    
             }
             else{
-                self.current_health += amount as u32;
+                //cast city
+                self.current_health = ((self.current_health as i32) + amount) as u32;
             }
         } else if self.current_health as i32 + amount > self.total_health as i32 {
             self.current_health = self.total_health;
