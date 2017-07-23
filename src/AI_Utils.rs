@@ -188,11 +188,14 @@ impl AI_Player{
 				self.options_order.push(i)
 			}
 		}
-		println!("Running attack Heap");
-		if ops_classi.attacks.len() > 0{
-			let mut att_heap = AttackHeap::new(self.game_state_data.clone(), ops_classi.attacks);
-			self.options_order.push(att_heap.pop_attack());
+		else{
+			println!("Running attack Heap");
+			if ops_classi.attacks.len() > 0{
+				let mut att_heap = AttackHeap::new(self.game_state_data.clone(), ops_classi.attacks);
+				self.options_order.push(att_heap.pop_attack());
+			}
 		}
+		
 		self.options_order.push(ops_classi.end);
 		let n_pack = OptionsPackage{options: self.options_order.clone()};
 		println!("OPS SELECTED {}", n_pack.to_json());
