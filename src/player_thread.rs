@@ -8,7 +8,7 @@ use rustc_serialize::json::Json;
 use std::sync::mpsc::{Sender, Receiver};
 use game_thread::ThreadMessage;
 
-use AI_Utils::{AI_Player, AI_Update_Request};
+use AI_Utils::{AI_Player, AI_Update_Request, OpsClassify};
 use std::mem;
 use rune_match::get_rune;
 use game_state::GameStateData;
@@ -200,11 +200,12 @@ fn player_thread_function(player_thread: PlayerThread,
                             if ops.options.len() as u32 > 2{
                                 //get those options and clone them into the ai to track
                                 ai_current_state.ops_recieved = ops.clone();
+                                let t_classify = OpsClassify::new(ops.clone());
                                 //have we already built an options strategy?
-                                println!("TEST REC {}",ai_current_state.options_test_recieved );
+                                //println!("TEST REC {}",ai_current_state.options_test_recieved );
                                 //if we havent we need to test if we even can, if we can then we will
                                 //we can only under the condition that we are up to date with our game_state
-                                if !ai_current_state.options_test_recieved{
+                                if !ai_current_state.options_test_recieved {
                                     println!("Checking if the update count is equal to the rune count");
                                     if ai_current_state.update_count == ai_current_state.public_runes.len() as u32{
                                         //there is no options plan and so we build an options plan and then run the first one we can
@@ -214,6 +215,9 @@ fn player_thread_function(player_thread: PlayerThread,
                                 }
                                 //the ai has an options plan we run the next one we can
                                 else{
+                                    if ((t_classify.plays.len()==0) && (t_classify.attacks.len() > 0)){
+                                        ai_current_state.option_engine();
+                                    }
                                     run_option(&player_thread, &to_server, &mut ai_current_state);
                                 }
                                 
@@ -251,8 +255,14 @@ fn player_thread_function(player_thread: PlayerThread,
                                 //first we check and see if there are even options to run
                                 if ai_current_state.ops_recieved.options.len() > 0 {
                                     //if there is yet to be a decision on how to run these things
-                                    if !ai_current_state.options_test_recieved {
+                                    let t_classify = OpsClassify::new(ai_current_state.ops_recieved.clone());
+                                    if !ai_current_state.options_test_recieved{
                                         &ai_current_state.option_engine();
+                                    }
+                                    else{
+                                        if ((t_classify.plays.len()==0) && (t_classify.attacks.len() > 0)){
+                                            &ai_current_state.option_engine();
+                                        }
                                     }
                                     if ai_current_state.iterative < ai_current_state.options_order.len(){
                                         run_option(&player_thread, &to_server, &mut ai_current_state);

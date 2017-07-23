@@ -105,9 +105,11 @@ impl Controller {
     }
 
     pub fn move_minion_from_play_to_graveyard(&mut self, uid: UID) {
-        let index = self.in_play_minions.iter().position(|x| *x == uid).unwrap();
-        let val = self.in_play_minions.remove(index);
-        self.graveyard.push(val);
+        if self.in_play_minions.iter().position(|x| *x == uid) != None{
+            let index = self.in_play_minions.iter().position(|x| *x == uid).unwrap();
+            let val = self.in_play_minions.remove(index);
+            self.graveyard.push(val);
+        }
     }
 
     pub fn set_base_mana(&mut self, base_mana: u8) {
