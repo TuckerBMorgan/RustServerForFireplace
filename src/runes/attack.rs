@@ -30,7 +30,7 @@ impl Rune for Attack {
         let defender = game_state.get_mut_minion(self.target_uid).unwrap().clone();
 
         let dr_1 = DamageRune::new(self.source_uid, self.target_uid, attacker.get_base_attack());
-        let dr_2 = DamageRune::new(self.source_uid, self.source_uid, defender.get_base_attack());
+        let dr_2 = DamageRune::new(self.target_uid, self.source_uid, defender.get_base_attack());
 
         game_state.add_to_attacked_this_turn(self.source_uid);
 
