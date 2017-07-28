@@ -74,7 +74,14 @@ impl Controller {
                                                           index: usize) {
         let remove = self.unplayed_minions.iter().position(|x| *x == minion_uid).unwrap();
         let val = self.unplayed_minions.remove(remove);
-        self.in_play_minions.insert(index, val);
+        
+        if index >= self.in_play_minions.len() {
+            self.in_play_minions.push(val);
+        }
+        else 
+        {
+            self.in_play_minions.insert(index, val);
+        }
     }
 
     pub fn add_card_to_deck(&mut self, card: Card) {
@@ -196,7 +203,7 @@ impl Controller {
         &mut self.hand
     }
 
-    pub fn _add_card_to_seen(&mut self, uid: UID) {
+    pub fn add_card_to_seen(&mut self, uid: UID) {
         self.seen_cards.insert(uid);
     }
 

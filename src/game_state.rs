@@ -48,6 +48,7 @@ pub struct GameStateData {
     client_id_to_controller_uid: HashMap<UID, u32>,
     attacked_this_turn: Vec<UID>,
     entity_count: u32,
+
     on_turn_player: i8,
     ai_player_copy : bool,
 }
@@ -413,6 +414,7 @@ impl<'a> GameState<'a> {
             let next_rune = self.remove_rune_from_queue();
             self.process_rune(next_rune);
         }
+        
     }
 
     #[allow(dead_code)]

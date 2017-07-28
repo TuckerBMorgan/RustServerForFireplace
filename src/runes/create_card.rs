@@ -43,7 +43,6 @@ impl Rune for CreateCard {
             let proto_minion = Minion::parse_minion_file(contents.clone());
             game_state.add_number_to_lua("give_uid".to_string(), self.uid);
             let mut minion = game_state.run_lua_statement::<Minion>(&proto_minion.get(&"create_minion_function".to_string()).unwrap(), true).unwrap();
-            
             let team =
                 game_state.get_mut_controller_by_uid(self.controller_uid).unwrap().get_team();
 
