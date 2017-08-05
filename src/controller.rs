@@ -203,7 +203,7 @@ impl Controller {
         &mut self.hand
     }
 
-    pub fn _add_card_to_seen(&mut self, uid: UID) {
+    pub fn add_card_to_seen(&mut self, uid: UID) {
         self.seen_cards.insert(uid);
     }
 
