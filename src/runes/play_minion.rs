@@ -84,7 +84,8 @@ impl Rune for PlayMinion {
         }
 
         let s_r = SummonMinion::new(self.minion_uid, self.controller_uid, self.field_index as u8);
-        game_state.process_rune(Box::new(s_r));
+        game_state.stage_rune(Box::new(s_r));
+    //    game_state.process_rune(Box::new(s_r));
     }
 
     fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {

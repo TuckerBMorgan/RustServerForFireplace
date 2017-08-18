@@ -382,6 +382,10 @@ impl<'a> GameState<'a> {
         }
     }
 
+    pub fn stage_rune(&mut self, rune: Box<Rune>) {
+        self.add_rune_to_queue(rune);
+    }
+
     pub fn process_rune(&mut self, rune: Box<Rune>) {
 
         println!("executing rune {}", rune.to_json());
@@ -441,7 +445,6 @@ impl<'a> GameState<'a> {
     }
 
     pub fn parse_deck(deck_file_name: String) -> Vec<String> {
-         println!("{}", "content/decks/".to_string() + &deck_file_name);
         let f = File::open("content/decks/".to_string() + &deck_file_name).unwrap();
         let reader = BufReader::new(f);
         let mut cards: Vec<String> = Vec::new();
