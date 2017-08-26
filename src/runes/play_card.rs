@@ -63,7 +63,7 @@ impl Rune for PlayCard {
                                  self.field_index as usize,
                                  self.target_uid);
 
-        game_state.execute_rune(Box::new(pm));
+        game_state.stage_rune(Box::new(pm));
     }
 
     fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {

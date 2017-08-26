@@ -33,21 +33,21 @@ impl Rune for SummonMinion {
                 .unwrap()
                 .set_minion_state(EMinionState::InPlay);
         }
+        println!("{}", self.minion_uid);
+        if !game_state.get_mut_controller_by_uid(self.controller_uid).unwrap().has_seen_card(self.minion_uid) {
+            let rmtc = ReportMinionToClient::from_minion(game_state.get_minion(self.minion_uid).unwrap(), self.controller_uid, false);
+            game_state.execute_rune(Box::new(rmtc));
+        }
 
         let controller = game_state.get_mut_controller_by_uid(self.controller_uid);
 
-        if !controller.has_seen_card(self.minion_uid) {
-            let rmtc = ReportMinionToClient::new(game_state.get_minion(self.minion_uid).unwrap());
-            game_state.execute_rune(rmtc);
-        }
         match controller {
             Some(controller) => {
                 if self.field_index == 0 {
                     controller.move_minion_from_unplayed_into_play(self.minion_uid);
                 } else {
                     controller.move_minion_from_unplayed_into_play_with_index(self.minion_uid,
-                                                                              self.field_index as
-                                                                              usize);
+                                                                              self.field_index as usize);
                 }
             }
             None => {
