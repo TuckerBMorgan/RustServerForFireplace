@@ -1,6 +1,6 @@
 use ai::ai_utils::{AI_Player, AI_Update_Request, OpsClassify};
 use client_option::{OptionsPackage, ClientOption, OptionType};
-use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc::{Sender};
 use game_thread::ThreadMessage;
 use player_thread::PlayerThread;
 use rune_match::get_rune;
@@ -131,7 +131,7 @@ fn queue_ai_update(player_thread : &PlayerThread, to_server: &Sender<ThreadMessa
 fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, ai_current_state : &mut AI_Player){
     let iter = ai_current_state.iterative.clone();
     println!("opsPack {}", ai_current_state.ops_recieved.to_json());
-    let current_op : ClientOption  = ai_current_state.options_order[0].clone();
+    let current_op : ClientOption  = ai_current_state.options_order[iter].clone();
     let ind =  ai_current_state.ops_recieved.options.iter().position(|&r| r==current_op).unwrap();
     let option_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : {i}, \"{l}\" : 0,  \"{j}\" : 0}}",
         k = "message_type",
@@ -148,10 +148,11 @@ fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, 
     let _ = &to_server.send(to_server_message);
 
     ai_current_state.iter_up();
+    println!("iter {} : option lens{}", ai_current_state.iterative, ai_current_state.options_order.len());
+
 
     match current_op.option_type {
         OptionType::EEndTurn=>{
-            println!("hit endTurn");
             ai_current_state.options_test_recieved = false;
             ai_current_state.iterative = 0;
             ai_current_state.ops_recieved.options = vec![];

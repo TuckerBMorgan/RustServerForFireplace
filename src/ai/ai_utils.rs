@@ -175,28 +175,31 @@ impl AI_Player{
 	*Takes an options package given by the server and generates responses
 	*/
 	pub fn option_engine(&mut self){
+		if self.options_order.len() != self.iterative && (self.iterative!=0 && self.options_order.len()!=0) {
+			return;
+		}
 		self.options_order = vec![];
 		println!("AI options selections");
 		let ops_classi = OpsClassify::new(self.ops_recieved.clone());
 		println!("Options classified");
 		self.options_test_recieved = true;
-		let mut matr = CardPlayMatrix::new(ops_classi.plays.clone(), self.game_state_data.clone());
-		println!("Running matrix");
+		
+		
 		if ops_classi.plays.len() > 0{
+			println!("Running matrix");
+			let mut matr = CardPlayMatrix::new(ops_classi.plays.clone(), self.game_state_data.clone());
 			matr.run_matrix();
-			for i in matr.selected_ops{
-				self.options_order.push(i)
-			}
+			self.options_order = matr.selected_ops;
 		}
 		else{
 			println!("Running attack Heap");
 			if ops_classi.attacks.len() > 0{
-				let mut att_heap = AttackHeap::new(self.game_state_data.clone(), ops_classi.attacks);
-				self.options_order.push(att_heap.pop_attack());
+				self.options_order.push(AttackHeap::new(self.game_state_data.clone(), ops_classi.attacks).pop_attack());
 			}
 		}
-		
-		self.options_order.push(ops_classi.end);
+		if self.options_order.len() == 0{
+			self.options_order.push(ops_classi.end);
+		}
 		let n_pack = OptionsPackage{options: self.options_order.clone()};
 		println!("OPS SELECTED {}", n_pack.to_json());
 		self.iterative = 0;
