@@ -177,164 +177,150 @@ fn player_thread_function(player_thread: PlayerThread,
                             }
                         };
                         //println!("mt {0}", message_type);
-                        if message_type.contains("Mulligan") {
-                            let mulligan_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : [] }}",
-                                                           k = "message_type",
-                                                           v = "mulligan",
-                                                           h = "index");
-                            let to_server_message = ThreadMessage {
-                                client_id: player_thread.client_id.clone(),
-                                payload: mulligan_message,
-                            };
+                        match message_type.as_ref(){
+                            "Mulligan"=> {
+                                let mulligan_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : [] }}",
+                                                            k = "message_type",
+                                                            v = "mulligan",
+                                                            h = "index");
+                                let to_server_message = ThreadMessage {
+                                    client_id: player_thread.client_id.clone(),
+                                    payload: mulligan_message,
+                                };
 
-                            let _ = &to_server.send(to_server_message);
-                        } 
+                                to_server.send(to_server_message);
+                            }, 
                         //if we have just recieved an options package
-                        else if message_type.contains("optionRune") {
-                            //dump the options
-                            println!("OPTIONS : {}", message.clone());
-                            //decode into an options package
-                            let ops_msg = message.clone().replace("{\"runeType\":\"optionRune\",", "{"); 
-                            let ops : OptionsPackage = json::decode(&ops_msg).unwrap();
-                            //if we have any options we can run, otherwise we just end it all
-                            if ops.options.len() as u32 > 2{
-                                //get those options and clone them into the ai to track
-                                ai_current_state.ops_recieved = ops.clone();
-                                let t_classify = OpsClassify::new(ops.clone());
-                                //have we already built an options strategy?
-                                //println!("TEST REC {}",ai_current_state.options_test_recieved );
-                                //if we havent we need to test if we even can, if we can then we will
-                                //we can only under the condition that we are up to date with our game_state
-                                if !ai_current_state.options_test_recieved {
-                                    println!("Checking if the update count is equal to the rune count");
-                                    if ai_current_state.update_count == ai_current_state.public_runes.len() as u32{
-                                        //there is no options plan and so we build an options plan and then run the first one we can
-                                        ai_current_state.option_engine();
-                                        run_option(&player_thread, &to_server, &mut ai_current_state);
-                                    }
-                                }
-                                //the ai has an options plan we run the next one we can
-                                else{
-                                    if ((t_classify.plays.len()==0) && (t_classify.attacks.len() > 0)){
-                                        ai_current_state.option_engine();
-                                    }
-                                    run_option(&player_thread, &to_server, &mut ai_current_state);
-                                }
-                                
-                            }
-                            //only 2 options came accross, just send an end turn signal
-                            else{
-
-                                let option_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : 0, \"{l}\" : 0,  \"{j}\" : 0}}",
-                                                           k = "message_type",
-                                                           v = "option",
-                                                           h = "index",
-                                                           l = "board_index",
-                                                           j = "timeStamp");
-                                    let to_server_message = ThreadMessage {
-                                        client_id: player_thread.client_id.clone(),
-                                        payload: option_message
-                                    };
-                                    let _ = &to_server.send(to_server_message);
-                            }
-                        } 
-                        //this here updates the player_thread ai track
-                        else if message_type.contains("AI_Update"){
-                            //copy the response, get the GSD give that to the AI 
-                            ai_current_state.update(message.clone());
-                            //we just updated the AI, announce what number update this is
-                            println!("AI UPDATED {0}", ai_current_state.update_count);
-                            //if the update count is less than the number of rune updates, continue updating
-                            if ai_current_state.update_count < ai_current_state.public_runes.len() as u32 {
-                                let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
-                                queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
-                            }
-                            //otherwise we know they are equal and we can run option requests
-                            else{
-                                println!("AI Checking if recieved options exist and runs if they are");
-                                //first we check and see if there are even options to run
-                                if ai_current_state.ops_recieved.options.len() > 0 {
-                                    //if there is yet to be a decision on how to run these things
-                                    let t_classify = OpsClassify::new(ai_current_state.ops_recieved.clone());
-                                    if !ai_current_state.options_test_recieved{
-                                        &ai_current_state.option_engine();
-                                    }
-                                    else{
-                                        if ((t_classify.plays.len()==0) && (t_classify.attacks.len() > 0)){
-                                            &ai_current_state.option_engine();
+                            "optionRune"=> {
+                                //dump the options
+                                println!("OPTIONS : {}", message.clone());
+                                //decode into an options package
+                                let ops_msg = message.clone().replace("{\"runeType\":\"optionRune\",", "{"); 
+                                let ops : OptionsPackage = json::decode(&ops_msg).unwrap();
+                                //if we have any options we can run, otherwise we just end it all
+                                if ops.options.len() as u32 > 2{
+                                    //get those options and clone them into the ai to track
+                                    ai_current_state.ops_recieved = ops.clone();
+                                    let t_classify = OpsClassify::new(ops.clone());
+                                    //have we already built an options strategy?
+                                    //println!("TEST REC {}",ai_current_state.options_test_recieved );
+                                    //if we havent we need to test if we even can, if we can then we will
+                                    //we can only under the condition that we are up to date with our game_state
+                                    if !ai_current_state.options_test_recieved {
+                                        println!("Checking if the update count is equal to the rune count");
+                                        if ai_current_state.update_count == ai_current_state.public_runes.len() as u32{
+                                            //there is no options plan and so we build an options plan and then run the first one we can
+                                            ai_current_state.option_engine();
+                                            run_option(&player_thread, &to_server, &mut ai_current_state);
                                         }
                                     }
-                                    if ai_current_state.iterative < ai_current_state.options_order.len(){
+                                    //the ai has an options plan we run the next one we can
+                                    else{
+                                        if ((t_classify.plays.len()==0) && (t_classify.attacks.len() > 0)){
+                                            ai_current_state.option_engine();
+                                        }
                                         run_option(&player_thread, &to_server, &mut ai_current_state);
                                     }
-                                    else{
-                                        ai_current_state.options_test_recieved = false;
+                                    
+                                }
+                                //only 2 options came accross, just send an end turn signal
+                                else{
+
+                                    let option_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : 0, \"{l}\" : 0,  \"{j}\" : 0}}",
+                                                            k = "message_type",
+                                                            v = "option",
+                                                            h = "index",
+                                                            l = "board_index",
+                                                            j = "timeStamp");
+                                        let to_server_message = ThreadMessage {
+                                            client_id: player_thread.client_id.clone(),
+                                            payload: option_message
+                                        };
+                                        let _ = &to_server.send(to_server_message);
+                                }
+                            }, 
+                        //this here updates the player_thread ai track
+                            "AI_Update"=>{
+                                //copy the response, get the GSD give that to the AI 
+                                ai_current_state.update(message.clone());
+                                //we just updated the AI, announce what number update this is
+                                println!("AI UPDATED {0}", ai_current_state.update_count);
+                                //if the update count is less than the number of rune updates, continue updating
+                                if ai_current_state.update_count < ai_current_state.public_runes.len() as u32 {
+                                    let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
+                                    queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
+                                }
+                                //otherwise we know they are equal and we can run option requests
+                                else{
+                                    println!("AI Checking if recieved options exist and runs if they are");
+                                    //first we check and see if there are even options to run
+                                    if ai_current_state.ops_recieved.options.len() > 0 {
+                                        //if there is yet to be a decision on how to run these things
+                                        let t_classify = OpsClassify::new(ai_current_state.ops_recieved.clone());
+                                        if !ai_current_state.options_test_recieved{
+                                            &ai_current_state.option_engine();
+                                        }
+                                        else{
+                                            if ((t_classify.plays.len()==0) && (t_classify.attacks.len() > 0)){
+                                                &ai_current_state.option_engine();
+                                            }
+                                        }
+                                        if ai_current_state.iterative < ai_current_state.options_order.len(){
+                                            run_option(&player_thread, &to_server, &mut ai_current_state);
+                                        }
+                                        else{
+                                            ai_current_state.options_test_recieved = false;
+                                        }
                                     }
                                 }
-                            }
-                        }
-                        //LOGIC FOR RUNNING A TURN GOES HERE
-                        //else if message_type.contains("optionRune"){
-
-                        //}
+                            },
                         //ANY THAT ARE EMPTY RUNES ARE IGNORE CONDITIONS
-                        else if message_type.contains("ReportMinionToClient"){
-                            //IGNORE
-                        }
-                        else if message_type.contains("AddTag"){
-                            //IGNORE
-                        }
-                        else if message_type.contains("SummonMinion"){
-                            //IGNORE
-                        }
-                        else if message_type.contains("RotateTurn"){
-                            //IGNORE
-                        }
-                        else if message_type.contains("PlayCard"){
-                            //IGNORE
-                        }
-                        else if message_type.contains("Attack"){
-                            //IGNORE
-                        }
-                        else if message_type.contains("NewController"){
-                            //get a new controller object so we can have the boolean
-                            //theres a better way to do this
-                            //probably
-                            let ns = message.clone().replace("{\"runeType\":\"NewController\",","{");
-                            let run : NewController = json::decode(ns.trim()).unwrap();
-                            if run.is_me {
-                                ai_current_state.queue_update(message.clone());
-                            }
-                            else{
-                                ai_current_state.public_runes.insert(0, message.clone());
-                                let rne = message.clone();
-                                queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
-                            }
-                        }
-                        //any of the runes which do not require special rules are executed below
-                        else {
-                            //borrow the update count
-                            let uDcount = ai_current_state.update_count;
-                            //if the update count is the same as the length of the 
-                            if (uDcount) == ai_current_state.public_runes.len() as u32 
-                                    && ai_current_state.public_runes.len() as u32 > 1  
-                            {         
-                                println!("SENDING UPDATE {} {}", uDcount, ai_current_state.public_runes.len());
-                                //let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
-                                queue_ai_update(&player_thread, &to_server, message.clone(), ai_current_state.game_state_data.clone());
-                                ai_current_state.queue_update(message.clone());
-                            }
-                            else if (uDcount) == ai_current_state.public_runes.len() as u32 
-                                    && ai_current_state.public_runes.len() as u32 == 0
-                            {
-                                //println!("SENDING UPDATE {} {}", uDcount, ai_current_state.public_runes.len());
-                                let rne = message.clone();
-                                queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
-                                ai_current_state.queue_update(message.clone());
-                            }
-                            else{
-                                //println!("QUEUEING UPDATE {} {}", uDcount, ai_current_state.public_runes.len());
-                                ai_current_state.queue_update(message.clone());
+                            "ReportMinionToClient"=>{},
+                            "AddTag"=>{},
+                            "SummonMinion"=>{},
+                            "RotateTurn"=>{},
+                            "PlayCard"=>{},
+                            "Attack"=>{},
+                            "NewController"=>{
+                                //get a new controller object so we can have the boolean
+                                //theres a better way to do this
+                                //probably
+                                let ns = message.clone().replace("{\"runeType\":\"NewController\",","{");
+                                let run : NewController = json::decode(ns.trim()).unwrap();
+                                if run.is_me {
+                                    ai_current_state.queue_update(message.clone());
+                                }
+                                else{
+                                    ai_current_state.public_runes.insert(0, message.clone());
+                                    let rne = message.clone();
+                                    queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
+                                }
+                            },
+                            //any of the runes which do not require special rules are executed below
+                            _=> {
+                                //borrow the update count
+                                let uDcount = ai_current_state.update_count;
+                                //if the update count is the same as the length of the 
+                                if (uDcount) == ai_current_state.public_runes.len() as u32 
+                                        && ai_current_state.public_runes.len() as u32 > 1  
+                                {         
+                                    println!("SENDING UPDATE {} {}", uDcount, ai_current_state.public_runes.len());
+                                    //let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
+                                    queue_ai_update(&player_thread, &to_server, message.clone(), ai_current_state.game_state_data.clone());
+                                    ai_current_state.queue_update(message.clone());
+                                }
+                                else if (uDcount) == ai_current_state.public_runes.len() as u32 
+                                        && ai_current_state.public_runes.len() as u32 == 0
+                                {
+                                    //println!("SENDING UPDATE {} {}", uDcount, ai_current_state.public_runes.len());
+                                    let rne = message.clone();
+                                    queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
+                                    ai_current_state.queue_update(message.clone());
+                                }
+                                else{
+                                    //println!("QUEUEING UPDATE {} {}", uDcount, ai_current_state.public_runes.len());
+                                    ai_current_state.queue_update(message.clone());
+                                }
                             }
                         }
                     }
