@@ -22,7 +22,7 @@ mod player_thread;
 mod client_message;
 mod process_message;
 mod tags_list;
-mod AI_Utils;
+mod ai;
 mod rune_match;
 
 

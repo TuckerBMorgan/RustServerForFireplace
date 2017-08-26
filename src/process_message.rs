@@ -7,7 +7,7 @@ use runes::new_controller::NewController;
 use client_message::{MulliganMessage, OptionsMessage};
 use rune_vm::Rune;
 use rune_match::get_rune;
-use AI_Utils::{AI_Update_Request,AI_Option_Set_Request};
+use ai::ai_utils::{AI_Update_Request,AI_Option_Set_Request};
 
 
 
