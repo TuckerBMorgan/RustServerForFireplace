@@ -9,45 +9,69 @@ use rustc_serialize::json::Json;
 use rustc_serialize::json;
 use runes::new_controller::NewController;
 
+pub fn message_to_action(message_type: String , mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
+    match message_type.as_ref(){
+        "Mulligan"=> {
+            let mulligan_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : [] }}",
+                k = "message_type",
+                v = "mulligan",
+                h = "index");
+            let to_server_message = ThreadMessage {
+                client_id: player_thread.client_id.clone(),
+                payload: mulligan_message,
+            };
 
-pub fn option_runner(mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
-//dump the options
-    println!("OPTIONS : {}", message.clone());
-    //decode into an options package
-    let ops_msg = message.clone().replace("{\"runeType\":\"optionRune\",", "{"); 
-    let ops : OptionsPackage = json::decode(&ops_msg).unwrap();
-    //if we have any options we can run, otherwise we just end it all
-    if ops.options.len() as u32 > 2{
-        //get those options and clone them into the ai to track
-        ai_current_state.ops_recieved = ops.clone();
-        let t_classify = OpsClassify::new(ops.clone());
-        //have we already built an options strategy?
-        //println!("TEST REC {}",ai_current_state.options_test_recieved );
-        //if we havent we need to test if we even can, if we can then we will
-        //we can only under the condition that we are up to date with our game_state
-        if !ai_current_state.options_test_recieved {
-            println!("Checking if the update count is equal to the rune count");
-            if ai_current_state.update_count == ai_current_state.public_runes.len() as u32{
-                //there is no options plan and so we build an options plan and then run the first one we can
-                ai_current_state.option_engine();
-                run_option(&player_thread, &to_server, &mut ai_current_state);
-            }
-            else{
-
-            }
-        }
-        //the ai has an options plan we run the next one we can
-        else{
-            if (t_classify.plays.len()==0) && (t_classify.attacks.len() > 0){
-                ai_current_state.option_engine();
-            }
-            run_option(&player_thread, &to_server, &mut ai_current_state);
+            to_server.send(to_server_message);
+        }, 
+        //if we have just recieved an options package
+        "optionRune"=> {
+            option_runner(&mut ai_current_state, message, &to_server, &player_thread);
+        }, 
+        //this here updates the player_thread ai track
+        "AI_Update"=>{
+            run_ai_update(&mut ai_current_state, message, &to_server, &player_thread);
+        },
+        //ANY THAT ARE EMPTY RUNES ARE IGNORE CONDITIONS
+        "ReportMinionToClient"=>{},
+        "AddTag"=>{},
+        "SummonMinion"=>{},
+        "RotateTurn"=>{},
+        "PlayCard"=>{},
+        "Attack"=>{},
+        "NewController"=>{
+            new_controller(&mut ai_current_state, message, &to_server, &player_thread)
+        },
+        //any of the runes which do not require special rules are executed below
+        _=> {
+            recieve_non_special(&mut ai_current_state, message, &to_server, &player_thread)
         }
     }
 }
 
+fn option_setup(mut ai_current_state: &mut AI_Player, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
+    if ai_current_state.update_count == ai_current_state.public_runes.len() as u32 
+        && ai_current_state.ops_recieved.options.len() > 0
+    {
+        ai_current_state.option_engine();
+        run_option(&player_thread, &to_server, &mut ai_current_state);
+    }
+}
 
-pub fn run_ai_update(mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
+
+fn option_runner(mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
+//dump the options
+    println!("OPTIONS : {}", message);
+    //decode into an options package
+    let ops_msg = message.replace("{\"runeType\":\"optionRune\",", "{"); 
+    let ops : OptionsPackage = json::decode(&ops_msg).unwrap();
+    //if we have any options we can run, otherwise we just end it all
+    ai_current_state.ops_recieved = ops;
+    option_setup(ai_current_state, to_server, player_thread);
+    
+}
+
+
+fn run_ai_update(mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
     //copy the response, get the GSD give that to the AI 
     ai_current_state.update(message.clone());
     //we just updated the AI, announce what number update this is
@@ -57,32 +81,13 @@ pub fn run_ai_update(mut ai_current_state: &mut AI_Player, message: String, to_s
         let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
         queue_ai_update(&player_thread, &to_server, rne, ai_current_state.game_state_data.clone());
     }
-    //otherwise we know they are equal and we can run option requests
     else{
-        println!("AI Checking if recieved options exist and runs if they are");
-        //first we check and see if there are even options to run
-        if ai_current_state.ops_recieved.options.len() > 0 {
-        //if there is yet to be a decision on how to run these things
-            let t_classify = OpsClassify::new(ai_current_state.ops_recieved.clone());
-            if !ai_current_state.options_test_recieved{
-                &ai_current_state.option_engine();
-            }
-            else{
-                if ((t_classify.plays.len()==0) && (t_classify.attacks.len() > 0)){
-                    &ai_current_state.option_engine();
-                }
-            }
-            if ai_current_state.iterative < ai_current_state.options_order.len(){
-                run_option(&player_thread, &to_server, &mut ai_current_state);
-            }
-            else{
-                ai_current_state.options_test_recieved = false;
-            }
-        }
+        option_setup(ai_current_state, to_server, player_thread);
     }
+    
 }
 
-pub fn new_controller(mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
+fn new_controller(mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
     //get a new controller object so we can have the boolean
     //theres a better way to do this
     //probably
@@ -98,7 +103,7 @@ pub fn new_controller(mut ai_current_state: &mut AI_Player, message: String, to_
     }
 }
 
-pub fn recieve_non_special(mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
+fn recieve_non_special(mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
     println!("msg: {}", message.clone());
     ai_current_state.queue_update(message.clone());
     if ai_current_state.public_runes.len() as u32 -  ai_current_state.update_count  == 1{
@@ -126,7 +131,7 @@ fn queue_ai_update(player_thread : &PlayerThread, to_server: &Sender<ThreadMessa
 fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, ai_current_state : &mut AI_Player){
     let iter = ai_current_state.iterative.clone();
     println!("opsPack {}", ai_current_state.ops_recieved.to_json());
-    let current_op : ClientOption  = ai_current_state.options_order[iter].clone();
+    let current_op : ClientOption  = ai_current_state.options_order[0].clone();
     let ind =  ai_current_state.ops_recieved.options.iter().position(|&r| r==current_op).unwrap();
     let option_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : {i}, \"{l}\" : 0,  \"{j}\" : 0}}",
         k = "message_type",

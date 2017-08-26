@@ -15,7 +15,7 @@ use game_state::GameStateData;
 use client_option::{OptionsPackage, ClientOption, OptionType};
 use rustc_serialize::json;
 
-use ai::ai_action::*;
+use ai::ai_action::message_to_action;
 
 use ai::ai_utils::{AI_Player, AI_Update_Request, OpsClassify};
 
@@ -180,43 +180,8 @@ fn player_thread_function(player_thread: PlayerThread,
                                 continue;
                             }
                         };
-                        //println!("mt {0}", message_type);
-                        match message_type.as_ref(){
-                            "Mulligan"=> {
-                                let mulligan_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : [] }}",
-                                                            k = "message_type",
-                                                            v = "mulligan",
-                                                            h = "index");
-                                let to_server_message = ThreadMessage {
-                                    client_id: player_thread.client_id.clone(),
-                                    payload: mulligan_message,
-                                };
-
-                                to_server.send(to_server_message);
-                            }, 
-                        //if we have just recieved an options package
-                            "optionRune"=> {
-                                option_runner(&mut ai_current_state, message, &to_server, &player_thread);
-                            }, 
-                        //this here updates the player_thread ai track
-                            "AI_Update"=>{
-                                run_ai_update(&mut ai_current_state, message, &to_server, &player_thread);
-                            },
-                            //ANY THAT ARE EMPTY RUNES ARE IGNORE CONDITIONS
-                            "ReportMinionToClient"=>{},
-                            "AddTag"=>{},
-                            "SummonMinion"=>{},
-                            "RotateTurn"=>{},
-                            "PlayCard"=>{},
-                            "Attack"=>{},
-                            "NewController"=>{
-                                new_controller(&mut ai_current_state, message, &to_server, &player_thread)
-                            },
-                            //any of the runes which do not require special rules are executed below
-                            _=> {
-                                recieve_non_special(&mut ai_current_state, message, &to_server, &player_thread)
-                            }
-                        }
+                        message_to_action(message_type, &mut ai_current_state, message, &to_server, &player_thread);
+  
                     }
                     Err(_) => {}
 
