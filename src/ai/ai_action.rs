@@ -8,6 +8,7 @@ use game_state::GameStateData;
 use rustc_serialize::json::Json;
 use rustc_serialize::json;
 use runes::new_controller::NewController;
+use minion_card::UID;
 
 pub fn message_to_action(message_type: String , mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
     match message_type.as_ref(){
@@ -93,7 +94,7 @@ fn new_controller(mut ai_current_state: &mut AI_Player, message: String, to_serv
     //probably
     let ns = message.clone().replace("{\"runeType\":\"NewController\",","{");
     let run : NewController = json::decode(ns.trim()).unwrap();
-    if run.is_me {
+    if run.uid == 3 {
         ai_current_state.queue_update(message.clone());
     }
     else{

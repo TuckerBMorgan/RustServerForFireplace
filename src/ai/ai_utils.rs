@@ -242,7 +242,7 @@ fn getHP_field(ref controller: &Controller, game: &GameStateData) -> u32{
 	return this_AP;
 }
 //basic for now add taunts later
-fn score_controllers(game: &GameStateData)->f32{
+pub fn score_controllers(game: &GameStateData)->f32{
 	let ctrlrs = game.get_controllers();
 	let controller_1 = &ctrlrs[0];
 	let controller_2 = &ctrlrs[1];
@@ -254,7 +254,7 @@ fn score_controllers(game: &GameStateData)->f32{
 	return ((con2_hp)/(con1_ap+1.0))-((con1_hp)/(con2_ap+1.0));
 }
 
-fn perspective_score(ops : Vec<ClientOption>, game : &GameStateData)->f32{
+pub fn perspective_score(ops : Vec<ClientOption>, game : &GameStateData)->f32{
 	let ctrlrs = game.get_controllers();
 	let controller_1 = &ctrlrs[0];
 	let controller_2 = &ctrlrs[1];
