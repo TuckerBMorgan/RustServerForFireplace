@@ -572,6 +572,12 @@ impl<'a> GameState<'a> {
             let rt = RotateTurn::new();
             self.execute_rune(Box::new(rt));
 
+            //After mulligan whoever is going first will be the player who gets the options
+            let controller_index = self.get_on_turn_player();
+
+            let controller_uid =
+                self.game_state_data.get_controllers()[controller_index as usize].get_uid().clone();
+
             let options = self.get_mut_controller_by_uid(controller_uid)
                 .unwrap()
                 .clone()
@@ -580,7 +586,7 @@ impl<'a> GameState<'a> {
             self.get_mut_controller_by_uid(controller_uid)
                 .unwrap()
                 .set_client_options(options.clone());
-
+            
             let op = OptionsPackage { options: options };
 
             self.report_rune_to_client(client_id.clone(), op.to_json());
@@ -600,13 +606,16 @@ impl<'a> GameState<'a> {
 
     pub fn execute_option(&mut self, option_message: OptionsMessage) {
         let index = option_message.index.clone();
+        
         let controller_index = self.get_on_turn_player();
 
         let controller_uid =
             self.game_state_data.get_controllers()[controller_index as usize].get_uid().clone();
+        
         let option = self.game_state_data.get_controllers()[controller_index as usize]
             .get_client_option(index as usize)
             .clone();
+        
         match option.option_type {
             OptionType::EAttack => {
                 let attack = Attack::new(option.source_uid, option.target_uid);
