@@ -126,6 +126,7 @@ pub struct AI_Player{
 	pub options_test_recieved : bool,
 	pub ops_recieved : OptionsPackage,
 	pub iterative : usize,
+	pub uid : UID,
 }
 impl AI_Player{
 	pub fn new()->AI_Player{
@@ -145,6 +146,7 @@ impl AI_Player{
 			options_test_recieved : options_test_recieved_false,
 			ops_recieved : OptionsPackage{options : Vec::new()},
 			iterative: 0,
+			uid: 0,
 		}
 	}
 

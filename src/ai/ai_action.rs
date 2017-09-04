@@ -61,7 +61,7 @@ fn option_setup(mut ai_current_state: &mut AI_Player, to_server: &Sender<ThreadM
 
 fn option_runner(mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
 //dump the options
-    println!("OPTIONS : {}", message);
+    println!("AI {} OPTIONS : {}", ai_current_state.uid, message);
     //decode into an options package
     let ops_msg = message.replace("{\"runeType\":\"optionRune\",", "{"); 
     let ops : OptionsPackage = json::decode(&ops_msg).unwrap();
@@ -76,7 +76,7 @@ fn run_ai_update(mut ai_current_state: &mut AI_Player, message: String, to_serve
     //copy the response, get the GSD give that to the AI 
     ai_current_state.update(message.clone());
     //we just updated the AI, announce what number update this is
-    println!("AI UPDATED {0}", ai_current_state.update_count);
+    println!("AI {} UPDATED {}", ai_current_state.uid, ai_current_state.update_count);
     //if the update count is less than the number of rune updates, continue updating
     if ai_current_state.update_count < ai_current_state.public_runes.len() as u32 {
         let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
@@ -94,6 +94,8 @@ fn new_controller(mut ai_current_state: &mut AI_Player, message: String, to_serv
     //probably
     let ns = message.clone().replace("{\"runeType\":\"NewController\",","{");
     let run : NewController = json::decode(ns.trim()).unwrap();
+    //the second controller always has uid 3 and controller 1 always has uid 2
+    ai_current_state.uid = run.uid;
     if run.uid == 3 {
         ai_current_state.queue_update(message.clone());
     }
@@ -105,7 +107,7 @@ fn new_controller(mut ai_current_state: &mut AI_Player, message: String, to_serv
 }
 
 fn recieve_non_special(mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
-    println!("msg: {}", message.clone());
+    println!("ai uid:{} msg: {}", ai_current_state.uid, message.clone());
     ai_current_state.queue_update(message.clone());
     if ai_current_state.public_runes.len() as u32 -  ai_current_state.update_count  == 1{
         let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
@@ -131,7 +133,7 @@ fn queue_ai_update(player_thread : &PlayerThread, to_server: &Sender<ThreadMessa
 
 fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, ai_current_state : &mut AI_Player){
     let iter = ai_current_state.iterative.clone();
-    println!("opsPack {}", ai_current_state.ops_recieved.to_json());
+    println!("AI {} opsPack {}", ai_current_state.uid, ai_current_state.ops_recieved.to_json());
     let current_op : ClientOption  = ai_current_state.options_order[iter].clone();
     let ind =  ai_current_state.ops_recieved.options.iter().position(|&r| r==current_op).unwrap();
     let option_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : {i}, \"{l}\" : 0,  \"{j}\" : 0}}",
@@ -149,7 +151,7 @@ fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, 
     let _ = &to_server.send(to_server_message);
 
     ai_current_state.iter_up();
-    println!("iter {} : option lens{}", ai_current_state.iterative, ai_current_state.options_order.len());
+    println!("AI {} iter {} : option lens{}", ai_current_state.uid, ai_current_state.iterative, ai_current_state.options_order.len());
 
 
     match current_op.option_type {
