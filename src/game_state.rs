@@ -37,6 +37,7 @@ use runes::modify_health::ModifyHealth;
 use runes::create_card::CreateCard;
 use runes::summon_minion::SummonMinion;
 use runes::attack::Attack;
+use runes::modify_hero_health::ModifyHeroHealth;
 use std::mem;
 use rustc_serialize::json;
 
@@ -137,7 +138,9 @@ impl GameStateData {
     }
 
     pub fn add_minion_to_minions(&mut self, minion: Minion) {
-        self.minions.insert(minion.get_uid(), minion);
+        if !self.minions.contains_key(&minion.get_uid()){
+            self.minions.insert(minion.get_uid(), minion);
+        }
     }
 
     pub fn get_client_ids(&self) -> Vec<u32> {
@@ -261,6 +264,8 @@ impl<'a> GameState<'a> {
                                hlua::function2(|uid, amount| ModifyAttack::new(uid, amount)));
             rune_namespace.set("new_modify_health",
                                hlua::function2(|uid, amount| ModifyHealth::new(uid, amount)));
+            rune_namespace.set("new_modify_hero_health",
+                               hlua::function2(|uid, amount| ModifyHeroHealth::new(uid, amount)));
             rune_namespace.set("new_create_card",
                                hlua::function3(|id, uid, controller_uid| {
                                    CreateCard::new(id, uid, controller_uid)
@@ -280,6 +285,8 @@ impl<'a> GameState<'a> {
                                hlua::function1(|ma| ERuneType::ModifyAttack(ma)));
             enum_namespace.set("new_modify_health",
                                hlua::function1(|mh| ERuneType::ModifyHealth(mh)));
+            enum_namespace.set("new_modify_hero_health",
+                               hlua::function1(|mh| ERuneType::ModifyHeroHealth(mh)));
             enum_namespace.set("new_set_health",
                                hlua::function1(|sh| ERuneType::SetHealth(sh)));
             enum_namespace.set("new_set_attack",
