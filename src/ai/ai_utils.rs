@@ -131,9 +131,9 @@ pub struct AI_Player{
 impl AI_Player{
 	pub fn new()->AI_Player{
 		let mut gsd = GameStateData::new(true);
-		let mut scre = 0.0 as f32;
-		let mut pr = Vec::new();
-		let mut uc = 0;
+		let scre = 0.0 as f32;
+		let pr = Vec::new();
+		let uc = 0;
 		let options_test_recieved_false = false;
 		gsd.get_uid();
 		gsd.get_uid();
@@ -158,8 +158,8 @@ impl AI_Player{
 	/*
 	*Updates the AI_Player using a json string of GameStateData
 	*/
-	pub fn update(&mut self, updateData: String){
-        self.game_state_data = AI_Player::gsd_from_json(updateData); 
+	pub fn update(&mut self, update_data: String){
+        self.game_state_data = AI_Player::gsd_from_json(update_data); 
 		self.update_count = self.update_count + 1;
 		if self.update_count > 1{
 			self.score = score_controllers(&self.game_state_data);
@@ -206,9 +206,6 @@ impl AI_Player{
 		println!("OPS SELECTED {}", n_pack.to_json());
 		self.iterative = 0;
 	}
-	pub fn prep_option(){
-		
-	}
 
 	pub fn iter_up(&mut self){
 		self.iterative = self.iterative + 1;
@@ -220,37 +217,37 @@ impl AI_Player{
 *
 *
 */
-fn getAP_field(ref controller: &Controller, game: &GameStateData) -> u32{
+fn get_ap_field(ref controller: &Controller, game: &GameStateData) -> u32{
 
-	let mut this_AP = 0;
+	let mut this_ap = 0;
 	//get the vectors of uuids of the minions on this part of the field.
 	let field = controller.get_copy_of_in_play();
 	//iterate through the list of uids detected.
 	for i in field{
-		this_AP += game.get_minion(i).unwrap().get_current_attack();
+		this_ap += game.get_minion(i).unwrap().get_current_attack();
 	}
-	return this_AP;
+	return this_ap;
 }
 
-fn getHP_field(ref controller: &Controller, game: &GameStateData) -> u32{
+fn get_hp_field(ref controller: &Controller, game: &GameStateData) -> u32{
 
-	let mut this_AP = 0;
+	let mut this_ap = 0;
 	//get the vectors of uuids of the minions on this part of the field.
 	let field = controller.get_copy_of_in_play();
 	//iterate through the list of uids detected.
 	for i in field{
-		this_AP += game.get_minion(i).unwrap().get_current_health();
+		this_ap += game.get_minion(i).unwrap().get_current_health();
 	}
-	return this_AP;
+	return this_ap;
 }
 //basic for now add taunts later
 pub fn score_controllers(game: &GameStateData)->f32{
 	let ctrlrs = game.get_controllers();
 	let controller_1 = &ctrlrs[0];
 	let controller_2 = &ctrlrs[1];
-	let mut score = 0;
-	let con1_ap = getAP_field(controller_1, game) as f32;
-	let con2_ap = getAP_field(controller_2, game) as f32;
+	
+	let con1_ap = get_ap_field(controller_1, game) as f32;
+	let con2_ap = get_ap_field(controller_2, game) as f32;
 	let con1_hp = controller_1.get_life().clone() as f32;
 	let con2_hp = controller_2.get_life().clone() as f32;
 	return ((con2_hp)/(con1_ap+1.0))-((con1_hp)/(con2_ap+1.0));
@@ -260,11 +257,11 @@ pub fn perspective_score(ops : Vec<ClientOption>, game : &GameStateData)->f32{
 	let ctrlrs = game.get_controllers();
 	let controller_1 = &ctrlrs[0];
 	let controller_2 = &ctrlrs[1];
-	let mut score = 0;
-	let con1_ap = getAP_field(controller_1, game) as f32;
-	let mut con2_ap = getAP_field(controller_2, game) as f32;
+	
+	let con1_ap = get_ap_field(controller_1, game) as f32;
+	let mut con2_ap = get_ap_field(controller_2, game) as f32;
 	let con1_hp = controller_1.get_life().clone() as f32;
-	let mut con2_hp = controller_2.get_life().clone() as f32;
+	let con2_hp = controller_2.get_life().clone() as f32;
 	//get the HP and AP for the AI minions that we will play and use those as scores
 	for i in &ops{
 		con2_ap = con2_ap + (game.get_minion(i.source_uid.clone()).unwrap().get_current_attack() as f32);
@@ -387,19 +384,19 @@ impl CardPlayMatrix {
 	fn run_matrix(&mut self){
 		//first step generate the row length of the matrix, this is done by adding copies of the GSD and their scores to a vec
 			//this is done for every mana given+1 for a 0 mana available
-		let mut initRow : Vec<PlayRuneSquare> =  Vec::new();
-		let emptOps : Vec<ClientOption>= Vec::new();
-		let initsqr = PlayRuneSquare::new(&self.start_gsd, emptOps);
+		let mut init_row : Vec<PlayRuneSquare> =  Vec::new();
+		let empt_ops : Vec<ClientOption>= Vec::new();
+		let initsqr = PlayRuneSquare::new(&self.start_gsd, empt_ops);
 		for i in 0..self.mana+1{
-			initRow.push(initsqr.clone());
+			init_row.push(initsqr.clone());
 		}
-		println!("mana to manaSpots {0} : {1}", self.mana ,initRow.len());
+		println!("mana to manaSpots {0} : {1}", self.mana ,init_row.len());
 		
-		self.matrix_tiles.push(initRow);
+		self.matrix_tiles.push(init_row);
 		//second step generate the column length of the matrix, this is done by adding a copy of 0,0 to 0,x where x<#of ops
 		for i in 1..self.ops.len()+1{
-			let mut colStart = self.matrix_tiles[0][0].clone();
-			self.matrix_tiles.push(vec![colStart]);
+			let col_start = self.matrix_tiles[0][0].clone();
+			self.matrix_tiles.push(vec![col_start]);
 		}
 		println!("ops to cols {0} : {1}", self.ops.len(), self.matrix_tiles.len());
 		//Third step is to initialize the optimization engine which is a hashmap between seen optionsets and gsd's 
@@ -419,16 +416,16 @@ impl CardPlayMatrix {
 				if min.unwrap().get_cost() <= (j as u32){
 					//get the mana lvl - cost as an index
 					println!();
-					let costSel = (j-(min.unwrap().get_cost() as u8)) as usize;
+					let cost_sel = (j-(min.unwrap().get_cost() as u8)) as usize;
 					//get the index for the row directly above the current row
 					let above = (i-1) as usize;
 					//get the square that is the (one row above, mana lvl - cost)
-					let i_j = self.matrix_tiles[above][costSel].clone();
+					let i_j = self.matrix_tiles[above][cost_sel].clone();
 					//get the options list for that square and append the current option to it
-					let mut getOps = i_j.ops_sel.clone();
-					getOps.push(self.ops[i-1]);
+					let mut get_ops = i_j.ops_sel.clone();
+					get_ops.push(self.ops[i-1]);
 					//create our new square & compare the scores
-					let square = PlayRuneSquare::new(&self.start_gsd, getOps);
+					let square = PlayRuneSquare::new(&self.start_gsd, get_ops);
 					//if the score is bigger then push the new square to i,j
 					//otherwise copy the square at i,j-1 and use that again
 					println!("Score analysis {0}:{1}", square.score, i_j_min1.score);

@@ -1,14 +1,11 @@
-use ai::ai_utils::{AI_Player, AI_Update_Request, OpsClassify};
+use ai::ai_utils::{AI_Player, AI_Update_Request};
 use client_option::{OptionsPackage, ClientOption, OptionType};
 use std::sync::mpsc::{Sender};
 use game_thread::ThreadMessage;
 use player_thread::PlayerThread;
-use rune_match::get_rune;
 use game_state::GameStateData;
-use rustc_serialize::json::Json;
 use rustc_serialize::json;
 use runes::new_controller::NewController;
-use minion_card::UID;
 
 pub fn message_to_action(message_type: String , mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
     match message_type.as_ref(){
@@ -22,7 +19,7 @@ pub fn message_to_action(message_type: String , mut ai_current_state: &mut AI_Pl
                 payload: mulligan_message,
             };
 
-            to_server.send(to_server_message);
+            println!("Sent the server {:?} bytes in Mulligan", to_server.send(to_server_message));
         }, 
         //if we have just recieved an options package
         "optionRune"=> {
@@ -127,7 +124,7 @@ fn queue_ai_update(player_thread : &PlayerThread, to_server: &Sender<ThreadMessa
         client_id: player_thread.client_id,
         payload: String::from(ai_request.toJson()),
     };
-    to_server.send(t_messsage);
+    println!("Queuing {:?} bytes", to_server.send(t_messsage));
 
 }
 
