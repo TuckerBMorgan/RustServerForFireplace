@@ -7,7 +7,7 @@ use runes::new_controller::NewController;
 use client_message::{MulliganMessage, OptionsMessage};
 use rune_vm::Rune;
 use rune_match::get_rune;
-use ai::ai_utils::{AI_Update_Request,AI_Option_Set_Request};
+use ai::ai_utils::{AiUpdateRequest};
 
 
 
@@ -53,25 +53,25 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
             game_state.mulligan(client_id, mull_message.index.clone());
         }
         "AIPlay"=>{
-            let mut ai_play : AI_Update_Request = json::decode(message.trim()).unwrap();
+            let ai_play : AiUpdateRequest = json::decode(message.trim()).unwrap();
             let mut ai_gsd : GameStateData = ai_play.game_state_data;
-            let mut rune_request : Box<Rune> = get_rune(ai_play.rune.as_ref());
+            let rune_request : Box<Rune> = get_rune(ai_play.rune.as_ref());
 
             game_state.swap_gsd(&mut ai_gsd);
             game_state.execute_rune(rune_request);
             game_state.swap_gsd(&mut ai_gsd);
 
-            let mut json_response = json::encode(&ai_gsd).unwrap();
-            let mut front= "{\"runeType\":\"AI_Update\",";
-		    let sendMsg = format!("{}{}", front, 
+            let json_response = json::encode(&ai_gsd).unwrap();
+            let front= "{\"runeType\":\"AI_Update\",";
+		    let send_message = format!("{}{}", front, 
                     &json_response.clone()[1..json_response.len()]);
             
-            game_state.send_msg(client_id, sendMsg); 
+            game_state.send_msg(client_id, send_message); 
 
         },
         "OptionsSimulation"=>{
-            let mut ai_play : AI_Option_Set_Request  = AI_Option_Set_Request::from_json(message.clone());
-            let mut ai_gsd : GameStateData = ai_play.game_state_data;
+            //let ai_play : AI_Option_Set_Request  = AI_Option_Set_Request::from_json(message.clone());
+            //let ai_gsd : GameStateData = ai_play.game_state_data;
             /*let mut options_request : Vec<ClientOption> = ai_play.theo_options;
 
             game_state.swap_gsd(&mut ai_gsd);

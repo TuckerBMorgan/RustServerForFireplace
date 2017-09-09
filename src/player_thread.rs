@@ -8,16 +8,8 @@ use rustc_serialize::json::Json;
 use std::sync::mpsc::{Sender, Receiver};
 use game_thread::ThreadMessage;
 
-
-use std::mem;
-use rune_match::get_rune;
-use game_state::GameStateData;
-use client_option::{OptionsPackage, ClientOption, OptionType};
-use rustc_serialize::json;
-
 use ai::ai_action::message_to_action;
-
-use ai::ai_utils::{AI_Player, AI_Update_Request, OpsClassify};
+use ai::ai_player::AiPlayer;
 
 
 pub struct PlayerThread {
@@ -153,7 +145,7 @@ fn player_thread_function(player_thread: PlayerThread,
         }
         // is AI
         None => {
-            let mut ai_current_state = AI_Player::new();
+            let mut ai_current_state = AiPlayer::new();
             loop {
                 let to_client_message = from_server.try_recv();
 
