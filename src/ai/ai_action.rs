@@ -1,4 +1,5 @@
-use ai::ai_utils::{AI_Player, AI_Update_Request};
+use ai::ai_utils::{AiUpdateRequest};
+use ai::ai_player::AiPlayer;
 use client_option::{OptionsPackage, ClientOption, OptionType};
 use std::sync::mpsc::{Sender};
 use game_thread::ThreadMessage;
@@ -7,7 +8,7 @@ use game_state::GameStateData;
 use rustc_serialize::json;
 use runes::new_controller::NewController;
 
-pub fn message_to_action(message_type: String , mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
+pub fn message_to_action(message_type: String , mut ai_current_state: &mut AiPlayer, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
     match message_type.as_ref(){
         "Mulligan"=> {
             let mulligan_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : [] }}",
@@ -19,7 +20,10 @@ pub fn message_to_action(message_type: String , mut ai_current_state: &mut AI_Pl
                 payload: mulligan_message,
             };
 
-            println!("Sent the server {:?} bytes in Mulligan", to_server.send(to_server_message));
+            match to_server.send(to_server_message){
+                Err(e)=>{println!("{}" , e)},
+                _=>{}
+            }
         }, 
         //if we have just recieved an options package
         "optionRune"=> {
@@ -46,7 +50,7 @@ pub fn message_to_action(message_type: String , mut ai_current_state: &mut AI_Pl
     }
 }
 
-fn option_setup(mut ai_current_state: &mut AI_Player, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
+fn option_setup(mut ai_current_state: &mut AiPlayer, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
     if ai_current_state.update_count == ai_current_state.public_runes.len() as u32 
         && ai_current_state.ops_recieved.options.len() > 0
     {
@@ -56,9 +60,9 @@ fn option_setup(mut ai_current_state: &mut AI_Player, to_server: &Sender<ThreadM
 }
 
 
-fn option_runner(mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
+fn option_runner(mut ai_current_state: &mut AiPlayer, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
 //dump the options
-    println!("AI {} OPTIONS : {}", ai_current_state.uid, message);
+    //println!("AI {} OPTIONS : {}", ai_current_state.uid, message);
     //decode into an options package
     let ops_msg = message.replace("{\"runeType\":\"optionRune\",", "{"); 
     let ops : OptionsPackage = json::decode(&ops_msg).unwrap();
@@ -69,11 +73,11 @@ fn option_runner(mut ai_current_state: &mut AI_Player, message: String, to_serve
 }
 
 
-fn run_ai_update(mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
+fn run_ai_update(mut ai_current_state: &mut AiPlayer, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
     //copy the response, get the GSD give that to the AI 
     ai_current_state.update(message.clone());
     //we just updated the AI, announce what number update this is
-    println!("AI {} UPDATED {}", ai_current_state.uid, ai_current_state.update_count);
+    //println!("AI {} UPDATED {}", ai_current_state.uid, ai_current_state.update_count);
     //if the update count is less than the number of rune updates, continue updating
     if ai_current_state.update_count < ai_current_state.public_runes.len() as u32 {
         let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
@@ -85,7 +89,7 @@ fn run_ai_update(mut ai_current_state: &mut AI_Player, message: String, to_serve
     
 }
 
-fn new_controller(mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
+fn new_controller(mut ai_current_state: &mut AiPlayer, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
     //get a new controller object so we can have the boolean
     //theres a better way to do this
     //probably
@@ -103,8 +107,8 @@ fn new_controller(mut ai_current_state: &mut AI_Player, message: String, to_serv
     }
 }
 
-fn recieve_non_special(mut ai_current_state: &mut AI_Player, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
-    println!("ai uid:{} msg: {}", ai_current_state.uid, message.clone());
+fn recieve_non_special(mut ai_current_state: &mut AiPlayer, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
+    //println!("ai uid:{} msg: {}", ai_current_state.uid, message.clone());
     ai_current_state.queue_update(message.clone());
     if ai_current_state.public_runes.len() as u32 -  ai_current_state.update_count  == 1{
         let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
@@ -115,22 +119,25 @@ fn recieve_non_special(mut ai_current_state: &mut AI_Player, message: String, to
 
 
 fn queue_ai_update(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, message : String, gsd : GameStateData){
-    let ai_request = AI_Update_Request::new(
+    let ai_request = AiUpdateRequest::new(
         gsd, 
         message.clone()
     );
-    println!("AI ATTEMPTING TO SEND {}", message.clone());
+    //println!("AI ATTEMPTING TO SEND {}", message.clone());
     let t_messsage = ThreadMessage {
         client_id: player_thread.client_id,
-        payload: String::from(ai_request.toJson()),
+        payload: String::from(ai_request.to_json()),
     };
-    println!("Queuing {:?} bytes", to_server.send(t_messsage));
+    match to_server.send(t_messsage){
+        Err(e)=>{println!("{}",e)},
+                _=>{}
+    }
 
 }
 
-fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, ai_current_state : &mut AI_Player){
+fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, ai_current_state : &mut AiPlayer){
     let iter = ai_current_state.iterative.clone();
-    println!("AI {} opsPack {}", ai_current_state.uid, ai_current_state.ops_recieved.to_json());
+    //println!("AI {} opsPack {}", ai_current_state.uid, ai_current_state.ops_recieved.to_json());
     let current_op : ClientOption  = ai_current_state.options_order[iter].clone();
     let ind =  ai_current_state.ops_recieved.options.iter().position(|&r| r==current_op).unwrap();
     let option_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : {i}, \"{l}\" : 0,  \"{j}\" : 0}}",
@@ -140,15 +147,18 @@ fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, 
         i=ind,
         l = "board_index",
         j = "timeStamp");
-    println!("SENDING OPTION {0}", option_message.clone());
+    //println!("SENDING OPTION {0}", option_message.clone());
     let to_server_message = ThreadMessage {
         client_id: player_thread.client_id.clone(),
         payload: option_message
     };
-    let _ = &to_server.send(to_server_message);
+    match to_server.send(to_server_message){
+        Err(e)=>{println!("{}",e)},
+                _=>{}
+    }
 
     ai_current_state.iter_up();
-    println!("AI {} iter {} : option lens{}", ai_current_state.uid, ai_current_state.iterative, ai_current_state.options_order.len());
+    //println!("AI {} iter {} : option lens{}", ai_current_state.uid, ai_current_state.iterative, ai_current_state.options_order.len());
 
 
     match current_op.option_type {
@@ -160,6 +170,6 @@ fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, 
         OptionType::EAttack=>{},
         OptionType::EPlayCard=>{},
     }
-    println!("AI ITER : {} ", ai_current_state.iterative);
+    //println!("AI ITER : {} ", ai_current_state.iterative);
 }
 
