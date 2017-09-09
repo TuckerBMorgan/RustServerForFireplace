@@ -7,13 +7,13 @@ use game_state::GameState;
 use client_option::{ClientOption, OptionGenerator, OptionType};
 use hlua;
 
-#[derive(RustcDecodable, RustcEncodable, Copy, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Copy, Clone, Debug)]
 pub enum EControllerType {
     Player,
     AI,
 }
 
-#[derive(RustcDecodable, RustcEncodable, Copy, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Copy, Clone, Debug)]
 pub enum EControllerState {
     Mulligan,
     WaitingForStart,
@@ -21,7 +21,7 @@ pub enum EControllerState {
     InTurn,
 }
 
-#[derive(Clone, RustcDecodable, RustcEncodable)]
+#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
 pub struct Controller {
     pub name: String,
     pub hero: String,
@@ -61,6 +61,10 @@ impl Controller {
 
     pub fn get_life(&self) -> u8 {
         self.life
+    }
+
+    pub fn set_current_life(&mut self, amount: u8){
+        self.life=amount;
     }
 
     pub fn move_minion_from_unplayed_into_play(&mut self, minion_uid: UID) {

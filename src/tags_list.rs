@@ -22,3 +22,4 @@ pub static AURA: &'static str = "Aura";
 pub static TARGET: &'static str = "Target";
 pub static TOTEM: &'static str = "Totem";
 pub static FROZEN: &'static str = "Frozen";
+pub static HERO: &'static str = "Hero";

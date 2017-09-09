@@ -24,3 +24,4 @@ pub mod set_attack;
 pub mod modify_attack;
 pub mod create_card;
 pub mod report_minion_to_client;
+pub mod modify_hero_health;
