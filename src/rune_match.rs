@@ -138,13 +138,13 @@ pub fn get_rune(json_obj : &str)->Box<Rune>{
             return dc.into_box();
         },
         "\"DamageRune\""=>{
-            println!("ModifyHeroHealth found");
+            println!("DamageRune found");
             let ns = json_obj.replace("{\"runeType\":\"DamageRune\",","{");
             let dc : DamageRune = json::decode(ns.trim()).unwrap();
             return dc.into_box();
         },
         "\"KillMinion\""=>{
-            println!("DamageRune found");
+            println!("KillMinion found");
             let ns = json_obj.replace("{\"runeType\":\"KillMinion\",","{");
             let dc : KillMinion = json::decode(ns.trim()).unwrap();
             return dc.into_box();

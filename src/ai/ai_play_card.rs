@@ -2,7 +2,7 @@ use ai::ai_utils::{perspective_score,  attack_score};
 use game_state::GameStateData;
 use client_option::{ClientOption};
 use std::collections::{BinaryHeap};
-
+use minion_card::UID;
 use std::cmp::Ordering;
 
 
@@ -18,16 +18,16 @@ pub struct PlayRuneSquare{
 	pub score : f32,
 }
 impl PlayRuneSquare{
-	fn new(gsd : &GameStateData,ops : Vec<ClientOption>)->PlayRuneSquare{
+	fn new(gsd : &GameStateData,ops : Vec<ClientOption>, my_uid: UID)->PlayRuneSquare{
 		PlayRuneSquare{
 			ops_sel: ops.clone(),
-			score: perspective_score(ops.clone(), gsd),
+			score: perspective_score(ops.clone(), gsd, my_uid),
 		}
 	}
-	fn new_attack_sq(gsd : &GameStateData,ops : Vec<ClientOption>)->PlayRuneSquare{
+	fn new_attack_sq(gsd : &GameStateData,ops : Vec<ClientOption>, my_uid: UID)->PlayRuneSquare{
 		PlayRuneSquare{
 			ops_sel: ops.clone(),
-			score: attack_score(&gsd, ops[0].source_uid, ops[0].target_uid),
+			score: attack_score(&gsd, ops[0].source_uid, ops[0].target_uid, my_uid),
 		}
 	}
 }
@@ -57,9 +57,10 @@ pub struct CardPlayMatrix {
 	pub matrix_tiles : Vec<Vec<PlayRuneSquare>>,
 	pub ops : Vec<ClientOption>,
 	pub selected_ops: Vec<ClientOption>,
+	pub uid: UID,
 }
 impl CardPlayMatrix {
-	pub fn new(ops_sel: Vec<ClientOption>, gsd : GameStateData)->CardPlayMatrix { 
+	pub fn new(ops_sel: Vec<ClientOption>, gsd : GameStateData, my_uid: UID)->CardPlayMatrix { 
 
 		if gsd.get_controllers().len() > 0{
 			let mut cpm = CardPlayMatrix{
@@ -69,6 +70,7 @@ impl CardPlayMatrix {
 				matrix_tiles: Vec::new(),
 				ops: ops_sel,
 				selected_ops: Vec::new(),
+				uid: my_uid,
 			};
 			cpm.run_matrix();
 			return cpm;
@@ -81,6 +83,7 @@ impl CardPlayMatrix {
 				matrix_tiles: Vec::new(),
 				ops: ops_sel,
 				selected_ops: Vec::new(),
+				uid: my_uid,
 			};
 			cpm.run_matrix();
 			return cpm;
@@ -93,7 +96,7 @@ impl CardPlayMatrix {
 			//this is done for every mana given+1 for a 0 mana available
 		let mut init_row : Vec<PlayRuneSquare> =  Vec::new();
 		let empt_ops : Vec<ClientOption>= Vec::new();
-		let initsqr = PlayRuneSquare::new(&self.start_gsd, empt_ops);
+		let initsqr = PlayRuneSquare::new(&self.start_gsd, empt_ops, self.uid);
 		for _ in 0..self.mana+1{
 			init_row.push(initsqr.clone());
 		}
@@ -122,7 +125,6 @@ impl CardPlayMatrix {
 
 				if min.unwrap().get_cost() <= (j as u32){
 					//get the mana lvl - cost as an index
-					println!();
 					let cost_select = (j-(min.unwrap().get_cost() as u8)) as usize;
 					//get the index for the row directly above the current row
 					let above = (i-1) as usize;
@@ -132,7 +134,7 @@ impl CardPlayMatrix {
 					let mut get_ops = i_j.ops_sel.clone();
 					get_ops.push(self.ops[i-1]);
 					//create our new square & compare the scores
-					let square = PlayRuneSquare::new(&self.start_gsd, get_ops);
+					let square = PlayRuneSquare::new(&self.start_gsd, get_ops, self.uid);
 					//if the score is bigger then push the new square to i,j
 					//otherwise copy the square at i,j-1 and use that again
 					//println!("Score analysis {0}:{1}", square.score, i_j_min1.score);
@@ -166,10 +168,10 @@ pub struct AttackHeap{
 }
 
 impl AttackHeap{
-	pub fn new(current_gsd: GameStateData, ops: Vec<ClientOption>)->AttackHeap{
+	pub fn new(current_gsd: GameStateData, ops: Vec<ClientOption>, my_uid: UID)->AttackHeap{
 		let mut a_heap = BinaryHeap::new();
 		for i in ops{
-			a_heap.push(PlayRuneSquare::new_attack_sq(&current_gsd, vec![i]));
+			a_heap.push(PlayRuneSquare::new_attack_sq(&current_gsd, vec![i], my_uid));
 		}
 
 		AttackHeap{

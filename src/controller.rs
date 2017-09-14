@@ -63,8 +63,8 @@ impl Controller {
         self.life
     }
 
-    pub fn set_current_life(&mut self, amount: u8){
-        self.life=amount;
+    pub fn set_current_life(&mut self, amount: i32){
+        self.life = ((self.life as i32) + amount) as u8;
     }
 
     pub fn move_minion_from_unplayed_into_play(&mut self, minion_uid: UID) {

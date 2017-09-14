@@ -362,6 +362,9 @@ impl<'a> GameState<'a> {
     pub fn add_number_to_lua(&mut self, key: String, val: u32) {
         self.lua.set(key, val);
     }
+    pub fn add_integer_to_lua(&mut self, key: String, val: i32) {
+        self.lua.set(key, val);
+    }
 
     //the only function to use when you want to execute a lua function
     //you may or may not want a result from this function, if you do, you have to type it, and then also insure that the lua statment you are executing
