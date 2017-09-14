@@ -142,35 +142,53 @@ fn get_hp_field(ref controller: &Controller, game: &GameStateData) -> u32{
 */
 
 //basic for now add taunts later
-pub fn score_controllers(game: &GameStateData)->f32{
+pub fn score_controllers(game: &GameStateData, my_uid: UID)->f32{
 	let ctrlrs = game.get_controllers();
 	let controller_1 = &ctrlrs[0];
 	let controller_2 = &ctrlrs[1];
-	
+
 	let con1_ap = get_ap_field(controller_1, game) as f32;
 	let con2_ap = get_ap_field(controller_2, game) as f32;
 	let con1_hp = controller_1.get_life().clone() as f32;
 	let con2_hp = controller_2.get_life().clone() as f32;
-	return ((con2_hp)/(con1_ap+1.0))-((con1_hp)/(con2_ap+1.0));
+	
+	if controller_1.uid == my_uid{
+		return ((con2_hp)/(con1_ap+1.0))-((con1_hp)/(con2_ap+1.0));	
+	}
+	else{
+		return ((con1_hp)/(con2_ap+1.0))-((con2_hp)/(con1_ap+1.0));
+	}
+	
 }
 
-pub fn perspective_score(ops : Vec<ClientOption>, game : &GameStateData)->f32{
+pub fn perspective_score(ops : Vec<ClientOption>, game : &GameStateData, my_uid: UID)->f32{
 	let ctrlrs = game.get_controllers();
 	let controller_1 = &ctrlrs[0];
 	let controller_2 = &ctrlrs[1];
 	
-	let con1_ap = get_ap_field(controller_1, game) as f32;
+	let mut con1_ap = get_ap_field(controller_1, game) as f32;
 	let mut con2_ap = get_ap_field(controller_2, game) as f32;
 	let con1_hp = controller_1.get_life().clone() as f32;
 	let con2_hp = controller_2.get_life().clone() as f32;
-	//get the HP and AP for the AI minions that we will play and use those as scores
-	for i in &ops{
-		con2_ap = con2_ap + (game.get_minion(i.source_uid.clone()).unwrap().get_current_attack() as f32);
+	
+
+	if controller_1.uid == my_uid{
+		//get the HP and AP for the AI minions that we will play and use those as scores
+		for i in &ops{
+			con2_ap = con2_ap + (game.get_minion(i.source_uid.clone()).unwrap().get_current_attack() as f32);
+		}
+		return ((con2_hp)/(con1_ap+1.0))-((con1_hp)/(con2_ap+1.0));	
 	}
-	return ((con2_hp)/(con1_ap+1.0))-((con1_hp)/(con2_ap+1.0));
+	else{
+		//get the HP and AP for the AI minions that we will play and use those as scores
+		for i in &ops{
+			con1_ap = con1_ap + (game.get_minion(i.source_uid.clone()).unwrap().get_current_attack() as f32);
+		}
+		return ((con2_hp)/(con1_ap+1.0))-((con1_hp)/(con2_ap+1.0));
+	}
 }
 
-pub fn attack_score(game : &GameStateData, attacker: UID, defender: UID)->f32{
+pub fn attack_score(game : &GameStateData, attacker: UID, defender: UID, my_uid: UID)->f32{
 	let mut copy_game = game.clone();
 
 	let mut attacker_min :Minion = copy_game.get_mut_minion(attacker).unwrap().clone();
@@ -202,5 +220,5 @@ pub fn attack_score(game : &GameStateData, attacker: UID, defender: UID)->f32{
 			ctrls[defender_ctrl].move_minion_from_play_to_graveyard(defender);
 		}
 	}
-	return score_controllers(&copy_game);
+	return score_controllers(&copy_game, my_uid);
 }

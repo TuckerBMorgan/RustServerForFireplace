@@ -8,13 +8,13 @@ use hlua;
 #[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
 pub struct ModifyHeroHealth {
     target_uid: UID,
-    amount: u8,
+    amount: i32,
 }
 
 implement_for_lua!(ModifyHeroHealth, |mut _metatable| {});
 
 impl ModifyHeroHealth {
-    pub fn new(target_uid: UID, amount: u8) -> ModifyHeroHealth {
+    pub fn new(target_uid: UID, amount: i32) -> ModifyHeroHealth {
         ModifyHeroHealth {
             target_uid: target_uid,
             amount: amount,
