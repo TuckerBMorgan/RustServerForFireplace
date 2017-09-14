@@ -33,7 +33,7 @@ impl Rune for ModifyHealth {
                 let rune_vec = {
                     game_state.add_number_to_lua("target_uid".to_string(),
                                                         self.target_uid as u32);
-                    game_state.add_number_to_lua("amount".to_string(), self.amount as u32);
+                    game_state.add_integer_to_lua("amount".to_string(), self.amount as i32);
                     let mut resutlt =
                         game_state.run_lua_statement::<hlua::LuaTable<_>>(&function, true)
                         .unwrap();
