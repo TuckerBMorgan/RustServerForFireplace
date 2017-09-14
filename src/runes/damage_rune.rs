@@ -27,6 +27,7 @@ impl DamageRune {
 impl Rune for DamageRune {
     fn execute_rune(&self, game_state: &mut GameState) {
         let m_h = ModifyHealth::new(self.target_uid, (self.amount as i32) * -1);
+        println!("Damage Rune Does {} TO {}", self.target_uid, (self.amount as i32) *-1);
         game_state.execute_rune(Box::new(m_h));
     }
 

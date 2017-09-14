@@ -24,6 +24,7 @@ impl ModifyHeroHealth {
 
 impl Rune for ModifyHeroHealth {
     fn execute_rune(&self, game_state: &mut GameState) {
+        println!("MOD HERO {} : {}", self.target_uid, self.amount);
         game_state.get_mut_controller_by_uid(self.target_uid).unwrap().set_current_life(self.amount);
     }
 

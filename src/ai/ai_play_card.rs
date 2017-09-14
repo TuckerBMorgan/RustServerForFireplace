@@ -109,8 +109,7 @@ impl CardPlayMatrix {
 			self.matrix_tiles.push(vec![col_start]);
 		}
 		//println!("ops to cols {0} : {1}", self.ops.len(), self.matrix_tiles.len());
-		//Third step is to initialize the optimization engine which is a hashmap between seen optionsets and gsd's 
-		//fourth is to run the matrix using the knapsack solution
+		//Third step is to run the matrix using the knapsack solution
 		for i in 1..self.ops.len()+1{
 			//loop through mana level
 			for j in 1..self.mana+1{
