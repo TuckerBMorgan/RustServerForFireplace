@@ -43,10 +43,14 @@ impl Rune for RotateTurn {
         game_state.get_mut_controller_by_index(turn_index as usize)
             .set_controller_state(EControllerState::WaitingForTurn);
 
+        println!("Controller {} Score {}", game_state.get_mut_controller_by_index(turn_index as usize).get_uid(), game_state.get_mut_controller_by_index(turn_index as usize).get_life());
+
         turn_index += 1;
         if turn_index == 2 {
             turn_index = 0;
         }
+        
+        println!("Controller {} Score {}", game_state.get_mut_controller_by_index(turn_index as usize).get_uid(), game_state.get_mut_controller_by_index(turn_index as usize).get_life());
 
         game_state.set_on_turn_player(turn_index);
 

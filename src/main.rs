@@ -81,9 +81,7 @@ fn ai_only_play()->std::thread::JoinHandle<()>{
 }
 
 fn check_if_aio()->bool{
-    let mut args = env::args();
-    let arg_len = args.count();
-    args = env::args();
+    let args = env::args();
 
     for i in args{
         match i.as_ref(){
