@@ -72,8 +72,8 @@ impl AiPlayer{
 			&& (self.iterative!=0 && self.options_order.len()!=0) 
 		{
 			
-			println!("quitting on condition :: AI {} opsOrder {} iter {}", self.uid, self.options_order.len(), self.iterative);
-			println!("{:?}", self.options_order);
+			//println!("quitting on condition :: AI {} opsOrder {} iter {}", self.uid, self.options_order.len(), self.iterative);
+			//println!("{:?}", self.options_order);
 			return;
 		}
 		self.options_order = vec![];
@@ -82,11 +82,11 @@ impl AiPlayer{
 		//println!("Options classified");
 		self.options_test_recieved = true;
 		if ops_classi.plays.len() > 0{
-			println!("Running matrix");
+			//println!(!("Running matrix");
 			self.options_order = CardPlayMatrix::new(ops_classi.plays.clone(), self.game_state_data.clone(), self.uid).selected_ops;
 		}
 		else{
-			println!("Running attack Heap");
+			//println!(!("Running attack Heap");
 			if ops_classi.attacks.len() > 0{
 				self.options_order.push(AttackHeap::new(self.game_state_data.clone(), ops_classi.attacks, self.uid).pop_attack());
 			}
@@ -95,7 +95,7 @@ impl AiPlayer{
 			self.options_order.push(ops_classi.end);
 		}
 		//let n_pack = OptionsPackage{options: self.options_order.clone()};
-		//println!("OPS SELECTED {}", n_pack.to_json());
+		////println!(!("OPS SELECTED {}", n_pack.to_json());
 		self.iterative = 0;
 	}
 

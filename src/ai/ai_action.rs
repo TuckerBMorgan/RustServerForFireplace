@@ -54,7 +54,7 @@ fn option_setup(mut ai_current_state: &mut AiPlayer, to_server: &Sender<ThreadMe
     if (ai_current_state.update_count == ai_current_state.public_runes.len() as u32 )
         && (ai_current_state.ops_recieved.options.len() > 0)
     {
-        println!("running op engine");
+        //println!("running op engine");
         ai_current_state.option_engine();
         run_option(&player_thread, &to_server, &mut ai_current_state);
     }
@@ -63,7 +63,7 @@ fn option_setup(mut ai_current_state: &mut AiPlayer, to_server: &Sender<ThreadMe
 
 fn option_runner(mut ai_current_state: &mut AiPlayer, message: String, to_server: &Sender<ThreadMessage>, player_thread: &PlayerThread){
 //dump the options
-    println!("AI {} OPTIONS : {}", ai_current_state.uid, message);
+    //println!("AI {} OPTIONS : {}", ai_current_state.uid, message);
     //decode into an options package
     let ops_msg = message.replace("{\"runeType\":\"optionRune\",", "{"); 
     let ops : OptionsPackage = json::decode(&ops_msg).unwrap();
@@ -78,7 +78,7 @@ fn run_ai_update(mut ai_current_state: &mut AiPlayer, message: String, to_server
     //copy the response, get the GSD give that to the AI 
     ai_current_state.update(message.clone());
     //we just updated the AI, announce what number update this is
-    println!("AI {} UPDATED {}", ai_current_state.uid, ai_current_state.update_count);
+    //println!("AI {} UPDATED {}", ai_current_state.uid, ai_current_state.update_count);
     //if the update count is less than the number of rune updates, continue updating
     if ai_current_state.update_count < ai_current_state.public_runes.len() as u32 {
         let rne = ai_current_state.public_runes[ai_current_state.update_count as usize].clone();
@@ -138,8 +138,8 @@ fn queue_ai_update(player_thread : &PlayerThread, to_server: &Sender<ThreadMessa
 
 fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, ai_current_state : &mut AiPlayer){
     let iter = ai_current_state.iterative.clone();
-    println!("AI {} opsPack {}", ai_current_state.uid, ai_current_state.ops_recieved.to_json());
-    println!("SelectedOps {:?} ITER {}", ai_current_state.options_order, iter);
+    //println!("AI {} opsPack {}", ai_current_state.uid, ai_current_state.ops_recieved.to_json());
+    //println!("SelectedOps {:?} ITER {}", ai_current_state.options_order, iter);
     let current_op : ClientOption  = ai_current_state.options_order[iter].clone();
     let ind =  ai_current_state.ops_recieved.options.iter().position(|&r| r==current_op).unwrap();
     let option_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : {i}, \"{l}\" : 0,  \"{j}\" : 0}}",
@@ -160,7 +160,7 @@ fn run_option(player_thread : &PlayerThread, to_server: &Sender<ThreadMessage>, 
     }
 
     ai_current_state.iter_up();
-    println!("ITERUP AI {} iter {} : option lens{}", ai_current_state.uid, ai_current_state.iterative, ai_current_state.options_order.len());
+    //println!("ITERUP AI {} iter {} : option lens{}", ai_current_state.uid, ai_current_state.iterative, ai_current_state.options_order.len());
 
 
     match current_op.option_type {
