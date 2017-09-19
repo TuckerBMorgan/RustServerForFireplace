@@ -11,6 +11,7 @@ use client_option::{OptionType, OptionsPackage, ClientOption};
 use client_message::OptionsMessage;
 use tags_list::AURA;
 use hlua::{self, Lua};
+use std::fs::OpenOptions;
 
 use rand::thread_rng;
 use entity::Entity;
@@ -407,9 +408,14 @@ impl<'a> GameState<'a> {
         self.add_rune_to_queue(rune);
     }
 
+    
+
     pub fn process_rune(&mut self, rune: Box<Rune>) {
 
-        println!("executing rune {}", rune.to_json());
+        if !self.game_state_data.ai_player_copy{
+            println!("executing rune {}", rune.to_json());
+            //append_rune_to_file(rune.to_json())
+        }
         rune.execute_rune(self);
 
         let controllers = self.game_state_data.get_controller_uids();
@@ -1117,4 +1123,19 @@ impl<'a> GameState<'a> {
     pub fn send_msg(&self, client_id: u32, message: String){
         self.game_thread.unwrap().report_message(client_id, message.clone()); 
     }
+}
+
+
+pub fn append_rune_to_file(rune:String){
+    let file = OpenOptions::new().create(true).write(true).append(true).open("rune_history.txt");
+    match file{
+        Ok(mut fil)=>{
+            fil.write_all((rune+"\n").as_bytes());
+            fil.sync_data();
+        },
+        Err(e)=>{
+            println!("{}",e)
+        }
+    }
+        
 }
