@@ -8,6 +8,7 @@ use runes::set_mana::SetMana;
 use runes::deal_card::DealCard;
 use controller::EControllerState;
 use hlua;
+use std::process;
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct RotateTurn {}
@@ -65,16 +66,21 @@ impl Rune for RotateTurn {
 
         game_state.execute_rune(Box::new(sbm));
         game_state.execute_rune(Box::new(sm));
+        if game_state.get_controller_by_index(turn_index as usize).deck.len() > 0{
+            let uids = game_state.get_controller_by_index(turn_index as usize)
+                .get_n_card_uids_from_deck(1)
+                .clone();
 
-        let uids = game_state.get_controller_by_index(turn_index as usize)
-            .get_n_card_uids_from_deck(1)
-            .clone();
-
-        let dc = DealCard::new(uids[0].clone(),
-                               game_state.get_controller_by_index(turn_index as usize)
-                                   .get_uid()
-                                   .clone());
-        game_state.execute_rune(Box::new(dc));
+            let dc = DealCard::new(uids[0].clone(),
+                                game_state.get_controller_by_index(turn_index as usize)
+                                    .get_uid()
+                                    .clone());
+            game_state.execute_rune(Box::new(dc));
+        }
+        else{
+            game_state.write_history();
+            process::exit(0);
+        }
     }
 
     fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {

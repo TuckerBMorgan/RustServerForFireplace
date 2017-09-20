@@ -12,6 +12,7 @@ use client_message::OptionsMessage;
 use tags_list::AURA;
 use hlua::{self, Lua};
 use std::fs::OpenOptions;
+use time::{now, Tm, Timespec};
 
 use rand::thread_rng;
 use entity::Entity;
@@ -201,10 +202,11 @@ pub struct GameState<'a> {
     entities: HashMap<String, Box<Entity>>,
     // all the streams of the current people connected so we can talk to them again
     connections: Vec<Box<TcpStream>>,
-
     first_to_connect: Option<NewController>,
-
     mulligan_played_out: u8,
+    name: String,
+    history: Vec<String>,
+
 }
 
 impl<'a> GameState<'a> {
@@ -223,6 +225,8 @@ impl<'a> GameState<'a> {
             game_scope: vec![],
             first_to_connect: None,
             mulligan_played_out: 0,
+            name: now().to_timespec().sec.to_string(),
+            history: vec![],
         };
 
         //this is required because we have to have to tell lua about all the special types from our game
@@ -416,6 +420,7 @@ impl<'a> GameState<'a> {
         if !self.game_state_data.ai_player_copy{
             println!("executing rune {}", rune.to_json());
             //append_rune_to_file(rune.to_json())
+            self.history.push(rune.to_json());
         }
         rune.execute_rune(self);
 
@@ -1123,6 +1128,14 @@ impl<'a> GameState<'a> {
     }
     pub fn send_msg(&self, client_id: u32, message: String){
         self.game_thread.unwrap().report_message(client_id, message.clone()); 
+    }
+    pub fn write_history(&self){
+        println!("WRITING GAME {}", self.name);
+        for i in 0..self.history.len(){
+            let t = self.history[i].replace("}", &(",rune_number:".to_owned()+&(i.to_string())+"}"));
+            println!("RUNE {} ", t);
+        }
+
     }
 }
 
