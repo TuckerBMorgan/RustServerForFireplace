@@ -4,6 +4,7 @@ extern crate regex;
 #[macro_use]
 extern crate hlua;
 extern crate rustc_serialize;
+extern crate time;
 
 
 #[macro_use]
