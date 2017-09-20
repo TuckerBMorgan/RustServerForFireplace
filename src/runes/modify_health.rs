@@ -26,7 +26,7 @@ impl Rune for ModifyHealth {
     fn execute_rune(&self, game_state: &mut GameState) {
         {
             game_state.get_mut_minion(self.target_uid).unwrap().shift_current_health(self.amount);
-            println!("SHIFTING HEALTH {} BY {}", self.target_uid, self.amount);
+            
         }
         let min = game_state.get_minion(self.target_uid).unwrap().clone();
         match min.get_function("on_hp_change_function".to_owned()){
