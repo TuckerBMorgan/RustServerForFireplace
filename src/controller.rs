@@ -202,7 +202,6 @@ impl Controller {
     }
 
     pub fn add_card_to_seen(&mut self, uid: UID) {
-        println!("I have seen {}", uid);
         self.seen_cards.insert(uid);
     }
 

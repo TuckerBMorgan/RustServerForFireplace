@@ -20,14 +20,14 @@ impl SetMana {
             mana: mana,
         }
     }
-
+ 
     pub fn to_rune(&self) -> Box<Rune> {
         Box::new(self.clone())
     }
 }
 
 impl Rune for SetMana {
-    fn execute_rune(&self, mut game_state: &mut GameState) {
+    fn execute_rune(&self, game_state: &mut GameState) {
         game_state.get_mut_controller_by_uid(self.controller_uid).unwrap().set_mana(self.mana);
     }
 

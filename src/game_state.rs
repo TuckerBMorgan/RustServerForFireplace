@@ -381,7 +381,7 @@ impl<'a> GameState<'a> {
             self.process_rune(rune);
         }
     }
-
+    
     pub fn stage_rune(&mut self, rune: Box<Rune>) {
         self.add_rune_to_queue(rune);
     }
