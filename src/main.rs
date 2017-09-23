@@ -22,6 +22,8 @@ mod player_thread;
 mod client_message;
 mod process_message;
 mod tags_list;
+mod ai;
+mod rune_match;
 
 
 use std::process;
@@ -32,17 +34,69 @@ use std::sync::mpsc::channel;
 use player_thread::PlayerThread;
 use std::net::TcpStream;
 use std::net::TcpListener;
+use std::env;
 
 
+fn ai_only_play()->std::thread::JoinHandle<()>{
 
+    let mut connected_clients: u32 = 0;
 
+    let (tx_client, rx_server) = channel();
+    let (tx_server_to_client_1, rx_client_1) = channel();
+    let (tx_server_to_client_2, rx_client_2) = channel();
 
+    let new_client_thread_1 =spawn_new_ai(connected_clients); 
+    connected_clients+=1;
+    let new_client_thread_2 = spawn_new_ai(connected_clients);
+
+    let client_id_1 = new_client_thread_1.client_id.clone();
+    let client_id_2 = new_client_thread_2.client_id.clone();
+
+    let new_game_thread = GameThread::new(tx_server_to_client_1,
+        tx_server_to_client_2,
+        rx_server,
+        client_id_1,
+        client_id_2);
+
+    let payload_message =
+        format!("{{ \"{k}\":\"{v}\"}}", k = "message_type", v = "connection");
+
+    let ready_1 = ThreadMessage {
+        client_id: new_client_thread_1.client_id.clone(),
+        payload: payload_message.clone(),
+    };
+
+    let ready_2 = ThreadMessage {
+        client_id: new_client_thread_2.client_id.clone(),
+        payload: payload_message.clone(),
+    };
+
+    let _ = tx_client.send(ready_1);
+    let _ = tx_client.send(ready_2);
+
+    new_client_thread_1.start_thread(tx_client.clone(), rx_client_1);
+    new_client_thread_2.start_thread(tx_client.clone(), rx_client_2);
+    let jh = new_game_thread.start_thread();
+    return jh;
+}
+
+fn check_if_aio()->bool{
+    let args = env::args();
+
+    for i in args{
+        match i.as_ref(){
+            "ai"=> return true,
+            _=>{}
+        }
+    }
+    return false
+}
 
 fn spawn_new_player(client_id: u32, stream: TcpStream) -> PlayerThread {
     PlayerThread::new(client_id, Some(stream))
 }
 fn spawn_new_ai(client_id: u32) -> PlayerThread {
-    PlayerThread::new(client_id, None)
+    return PlayerThread::new(client_id, None);
 }
 
 fn terminal_commands() {
@@ -76,10 +130,16 @@ fn terminal_help() {
 fn main() {
     thread::spawn(move || (terminal_commands()));
 
+    
+
     let mut connected_clients: u32 = 0;
     let mut players: Vec<PlayerThread> = vec![];
     let listener = TcpListener::bind("127.0.0.1:1337").unwrap();
     let mut games = vec![];
+
+    if check_if_aio(){
+        games.push(ai_only_play());
+    }
 
     for stream in listener.incoming() {
         match stream {

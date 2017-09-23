@@ -3,6 +3,7 @@ use rustc_serialize::json;
 use game_state::GameState;
 use minion_card::UID;
 use runes::damage_rune::DamageRune;
+use tags_list::{HERO};
 use hlua;
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
@@ -28,14 +29,22 @@ impl Rune for Attack {
 
         let attacker = game_state.get_mut_minion(self.source_uid).unwrap().clone();
         let defender = game_state.get_mut_minion(self.target_uid).unwrap().clone();
+        if !defender.has_tag(HERO.to_string()){
+            let dr_1 = DamageRune::new(self.source_uid, self.target_uid, defender.get_base_attack());
+            game_state.execute_rune(Box::new(dr_1));
+        }
+        
 
-        let dr_1 = DamageRune::new(self.source_uid, self.target_uid, attacker.get_base_attack());
-        let dr_2 = DamageRune::new(self.source_uid, self.source_uid, defender.get_base_attack());
+        let dr_2 = DamageRune::new(self.target_uid, self.source_uid, attacker.get_base_attack());
+            
+        
 
         game_state.add_to_attacked_this_turn(self.source_uid);
+        
+        
 
-        game_state.execute_rune(Box::new(dr_1));
         game_state.execute_rune(Box::new(dr_2));
+        
     }
 
     fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {

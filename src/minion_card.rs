@@ -15,7 +15,7 @@ pub enum EFileReadResult {
     BadFileRead,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, RustcDecodable, RustcEncodable,Debug)]
 pub enum EMinionState {
     NotInPlay,
     InPlay,
@@ -23,7 +23,7 @@ pub enum EMinionState {
     MarkForDestroy,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, RustcDecodable, RustcEncodable,Debug)]
 pub struct Minion {
     cost: u32,
     id: String,
@@ -265,7 +265,13 @@ impl Minion {
     pub fn shift_current_health(&mut self, amount: i32) {
 
         if self.current_health as i32 + amount <= self.total_health as i32 {
-            self.current_health += amount as u32;
+            if self.current_health as i32 + amount <= 0{
+                self.current_health = 0;    
+            }
+            else{
+                //cast city
+                self.current_health = ((self.current_health as i32) + amount) as u32;
+            }
         } else if self.current_health as i32 + amount > self.total_health as i32 {
             self.current_health = self.total_health;
         }

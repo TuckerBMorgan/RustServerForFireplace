@@ -1,17 +1,23 @@
 extern crate rustc_serialize;
 
-use game_state::GameState;
+use game_state::{GameState, GameStateData};
 use rustc_serialize::json;
 use rustc_serialize::json::Json;
 use runes::new_controller::NewController;
 use client_message::{MulliganMessage, OptionsMessage};
+use rune_vm::Rune;
+use rune_match::get_rune;
+use ai::ai_utils::{AiUpdateRequest};
+
 
 
 
 #[allow(dead_code)]
 pub fn process_client_message(message: String, client_id: u32, game_state: &mut GameState) {
 
-    println!("processing message {}", message);
+    if !message.contains("AIPlay"){
+        println!("processing message {}", message);
+    }
     let j_message: Json = Json::from_str(message.trim()).unwrap();
     let obj = j_message.as_object().unwrap();
 
@@ -45,6 +51,37 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
         "mulligan" => {
             let mull_message: MulliganMessage = json::decode(message.trim()).unwrap();
             game_state.mulligan(client_id, mull_message.index.clone());
+        }
+        "AIPlay"=>{
+            let ai_play : AiUpdateRequest = json::decode(message.trim()).unwrap();
+            let mut ai_gsd : GameStateData = ai_play.game_state_data;
+            let rune_request : Box<Rune> = get_rune(ai_play.rune.as_ref());
+
+            game_state.swap_gsd(&mut ai_gsd);
+            game_state.execute_rune(rune_request);
+            game_state.swap_gsd(&mut ai_gsd);
+
+            let json_response = json::encode(&ai_gsd).unwrap();
+            let front= "{\"runeType\":\"AI_Update\",";
+		    let send_message = format!("{}{}", front, 
+                    &json_response.clone()[1..json_response.len()]);
+            
+            game_state.send_msg(client_id, send_message); 
+
+        },
+        "OptionsSimulation"=>{
+            //let ai_play : AI_Option_Set_Request  = AI_Option_Set_Request::from_json(message.clone());
+            //let ai_gsd : GameStateData = ai_play.game_state_data;
+            /*let mut options_request : Vec<ClientOption> = ai_play.theo_options;
+
+            game_state.swap_gsd(&mut ai_gsd);
+            for i in &options_request{
+                game_state.execute_option();
+            }
+
+            game_state.swap_gsd(&mut ai_gsd);
+            */
+
         }
 
         _ => {

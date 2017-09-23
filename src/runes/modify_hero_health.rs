@@ -4,26 +4,28 @@ use rustc_serialize::json;
 use game_state::GameState;
 use hlua;
 
+
 #[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
-pub struct ModifyAttack {
+pub struct ModifyHeroHealth {
     target_uid: UID,
-    amount: u32,
+    amount: i32,
 }
 
-implement_for_lua!(ModifyAttack, |mut _metatable| {});
+implement_for_lua!(ModifyHeroHealth, |mut _metatable| {});
 
-impl ModifyAttack {
-    pub fn new(target_uid: UID, amount: u32) -> ModifyAttack {
-        ModifyAttack {
+impl ModifyHeroHealth {
+    pub fn new(target_uid: UID, amount: i32) -> ModifyHeroHealth {
+        ModifyHeroHealth {
             target_uid: target_uid,
             amount: amount,
         }
     }
 }
 
-impl Rune for ModifyAttack {
+impl Rune for ModifyHeroHealth {
     fn execute_rune(&self, game_state: &mut GameState) {
-        game_state.get_mut_minion(self.target_uid).unwrap().set_current_attack(self.amount);
+        
+        game_state.get_mut_controller_by_uid(self.target_uid).unwrap().set_current_life(self.amount);
     }
 
     fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {
@@ -31,7 +33,7 @@ impl Rune for ModifyAttack {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"ModifyAttack\",")
+        json::encode(self).unwrap().replace("{", "{\"runeType\":\"ModifyHeroHealth\",")
     }
 
     fn into_box(&self) -> Box<Rune> {

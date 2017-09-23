@@ -1,11 +1,14 @@
 
 use rune_vm::Rune;
+use runes::create_card::CreateCard;
 use rustc_serialize::json;
 use minion_card::UID;
 use game_state::GameState;
 use std::collections::HashSet;
 use controller::{EControllerState, Controller};
 use hlua;
+use runes::summon_minion::SummonMinion;
+
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct NewController {
@@ -56,6 +59,16 @@ impl Rune for NewController {
         };
 
         game_state.add_player_controller(new_controller, self.deck.clone());
+        game_state.execute_rune(CreateCard::new("basic/hunter".to_owned(), self.uid, self.uid).into_box());
+
+        //new_controller.unplayed_minions.push(new_controller.uid);
+        
+        //game_state.get_mut_controller_by_uid(self.uid).unwrap().add_card_to_deck(play_card);
+        //game_state.execute_rune(DealCard::new(self.uid, self.uid).into_box());
+        game_state.execute_rune(SummonMinion::new(self.uid, self.uid, 0).into_box());
+        
+
+        //game_state.stage_rune(PlayCard::new(self.uid, self.uid, 0, 0).into_box());
     }
 
     fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {

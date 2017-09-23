@@ -8,6 +8,10 @@ use rustc_serialize::json::Json;
 use std::sync::mpsc::{Sender, Receiver};
 use game_thread::ThreadMessage;
 
+use ai::ai_action::message_to_action;
+use ai::ai_player::AiPlayer;
+
+
 pub struct PlayerThread {
     pub client_id: u32,
     pub stream: Option<TcpStream>,
@@ -16,6 +20,7 @@ pub struct PlayerThread {
 
 impl PlayerThread {
     pub fn new(client_id: u32, stream: Option<TcpStream>) -> PlayerThread {
+        
         let p_thread = PlayerThread {
             client_id: client_id,
             stream: stream,
@@ -31,6 +36,8 @@ impl PlayerThread {
         Some(thread::spawn(move || { player_thread_function(self, to_server, from_server); }))
             .unwrap()
     }
+
+    
     // pub fn from_stream(stream : TcpStream, client_id: u32) -> Result<PlayerThread> {
     // let p_thread = PlayerThread {
     // client_id: client_id,
@@ -138,6 +145,7 @@ fn player_thread_function(player_thread: PlayerThread,
         }
         // is AI
         None => {
+            let mut ai_current_state = AiPlayer::new();
             loop {
                 let to_client_message = from_server.try_recv();
 
@@ -145,10 +153,9 @@ fn player_thread_function(player_thread: PlayerThread,
                 match to_client_message {
                     Ok(to_client_message) => {
                         let message = to_client_message.payload.clone();
-
+                        //println!("AI JUST GOT {0}", message.clone());
                         let j_message: Json = Json::from_str(message.trim()).unwrap();
                         let obj = j_message.as_object().unwrap();
-
                         let message_type = match obj.get("runeType") {
                             Some(message_type) => {
                                 match *message_type {
@@ -165,33 +172,8 @@ fn player_thread_function(player_thread: PlayerThread,
                                 continue;
                             }
                         };
-
-                        if message_type.contains("Mulligan") {
-                            let mulligan_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : [] }}",
-                                                           k = "message_type",
-                                                           v = "mulligan",
-                                                           h = "index");
-                            let to_server_message = ThreadMessage {
-                                client_id: player_thread.client_id,
-                                payload: mulligan_message,
-                            };
-
-                            let _ = to_server.send(to_server_message);
-                        } else if message_type.contains("option_rune") {
-              
-                        let option_message = format!("{{ \"{k}\":\"{v}\", \"{h}\" : 0, \"{l}\" : 0,  \"{j}\" : 0}}",
-                                                           k = "message_type",
-                                                           v = "option",
-                                                           h = "index",
-                                                           l = "board_index",
-                                                           j = "timeStamp");
-
-                            let to_server_message = ThreadMessage {
-                                client_id: player_thread.client_id,
-                                payload: option_message
-                            };
-                            let _ = to_server.send(to_server_message);
-                        }
+                        message_to_action(message_type, &mut ai_current_state, message, &to_server, &player_thread);
+  
                     }
                     Err(_) => {}
 
@@ -199,4 +181,5 @@ fn player_thread_function(player_thread: PlayerThread,
             }
         }
     }
+    
 }

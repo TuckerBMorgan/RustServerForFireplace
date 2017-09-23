@@ -11,6 +11,7 @@ use client_option::{OptionType, OptionsPackage, ClientOption};
 use client_message::OptionsMessage;
 use tags_list::AURA;
 use hlua::{self, Lua};
+use std::fs::OpenOptions;
 
 use rand::thread_rng;
 use entity::Entity;
@@ -36,9 +37,12 @@ use runes::modify_attack::ModifyAttack;
 use runes::modify_health::ModifyHealth;
 use runes::create_card::CreateCard;
 use runes::summon_minion::SummonMinion;
+use runes::attack::Attack;
+use runes::modify_hero_health::ModifyHeroHealth;
+use std::mem;
+use rustc_serialize::json;
 
-
-#[derive(Clone)]
+#[derive(Clone, RustcDecodable, RustcEncodable,)]
 pub struct GameStateData {
     controllers: Vec<Controller>,
     minions: HashMap<UID, Minion>,
@@ -46,7 +50,8 @@ pub struct GameStateData {
     client_id_to_controller_uid: HashMap<UID, u32>,
     attacked_this_turn: Vec<UID>,
     entity_count: u32,
-    on_turn_player: i8, 
+    on_turn_player: i8,
+    ai_player_copy : bool,
 }
 
 //implement_for_lua!(i32, |mut _metatable|{});
@@ -58,7 +63,7 @@ implement_for_lua!(GameStateData, |mut _metatable| {
 });
 
 impl GameStateData {
-    pub fn new() -> GameStateData {
+    pub fn new(aipc: bool) -> GameStateData {
         GameStateData {
             controllers: vec![],
             entity_count: 1, //this is really emportant that we start this at 1, beause new UIDS are the current value of this, but we need a value for not a UID, which is 0
@@ -67,7 +72,8 @@ impl GameStateData {
             client_id_to_controller_uid: HashMap::new(),
             on_turn_player: 0,
             attacked_this_turn: vec![],
-        }
+            ai_player_copy : aipc,
+            }
     }
 
     pub fn add_player_controller(&mut self, controller: Controller) {
@@ -88,6 +94,10 @@ impl GameStateData {
 
     pub fn add_has_attack(&mut self, uid: UID) {
         self.attacked_this_turn.push(uid);
+    }
+
+    pub fn get_has_attack(&self)->Vec<UID>{
+        self.attacked_this_turn.clone()
     }
 
     pub fn set_on_turn_player(&mut self, on_turn_player: i8) {
@@ -132,7 +142,9 @@ impl GameStateData {
     }
 
     pub fn add_minion_to_minions(&mut self, minion: Minion) {
-        self.minions.insert(minion.get_uid(), minion);
+        if !self.minions.contains_key(&minion.get_uid()){
+            self.minions.insert(minion.get_uid(), minion);
+        }
     }
 
     pub fn get_client_ids(&self) -> Vec<u32> {
@@ -151,6 +163,10 @@ impl GameStateData {
         uids
     }
 
+    pub fn get_is_ai_copy(&self)->bool{
+        return self.ai_player_copy.clone();
+    }
+
     pub fn get_all_minions_in_play(&self) -> Vec<Minion> {
         let mut mins = vec![];
         for (_, v) in self.minions.clone() {
@@ -164,6 +180,14 @@ impl GameStateData {
         }
         mins
     }
+    pub fn to_json(&self)->String{
+        return json::encode(self).unwrap();
+    }
+
+    pub fn reset_attacks(&mut self){
+        self.attacked_this_turn = vec![];
+    }
+
 }
 
 pub struct GameState<'a> {
@@ -195,7 +219,7 @@ impl<'a> GameState<'a> {
     pub fn new(game_thread: &GameThread) -> GameState {
         let mut gs = GameState {
             game_thread: Some(game_thread),
-            game_state_data: GameStateData::new(),
+            game_state_data: GameStateData::new(false),
             players_ready: 0,
             team_count: 0,
             connection_number: 0,
@@ -249,6 +273,8 @@ impl<'a> GameState<'a> {
                                hlua::function2(|uid, amount| ModifyAttack::new(uid, amount)));
             rune_namespace.set("new_modify_health",
                                hlua::function2(|uid, amount| ModifyHealth::new(uid, amount)));
+            rune_namespace.set("new_modify_hero_health",
+                               hlua::function2(|uid, amount| ModifyHeroHealth::new(uid, amount)));
             rune_namespace.set("new_create_card",
                                hlua::function3(|id, uid, controller_uid| {
                                    CreateCard::new(id, uid, controller_uid)
@@ -268,6 +294,8 @@ impl<'a> GameState<'a> {
                                hlua::function1(|ma| ERuneType::ModifyAttack(ma)));
             enum_namespace.set("new_modify_health",
                                hlua::function1(|mh| ERuneType::ModifyHealth(mh)));
+            enum_namespace.set("new_modify_hero_health",
+                               hlua::function1(|mh| ERuneType::ModifyHeroHealth(mh)));
             enum_namespace.set("new_set_health",
                                hlua::function1(|sh| ERuneType::SetHealth(sh)));
             enum_namespace.set("new_set_attack",
@@ -343,6 +371,9 @@ impl<'a> GameState<'a> {
     pub fn add_number_to_lua(&mut self, key: String, val: u32) {
         self.lua.set(key, val);
     }
+    pub fn add_integer_to_lua(&mut self, key: String, val: i32) {
+        self.lua.set(key, val);
+    }
 
     //the only function to use when you want to execute a lua function
     //you may or may not want a result from this function, if you do, you have to type it, and then also insure that the lua statment you are executing
@@ -386,15 +417,20 @@ impl<'a> GameState<'a> {
         self.add_rune_to_queue(rune);
     }
 
+    
+
     pub fn process_rune(&mut self, rune: Box<Rune>) {
 
-        println!("executing rune {}", rune.to_json());
+        if !self.game_state_data.ai_player_copy{
+            println!("executing rune {}", rune.to_json());
+            //append_rune_to_file(rune.to_json())
+        }
         rune.execute_rune(self);
 
         let controllers = self.game_state_data.get_controller_uids();
 
         for controller in controllers {
-            if rune.can_see(controller, self) {
+            if rune.can_see(controller, self) && !self.game_state_data.ai_player_copy {
                 self.report_rune_to_client(self.game_state_data
                                                .get_client_id_from_controller_uid(controller)
                                                .clone(),
@@ -560,6 +596,12 @@ impl<'a> GameState<'a> {
             let rt = RotateTurn::new();
             self.execute_rune(Box::new(rt));
 
+            //After mulligan whoever is going first will be the player who gets the options
+            let controller_index = self.get_on_turn_player();
+
+            let controller_uid =
+                self.game_state_data.get_controllers()[controller_index as usize].get_uid().clone();
+
             let options = self.get_mut_controller_by_uid(controller_uid)
                 .unwrap()
                 .clone()
@@ -568,7 +610,7 @@ impl<'a> GameState<'a> {
             self.get_mut_controller_by_uid(controller_uid)
                 .unwrap()
                 .set_client_options(options.clone());
-
+            
             let op = OptionsPackage { options: options };
 
             self.report_rune_to_client(client_id.clone(), op.to_json());
@@ -587,16 +629,23 @@ impl<'a> GameState<'a> {
     }
 
     pub fn execute_option(&mut self, option_message: OptionsMessage) {
+        
         let index = option_message.index.clone();
+        
         let controller_index = self.get_on_turn_player();
 
         let controller_uid =
             self.game_state_data.get_controllers()[controller_index as usize].get_uid().clone();
+        
         let option = self.game_state_data.get_controllers()[controller_index as usize]
             .get_client_option(index as usize)
             .clone();
+        //println!("EXECUTING OPTION {:?}", option);
         match option.option_type {
-            OptionType::EAttack => {}
+            OptionType::EAttack => {
+                let attack = Attack::new(option.source_uid, option.target_uid);
+                self.execute_rune(attack.into_box());
+            }
             OptionType::EPlayCard => {
                 let card = self.game_state_data.get_controllers()[controller_index as usize]
                     .get_copy_of_card_from_hand(option.source_uid)
@@ -637,6 +686,7 @@ impl<'a> GameState<'a> {
         new_op.push(ClientOption::new(0, 0, OptionType::EEndTurn));
         let mut_uid = self.game_state_data.get_controllers()[controller_index as usize].get_uid();
         let client_id = self.game_state_data.get_controllers()[controller_index as usize].client_id;
+        
 
         self.get_mut_controller_by_uid(mut_uid).unwrap().set_client_options(new_op.clone());
         let op = OptionsPackage { options: new_op };
@@ -962,6 +1012,10 @@ impl<'a> GameState<'a> {
         self.game_state_data.get_number_of_controllers()
     }
 
+    pub fn is_ai_copy_running(&self)->bool{
+        return self.game_state_data.get_is_ai_copy()
+    }
+
     pub fn add_player_controller(&mut self, controller: Controller, deck: String) {
         
         {
@@ -973,7 +1027,7 @@ impl<'a> GameState<'a> {
 
 
 
-        if self.game_state_data.get_number_of_controllers() == 2 {
+        if self.game_state_data.get_number_of_controllers() == 2 && !self.game_state_data.get_is_ai_copy(){
 
             let _rng = thread_rng();
             let first: u16 = 0; //in the release this has to be a
@@ -1073,4 +1127,37 @@ impl<'a> GameState<'a> {
     pub fn add_to_attacked_this_turn(&mut self, uid: UID) {
         self.game_state_data.add_has_attack(uid);
     }
+
+    pub fn has_attacked_this_turn(&self)->Vec<UID>{
+        self.game_state_data.get_has_attack()
+    }
+    pub fn reset_attack_list(&mut self){
+        self.game_state_data.reset_attacks();
+    }
+    
+    pub fn get_game_state_data(&self)->GameStateData{
+        return self.game_state_data.clone();
+    }
+    
+    pub fn swap_gsd(&mut self, gsd: &mut GameStateData){
+        mem::swap(&mut self.game_state_data, gsd);
+    }
+    pub fn send_msg(&self, client_id: u32, message: String){
+        self.game_thread.unwrap().report_message(client_id, message.clone()); 
+    }
+}
+
+
+pub fn append_rune_to_file(rune:String){
+    let file = OpenOptions::new().create(true).write(true).append(true).open("rune_history.txt");
+    match file{
+        Ok(mut fil)=>{
+            fil.write_all((rune+"\n").as_bytes());
+            fil.sync_data();
+        },
+        Err(e)=>{
+            println!("{}",e)
+        }
+    }
+        
 }
