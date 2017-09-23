@@ -24,12 +24,12 @@ impl ModifyHeroHealth {
 
 impl Rune for ModifyHeroHealth {
     fn execute_rune(&self, game_state: &mut GameState) {
-        println!("MOD HERO {} : {}", self.target_uid, self.amount);
+        
         game_state.get_mut_controller_by_uid(self.target_uid).unwrap().set_current_life(self.amount);
     }
 
     fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {
-        return true;
+        !_game_state.is_ai_copy_running()
     }
 
     fn to_json(&self) -> String {

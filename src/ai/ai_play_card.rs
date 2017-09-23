@@ -12,7 +12,7 @@ use std::cmp::Ordering;
 *
 *
 */
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
 pub struct PlayRuneSquare{
 	pub ops_sel : Vec<ClientOption>,
 	pub score : f32,
@@ -136,29 +136,34 @@ impl CardPlayMatrix {
 					let square = PlayRuneSquare::new(&self.start_gsd, get_ops, self.uid);
 					//if the score is bigger then push the new square to i,j
 					//otherwise copy the square at i,j-1 and use that again
-					//println!("Score analysis {0}:{1}", square.score, i_j_min1.score);
-					if square.score > i_j_min1.score {
+					
+					if (square.score < i_j_min1.score) || (i_j_min1.ops_sel.len() == 0) {
+					
 						self.matrix_tiles[i].push(square);
 					}
 					else{
+					
 						self.matrix_tiles[i].push(i_j_min1.clone());
 					}
 				}
 				//if you cant play anything then add the i,j-1 solution
 				else{
+					
 					self.matrix_tiles[i].push(i_j_min1.clone());
 				}
-				//get score from [i][j-1] the immediate left position
 				
 			}
 		}
 		//set the selected options to run to the max position in (mana,options#)
 		//println!("{0} : {1} ", (self.mana as usize), self.ops.len());
 		//println!("Matrix size {0}:{1}", self.matrix_tiles.len(), self.matrix_tiles[0].len());
-		//println("cols {0} : rows : {}");
+		
+		
 		self.selected_ops = self.matrix_tiles[self.ops.len()][(self.mana as usize)].ops_sel.clone();
+		
 	}
 }
+
 
 pub struct AttackHeap{
 	pub ops : Vec<ClientOption>,
@@ -181,7 +186,10 @@ impl AttackHeap{
 	}
 
 	pub fn pop_attack(&mut self)->ClientOption{
-		return self.attack_heap.pop().unwrap().ops_sel[0];
+		//println!("ATTACKS AVAILABLE   {:?}", self.attack_heap);
+		let popper = self.attack_heap.pop().unwrap();
+		//println!("ATTACKS selected   {:?}", popper);
+		return popper.ops_sel[0];
 	}
 
 }

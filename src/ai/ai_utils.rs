@@ -79,7 +79,7 @@ impl AI_Option_Set_Request{
 *	This allows other processes to operate on different option
 *	sets in parallel
 */
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
 pub struct OpsClassify {
 	pub end : ClientOption,
 	pub plays : Vec<ClientOption>,
@@ -184,7 +184,7 @@ pub fn perspective_score(ops : Vec<ClientOption>, game : &GameStateData, my_uid:
 		for i in &ops{
 			con1_ap = con1_ap + (game.get_minion(i.source_uid.clone()).unwrap().get_current_attack() as f32);
 		}
-		return ((con2_hp)/(con1_ap+1.0))-((con1_hp)/(con2_ap+1.0));
+		return ((con1_hp)/(con2_ap+1.0))-((con2_hp)/(con1_ap+1.0));
 	}
 }
 

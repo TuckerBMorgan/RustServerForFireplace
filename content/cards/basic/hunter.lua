@@ -7,7 +7,7 @@ create_minion_function**
 
 @@
 on_hp_change_function**
-    mh = Rune.new_modify_hero_health(target_uid, -1 * amount)
+    mh = Rune.new_modify_hero_health(target_uid, amount)
     
     result = {}
     result[1]=RuneTypeEnum.new_modify_hero_health(mh)

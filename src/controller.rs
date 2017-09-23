@@ -6,6 +6,7 @@ use rand::{thread_rng, Rng, sample};
 use game_state::GameState;
 use client_option::{ClientOption, OptionGenerator, OptionType};
 use hlua;
+use std::process;
 
 #[derive(RustcDecodable, RustcEncodable, Copy, Clone, Debug)]
 pub enum EControllerType {
@@ -64,9 +65,16 @@ impl Controller {
     }
 
     pub fn set_current_life(&mut self, amount: i32){
-        println!("Hit Change AI LIFE CURRENT : {}", self.get_life());
-        self.life = ((self.life as i32) + amount) as u8;
-        println!("Hit Change AI LIFE CURRENT : {}", self.get_life());
+        
+        if ((self.life as i32) + amount) < 0{
+            self.life = 0;
+            println!("CONTROLLER {} Loses", self.uid);
+            process::exit(0);
+        }
+        else{
+            self.life = ((self.life as i32) + amount) as u8;
+        }
+        
     }
 
     pub fn move_minion_from_unplayed_into_play(&mut self, minion_uid: UID) {
@@ -126,7 +134,9 @@ impl Controller {
     }
 
     pub fn set_base_mana(&mut self, base_mana: u8) {
-        self.base_mana = base_mana;
+        if base_mana <= 10{
+            self.base_mana = base_mana;
+        }
     }
 
     pub fn get_base_mana(&self) -> u8 {
@@ -178,11 +188,13 @@ impl Controller {
 
         options.clear();
         for min_uid in self.in_play_minions.clone().iter() {
-            let min = game_state.get_minion(*min_uid).unwrap().clone();
+            if !game_state.has_attacked_this_turn().iter().any(|x| x == min_uid){
+                let min = game_state.get_minion(*min_uid).unwrap().clone();
 
-            options = min.generate_options(game_state, self);
-            for option in options.iter() {
-                self.add_client_options(*option);
+                options = min.generate_options(game_state, self);
+                for option in options.iter() {
+                    self.add_client_options(*option);
+                }
             }
         }
         let op = self.current_options.clone();

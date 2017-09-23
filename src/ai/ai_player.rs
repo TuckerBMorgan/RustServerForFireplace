@@ -79,23 +79,25 @@ impl AiPlayer{
 		self.options_order = vec![];
 		//println!("AI options selections");
 		let ops_classi = OpsClassify::new(self.ops_recieved.clone());
-		//println!("Options classified");
+		//println!("Options classified: {:?}", ops_classi);
 		self.options_test_recieved = true;
 		if ops_classi.plays.len() > 0{
-			//println!(!("Running matrix");
+			//println!("Running matrix");
 			self.options_order = CardPlayMatrix::new(ops_classi.plays.clone(), self.game_state_data.clone(), self.uid).selected_ops;
+			//println!("OPTIONS AFTER MATRIX {:?}",self.options_order);
 		}
 		else{
-			//println!(!("Running attack Heap");
+			//println!("Running attack Heap");
 			if ops_classi.attacks.len() > 0{
 				self.options_order.push(AttackHeap::new(self.game_state_data.clone(), ops_classi.attacks, self.uid).pop_attack());
 			}
 		}
+		//println!("OPTIONS AFTER MATRIX {:?}",self.options_order);
 		if self.options_order.len() == 0{
 			self.options_order.push(ops_classi.end);
 		}
 		//let n_pack = OptionsPackage{options: self.options_order.clone()};
-		////println!(!("OPS SELECTED {}", n_pack.to_json());
+		//println!("OPS SELECTED {}", n_pack.to_json());
 		self.iterative = 0;
 	}
 

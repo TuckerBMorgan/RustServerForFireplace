@@ -35,6 +35,7 @@ impl Rune for RotateTurn {
                 remove_tag_runes.push(RemoveTag::new(uids.clone(), SUMMONING_SICKNESS.to_string().clone()));
             }
         }
+        game_state.reset_attack_list();
 
         for rune in remove_tag_runes {
             game_state.execute_rune(Box::new(rune));

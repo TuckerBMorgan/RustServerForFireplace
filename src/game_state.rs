@@ -96,6 +96,10 @@ impl GameStateData {
         self.attacked_this_turn.push(uid);
     }
 
+    pub fn get_has_attack(&self)->Vec<UID>{
+        self.attacked_this_turn.clone()
+    }
+
     pub fn set_on_turn_player(&mut self, on_turn_player: i8) {
         self.on_turn_player = on_turn_player;
     }
@@ -179,6 +183,11 @@ impl GameStateData {
     pub fn to_json(&self)->String{
         return json::encode(self).unwrap();
     }
+
+    pub fn reset_attacks(&mut self){
+        self.attacked_this_turn = vec![];
+    }
+
 }
 
 pub struct GameState<'a> {
@@ -620,6 +629,7 @@ impl<'a> GameState<'a> {
     }
 
     pub fn execute_option(&mut self, option_message: OptionsMessage) {
+        
         let index = option_message.index.clone();
         
         let controller_index = self.get_on_turn_player();
@@ -630,7 +640,7 @@ impl<'a> GameState<'a> {
         let option = self.game_state_data.get_controllers()[controller_index as usize]
             .get_client_option(index as usize)
             .clone();
-        
+        //println!("EXECUTING OPTION {:?}", option);
         match option.option_type {
             OptionType::EAttack => {
                 let attack = Attack::new(option.source_uid, option.target_uid);
@@ -676,6 +686,7 @@ impl<'a> GameState<'a> {
         new_op.push(ClientOption::new(0, 0, OptionType::EEndTurn));
         let mut_uid = self.game_state_data.get_controllers()[controller_index as usize].get_uid();
         let client_id = self.game_state_data.get_controllers()[controller_index as usize].client_id;
+        
 
         self.get_mut_controller_by_uid(mut_uid).unwrap().set_client_options(new_op.clone());
         let op = OptionsPackage { options: new_op };
@@ -1001,6 +1012,10 @@ impl<'a> GameState<'a> {
         self.game_state_data.get_number_of_controllers()
     }
 
+    pub fn is_ai_copy_running(&self)->bool{
+        return self.game_state_data.get_is_ai_copy()
+    }
+
     pub fn add_player_controller(&mut self, controller: Controller, deck: String) {
         
         {
@@ -1111,6 +1126,13 @@ impl<'a> GameState<'a> {
 
     pub fn add_to_attacked_this_turn(&mut self, uid: UID) {
         self.game_state_data.add_has_attack(uid);
+    }
+
+    pub fn has_attacked_this_turn(&self)->Vec<UID>{
+        self.game_state_data.get_has_attack()
+    }
+    pub fn reset_attack_list(&mut self){
+        self.game_state_data.reset_attacks();
     }
     
     pub fn get_game_state_data(&self)->GameStateData{

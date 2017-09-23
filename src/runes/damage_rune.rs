@@ -32,7 +32,7 @@ impl Rune for DamageRune {
     }
 
     fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {
-        return true;
+        !_game_state.is_ai_copy_running()
     }
 
     fn to_json(&self) -> String {
