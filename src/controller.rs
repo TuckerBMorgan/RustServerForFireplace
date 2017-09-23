@@ -65,6 +65,7 @@ impl Controller {
     }
 
     pub fn set_current_life(&mut self, amount: i32){
+<<<<<<< HEAD
         
         if ((self.life as i32) + amount) < 0{
             self.life = 0;
@@ -75,6 +76,11 @@ impl Controller {
             self.life = ((self.life as i32) + amount) as u8;
         }
         
+=======
+        println!("Hit Change AI LIFE CURRENT : {}", self.get_life());
+        self.life = ((self.life as i32) + amount) as u8;
+        println!("Hit Change AI LIFE CURRENT : {}", self.get_life());
+>>>>>>> 0c5ee7ddc645cc71a93a4f14ee8a1511ac39414f
     }
 
     pub fn move_minion_from_unplayed_into_play(&mut self, minion_uid: UID) {

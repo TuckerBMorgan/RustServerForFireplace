@@ -50,6 +50,10 @@ pub struct GameStateData {
     client_id_to_controller_uid: HashMap<UID, u32>,
     attacked_this_turn: Vec<UID>,
     entity_count: u32,
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0c5ee7ddc645cc71a93a4f14ee8a1511ac39414f
     on_turn_player: i8,
     ai_player_copy : bool,
 }
