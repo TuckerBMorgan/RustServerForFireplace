@@ -27,6 +27,15 @@ mod ai;
 mod rune_match;
 
 
+#[macro_use(bson, doc)]
+extern crate bson;
+extern crate mongodb;
+
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
+
+
 use std::process;
 use std::thread;
 use std::io;

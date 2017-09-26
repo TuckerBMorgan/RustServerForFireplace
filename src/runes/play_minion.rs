@@ -6,6 +6,8 @@ use runes::add_tag::AddTag;
 use runes::summon_minion::SummonMinion;
 use tags_list::{CHARGE, SUMMONING_SICKNESS, TARGET};
 use hlua;
+use bson;
+use bson::Document;
 
 // the play_minion rune is called when you play a minion
 // out of your hand. It will call battle_cry if it has one
@@ -15,11 +17,15 @@ use hlua;
 //
 
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Clone, Debug, Serialize, Deserialize)]
 pub struct PlayMinion {
+    #[serde(with = "bson::compat::u2f")]
     pub minion_uid: UID,
+    #[serde(with = "bson::compat::u2f")]
     pub controller_uid: UID,
-    pub field_index: usize,
+    #[serde(with = "bson::compat::u2f")]
+    pub field_index: u8,
+    #[serde(with = "bson::compat::u2f")]
     pub target_uid: UID,
 }
 
@@ -34,7 +40,7 @@ impl PlayMinion {
         PlayMinion {
             minion_uid: minion_uid,
             controller_uid: controller_uid,
-            field_index: field_index,
+            field_index: field_index as u8,
             target_uid: target_uid,
         }
     }
@@ -98,5 +104,26 @@ impl Rune for PlayMinion {
 
     fn into_box(&self) -> Box<Rune> {
         Box::new(self.clone())
+    }
+
+    fn to_bson_doc(&self, game_name: String, count: usize) -> Document{
+        let mut doc = bson::to_bson(&self);
+        match doc{
+            Ok(document)=>{
+                match document{
+                    bson::Bson::Document(mut d)=>{
+                        d.insert("game", game_name);
+                        d.insert("RuneCount", count as u64);
+                        d.insert("RuneType", "PlayMinion");
+                        return d
+                    },
+                    _=>{}
+                }
+            },
+            Err(e)=>{
+                return Document::new();
+            }
+        }
+        return Document::new();
     }
 }

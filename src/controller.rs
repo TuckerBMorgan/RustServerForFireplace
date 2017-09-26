@@ -69,7 +69,6 @@ impl Controller {
         if ((self.life as i32) + amount) < 0{
             self.life = 0;
             println!("CONTROLLER {} Loses", self.uid);
-            process::exit(0);
         }
         else{
             self.life = ((self.life as i32) + amount) as u8;

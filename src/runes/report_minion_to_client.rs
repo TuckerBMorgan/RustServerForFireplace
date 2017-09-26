@@ -4,23 +4,31 @@ use game_state::GameState;
 use minion_card::UID;
 use minion_card::Minion;
 use hlua;
+use bson;
+use bson::Document;
 
-#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
+#[derive(RustcDecodable, RustcEncodable, Clone, Debug, Serialize, Deserialize)]
 pub struct ReportMinionToClient {
+    #[serde(with = "bson::compat::u2f")]
     cost: u32,
     id: String,
+    #[serde(with = "bson::compat::u2f")]
     uid: UID,
     name: String,
     set: String,
-
+    #[serde(with = "bson::compat::u2f")]
     base_attack: u32,
+    #[serde(with = "bson::compat::u2f")]
     current_attack: u32,
+    #[serde(with = "bson::compat::u2f")]
     total_attack: u32,
-
+    #[serde(with = "bson::compat::u2f")]
     base_health: u32,
+    #[serde(with = "bson::compat::u2f")]
     current_health: u32,
+    #[serde(with = "bson::compat::u2f")]
     total_health: u32,
-
+    #[serde(with = "bson::compat::u2f")]
     controller_uid: UID,
     is_deal: bool,
 }
@@ -104,5 +112,26 @@ impl Rune for ReportMinionToClient {
 
     fn into_box(&self) -> Box<Rune> {
         Box::new(self.clone())
+    }
+
+    fn to_bson_doc(&self, game_name: String, count: usize) -> Document{
+        let mut doc = bson::to_bson(&self);
+        match doc{
+            Ok(document)=>{
+                match document{
+                    bson::Bson::Document(mut d)=>{
+                        d.insert("game", game_name);
+                        d.insert("RuneCount", count as u64);
+                        d.insert("RuneType", "ReportMinionToClient");
+                        return d
+                    },
+                    _=>{}
+                }
+            },
+            Err(e)=>{
+                return Document::new();
+            }
+        }
+        return Document::new();
     }
 }

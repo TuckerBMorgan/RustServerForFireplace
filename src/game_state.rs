@@ -42,6 +42,11 @@ use runes::attack::Attack;
 use runes::modify_hero_health::ModifyHeroHealth;
 use std::mem;
 use rustc_serialize::json;
+use bson::Document;
+use mongodb;
+use mongodb::ThreadedClient;
+use mongodb::Client;
+use mongodb::db::ThreadedDatabase;
 
 #[derive(Clone, RustcDecodable, RustcEncodable,)]
 pub struct GameStateData {
@@ -213,7 +218,7 @@ pub struct GameState<'a> {
     first_to_connect: Option<NewController>,
     mulligan_played_out: u8,
     name: String,
-    history: Vec<String>,
+    history: Vec<Document>,
 
 }
 
@@ -427,8 +432,10 @@ impl<'a> GameState<'a> {
 
         if !self.game_state_data.ai_player_copy{
             println!("executing rune {}", rune.to_json());
-            //append_rune_to_file(rune.to_json())
-            self.history.push(rune.to_json());
+            let s = self.history.len().clone();
+            let b = rune.to_bson_doc(self.name.clone(), s);
+            println!("BSON OF RUNE {}", b);
+            self.history.push(b);
         }
         rune.execute_rune(self);
 
@@ -1152,10 +1159,12 @@ impl<'a> GameState<'a> {
     }
     pub fn write_history(&self){
         println!("WRITING GAME {}", self.name);
-        for i in 0..self.history.len(){
-            let t = self.history[i].replace("}", &(",rune_number:".to_owned()+&(i.to_string())+"}"));
-            println!("RUNE {} ", t);
-        }
+        let client = Client::connect("localhost", 27017).expect("Failed to initialize standalone client.");
+
+        let coll = client.db("Fireplace").collection("games");
+
+        coll.insert_many(self.history.clone(), None).ok().expect("Failed to insert document.");;
+
 
     }
 }

@@ -5,10 +5,15 @@ use minion_card::UID;
 use runes::damage_rune::DamageRune;
 use tags_list::{HERO};
 use hlua;
+use bson;
+use bson::Document;
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+
+#[derive(RustcDecodable, RustcEncodable, Clone, Debug, Serialize, Deserialize)]
 pub struct Attack {
+    #[serde(with = "bson::compat::u2f")]
     pub source_uid: UID,
+    #[serde(with = "bson::compat::u2f")]
     pub target_uid: UID,
 }
 
@@ -57,5 +62,26 @@ impl Rune for Attack {
 
     fn into_box(&self) -> Box<Rune> {
         Box::new(self.clone())
+    }
+
+    fn to_bson_doc(&self, game_name: String, count: usize) -> Document{
+        let mut doc = bson::to_bson(&self);
+        match doc{
+            Ok(document)=>{
+                match document{
+                    bson::Bson::Document(mut d)=>{
+                        d.insert("game", game_name);
+                        d.insert("RuneCount", count as u64);
+                        d.insert("RuneType", "Attack");
+                        return d
+                    },
+                    _=>{}
+                }
+            },
+            Err(e)=>{
+                return Document::new();
+            }
+        }
+        return Document::new();
     }
 }

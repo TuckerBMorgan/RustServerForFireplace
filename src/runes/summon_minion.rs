@@ -5,11 +5,16 @@ use game_state::GameState;
 use minion_card::{UID, EMinionState};
 use hlua;
 use runes::report_minion_to_client::ReportMinionToClient;
+use bson;
+use bson::Document;
 
-#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
+#[derive(RustcDecodable, RustcEncodable, Clone, Debug, Serialize, Deserialize)]
 pub struct SummonMinion {
+    #[serde(with = "bson::compat::u2f")]
     pub minion_uid: UID,
+    #[serde(with = "bson::compat::u2f")]
     pub controller_uid: UID,
+    #[serde(with = "bson::compat::u2f")]
     pub field_index: u8,
 }
 
@@ -67,5 +72,26 @@ impl Rune for SummonMinion {
 
     fn into_box(&self) -> Box<Rune> {
         Box::new(self.clone())
+    }
+
+    fn to_bson_doc(&self, game_name: String, count: usize) -> Document{
+        let mut doc = bson::to_bson(&self);
+        match doc{
+            Ok(document)=>{
+                match document{
+                    bson::Bson::Document(mut d)=>{
+                        d.insert("game", game_name);
+                        d.insert("RuneCount", count as u64);
+                        d.insert("RuneType", "SummonMinion");
+                        return d
+                    },
+                    _=>{}
+                }
+            },
+            Err(e)=>{
+                return Document::new();
+            }
+        }
+        return Document::new();
     }
 }

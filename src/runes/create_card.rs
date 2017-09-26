@@ -6,11 +6,16 @@ use hlua;
 
 use std::fs::File;
 use std::io::prelude::*;
+use bson;
+use bson::Document;
 
-#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
+
+#[derive(RustcDecodable, RustcEncodable, Clone, Debug, Serialize, Deserialize)]
 pub struct CreateCard {
     card_id: String,
+    #[serde(with = "bson::compat::u2f")]
     uid: UID,
+    #[serde(with = "bson::compat::u2f")]
     controller_uid: UID,
 }
 
@@ -67,5 +72,26 @@ impl Rune for CreateCard {
 
     fn into_box(&self) -> Box<Rune> {
         Box::new(self.clone())
+    }
+
+    fn to_bson_doc(&self, game_name: String, count: usize) -> Document{
+        let mut doc = bson::to_bson(&self);
+        match doc{
+            Ok(document)=>{
+                match document{
+                    bson::Bson::Document(mut d)=>{
+                        d.insert("game", game_name);
+                        d.insert("RuneCount", count as u64);
+                        d.insert("RuneType", "CreateCard");
+                        return d
+                    },
+                    _=>{}
+                }
+            },
+            Err(e)=>{
+                return Document::new();
+            }
+        }
+        return Document::new();
     }
 }
