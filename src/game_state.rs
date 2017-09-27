@@ -619,12 +619,14 @@ impl<'a> GameState<'a> {
                 .clone()
                 .generate_options_from_every_source(self)
                 .clone();
+            
             self.get_mut_controller_by_uid(controller_uid)
                 .unwrap()
                 .set_client_options(options.clone());
             
             let op = OptionsPackage { options: options };
-
+            let s = self.history.len().clone();
+            self.history.push(op.to_bson_doc(self.name.clone(), s));
             self.report_rune_to_client(client_id.clone(), op.to_json());
         } else {
             self.mulligan_played_out += 1;
@@ -652,6 +654,8 @@ impl<'a> GameState<'a> {
         let option = self.game_state_data.get_controllers()[controller_index as usize]
             .get_client_option(index as usize)
             .clone();
+        let mut s = self.history.len().clone();
+        self.history.push(option.to_bson_doc(self.name.clone(), s));
         //println!("EXECUTING OPTION {:?}", option);
         match option.option_type {
             OptionType::EAttack => {
@@ -702,6 +706,8 @@ impl<'a> GameState<'a> {
 
         self.get_mut_controller_by_uid(mut_uid).unwrap().set_client_options(new_op.clone());
         let op = OptionsPackage { options: new_op };
+        s = self.history.len().clone();
+        self.history.push(op.to_bson_doc(self.name.clone(), s));
         self.report_rune_to_client(client_id, op.to_json());
     }
 
@@ -1163,7 +1169,7 @@ impl<'a> GameState<'a> {
 
         let coll = client.db("Fireplace").collection("games");
 
-        coll.insert_many(self.history.clone(), None).ok().expect("Failed to insert document.");;
+        coll.insert_many(self.history.clone(), None).ok().expect("Failed to insert document.");
 
 
     }
