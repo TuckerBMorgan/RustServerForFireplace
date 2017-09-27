@@ -8,7 +8,7 @@ use tags_list::{CHARGE, SUMMONING_SICKNESS, TARGET};
 use hlua;
 use bson;
 use bson::Document;
-
+use database_utils::{to_doc};
 // the play_minion rune is called when you play a minion
 // out of your hand. It will call battle_cry if it has one
 // and it will remove the card from your hand
@@ -107,23 +107,6 @@ impl Rune for PlayMinion {
     }
 
     fn to_bson_doc(&self, game_name: String, count: usize) -> Document{
-        let mut doc = bson::to_bson(&self);
-        match doc{
-            Ok(document)=>{
-                match document{
-                    bson::Bson::Document(mut d)=>{
-                        d.insert("game", game_name);
-                        d.insert("RuneCount", count as u64);
-                        d.insert("RuneType", "PlayMinion");
-                        return d
-                    },
-                    _=>{}
-                }
-            },
-            Err(e)=>{
-                return Document::new();
-            }
-        }
-        return Document::new();
+        return to_doc(bson::to_bson(&self).unwrap(), game_name, count, "PlayMinion".to_string());
     }
 }

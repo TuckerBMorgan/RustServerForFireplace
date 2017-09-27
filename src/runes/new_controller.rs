@@ -10,7 +10,7 @@ use hlua;
 use runes::summon_minion::SummonMinion;
 use bson;
 use bson::Document;
-
+use database_utils::{to_doc};
 
 #[derive(RustcDecodable, RustcEncodable, Clone, Debug, Serialize, Deserialize)]
 pub struct NewController {
@@ -88,24 +88,7 @@ impl Rune for NewController {
     }
     
     fn to_bson_doc(&self, game_name: String, count: usize) -> Document{
-        let mut doc = bson::to_bson(&self);
-        match doc{
-            Ok(document)=>{
-                match document{
-                    bson::Bson::Document(mut d)=>{
-                        d.insert("game", game_name);
-                        d.insert("RuneCount", count as u64);
-                        d.insert("RuneType", "NewController");
-                        return d
-                    },
-                    _=>{}
-                }
-            },
-            Err(e)=>{
-                return Document::new();
-            }
-        }
-        return Document::new();
+        return to_doc(bson::to_bson(&self).unwrap(), game_name, count, "NewController".to_string());
     }
 }
 

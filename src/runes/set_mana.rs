@@ -5,6 +5,7 @@ use minion_card::UID;
 use hlua;
 use bson;
 use bson::Document;
+use database_utils::{to_doc};
 
 #[derive(RustcDecodable, RustcEncodable, Clone, Debug, Serialize, Deserialize)]
 pub struct SetMana {
@@ -47,23 +48,6 @@ impl Rune for SetMana {
     }
 
     fn to_bson_doc(&self, game_name: String, count: usize) -> Document{
-        let mut doc = bson::to_bson(&self);
-        match doc{
-            Ok(document)=>{
-                match document{
-                    bson::Bson::Document(mut d)=>{
-                        d.insert("game", game_name);
-                        d.insert("RuneCount", count as u64);
-                        d.insert("RuneType", "SetMana");
-                        return d
-                    },
-                    _=>{}
-                }
-            },
-            Err(e)=>{
-                return Document::new();
-            }
-        }
-        return Document::new();
+        return to_doc(bson::to_bson(&self).unwrap(), game_name, count, "SetMana".to_string());
     }
 }
