@@ -43,10 +43,7 @@ use runes::modify_hero_health::ModifyHeroHealth;
 use std::mem;
 use rustc_serialize::json;
 use bson::Document;
-use mongodb;
-use mongodb::ThreadedClient;
-use mongodb::Client;
-use mongodb::db::ThreadedDatabase;
+
 
 #[derive(Clone, RustcDecodable, RustcEncodable,)]
 pub struct GameStateData {
@@ -1163,16 +1160,15 @@ impl<'a> GameState<'a> {
     pub fn send_msg(&self, client_id: u32, message: String){
         self.game_thread.unwrap().report_message(client_id, message.clone()); 
     }
-    pub fn write_history(&self){
-        println!("WRITING GAME {}", self.name);
-        let client = Client::connect("localhost", 27017).expect("Failed to initialize standalone client.");
 
-        let coll = client.db("Fireplace").collection("games");
-
-        coll.insert_many(self.history.clone(), None).ok().expect("Failed to insert document.");
-
-
+    pub fn get_history(&self)->Vec<Document>{
+        self.history.clone()
     }
+    
+    pub fn get_name(&self)->String{
+        self.name.clone()
+    }
+
 }
 
 

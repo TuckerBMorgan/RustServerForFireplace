@@ -25,9 +25,9 @@ mod process_message;
 mod tags_list;
 mod ai;
 mod rune_match;
+mod database_utils;
 
-
-#[macro_use(bson, doc)]
+#[macro_use]
 extern crate bson;
 extern crate mongodb;
 
@@ -45,6 +45,7 @@ use player_thread::PlayerThread;
 use std::net::TcpStream;
 use std::net::TcpListener;
 use std::env;
+
 
 
 fn ai_only_play()->std::thread::JoinHandle<()>{

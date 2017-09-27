@@ -11,6 +11,7 @@ use hlua;
 use std::process;
 use bson;
 use bson::Document;
+use database_utils::write_history;
 
 #[derive(RustcDecodable, RustcEncodable, Clone, Debug, Serialize, Deserialize)]
 pub struct RotateTurn {}
@@ -81,7 +82,8 @@ impl Rune for RotateTurn {
             game_state.execute_rune(Box::new(dc));
         }
         else{
-            game_state.write_history();
+            println!("WRITING GAME: {}", game_state.get_name());
+            write_history(game_state.get_history());
             process::exit(0);
         }
     }

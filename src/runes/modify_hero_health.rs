@@ -6,6 +6,7 @@ use hlua;
 use bson;
 use bson::Document;
 use std::process;
+use database_utils::{write_history, to_doc};
 
 #[derive(RustcDecodable, RustcEncodable, Clone, Debug, Serialize, Deserialize)]
 pub struct ModifyHeroHealth {
@@ -31,7 +32,8 @@ impl Rune for ModifyHeroHealth {
         game_state.get_mut_controller_by_uid(self.target_uid).unwrap().set_current_life(self.amount);
 
         if game_state.get_mut_controller_by_uid(self.target_uid).unwrap().get_life() == 0{
-            game_state.write_history();
+            println!("WRITING GAME: {}", game_state.get_name());
+            write_history(game_state.get_history());
             process::exit(0);
         }
     }
@@ -49,23 +51,6 @@ impl Rune for ModifyHeroHealth {
     }
 
     fn to_bson_doc(&self, game_name: String, count: usize) -> Document{
-        let mut doc = bson::to_bson(&self);
-        match doc{
-            Ok(document)=>{
-                match document{
-                    bson::Bson::Document(mut d)=>{
-                        d.insert("game", game_name);
-                        d.insert("RuneCount", count as u64);
-                        d.insert("RuneType", "ModifyHeroHealth");
-                        return d
-                    },
-                    _=>{}
-                }
-            },
-            Err(e)=>{
-                return Document::new();
-            }
-        }
-        return Document::new();
+        return to_doc(bson::to_bson(&self).unwrap(), game_name, count, "ModifyHeroHealth".to_string());
     }
 }
