@@ -5,7 +5,7 @@ use rustc_serialize::json;
 use hlua;
 use bson;
 use bson::Document;
-
+use database_utils::{to_doc};
 
 #[derive(Copy, Clone, Debug, RustcDecodable, RustcEncodable, PartialEq, Serialize, Deserialize)]
 pub enum OptionType {
@@ -35,24 +35,7 @@ impl ClientOption {
     }
 
     pub fn to_bson_doc(&self, game: String, count: usize) -> Document{
-        let doc = bson::to_bson(&self);
-        match doc{
-            Ok(document)=>{
-                match document{
-                    bson::Bson::Document(mut d)=>{
-                        d.insert("game", game);
-                        d.insert("RuneCount", count as u64);
-                        d.insert("RuneType", "Option");
-                        return d
-                    },
-                    _=>{}
-                }
-            },
-            Err(e)=>{
-                return Document::new();
-            }
-        }
-        return Document::new();
+        return to_doc(bson::to_bson(&self).unwrap(), game, count, "Option".to_string());
     }
 }
 
@@ -73,24 +56,7 @@ impl OptionsPackage {
     }
 
     pub fn to_bson_doc(&self, game: String, count: usize) -> Document{
-        let doc = bson::to_bson(&self);
-        match doc{
-            Ok(document)=>{
-                match document{
-                    bson::Bson::Document(mut d)=>{
-                        d.insert("game", game);
-                        d.insert("RuneCount", count as u64);
-                        d.insert("RuneType", "optionRune");
-                        return d
-                    },
-                    _=>{}
-                }
-            },
-            Err(e)=>{
-                return Document::new();
-            }
-        }
-        return Document::new();
+        return to_doc(bson::to_bson(&self).unwrap(), game, count, "optionRune".to_string());
     }
 
 }
