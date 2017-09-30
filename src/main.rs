@@ -44,10 +44,11 @@ use player_thread::PlayerThread;
 use std::net::TcpStream;
 use std::net::TcpListener;
 use std::env;
+use std::collections::HashMap;
 
+use time::{now};
 
-
-fn ai_only_play()->std::thread::JoinHandle<()>{
+fn ai_only_play(name: String)->std::thread::JoinHandle<()>{
 
     let mut connected_clients: u32 = 0;
 
@@ -86,7 +87,7 @@ fn ai_only_play()->std::thread::JoinHandle<()>{
 
     new_client_thread_1.start_thread(tx_client.clone(), rx_client_1);
     new_client_thread_2.start_thread(tx_client.clone(), rx_client_2);
-    let jh = new_game_thread.start_thread();
+    let jh = new_game_thread.start_thread(name);
     return jh;
 }
 
@@ -140,15 +141,17 @@ fn terminal_help() {
 fn main() {
     thread::spawn(move || (terminal_commands()));
 
-    
 
     let mut connected_clients: u32 = 0;
     let mut players: Vec<PlayerThread> = vec![];
     let listener = TcpListener::bind("127.0.0.1:1337").unwrap();
-    let mut games = vec![];
+    let mut games = HashMap::new();
 
     if check_if_aio(){
-        games.push(ai_only_play());
+        let tim = now().to_timespec();
+        let seconds = &tim.sec.to_string();
+        let game_name = seconds.clone() + &tim.nsec.to_string();
+        games.insert( game_name.clone(), ai_only_play(game_name.clone()));
     }
 
     for stream in listener.incoming() {
@@ -160,6 +163,10 @@ fn main() {
 
                 players.push(p_thread);
                 if players.len() >= 1 {
+                    let tim = now().to_timespec();
+                    let seconds = &tim.sec.to_string();
+                    let game_name = seconds.clone() + &tim.nsec.to_string();
+
                     let (tx_client, rx_server) = channel();
                     let (tx_server_to_client_1, rx_client_1) = channel();
                     let (tx_server_to_client_2, rx_client_2) = channel();
@@ -194,8 +201,9 @@ fn main() {
 
                     new_client_thread_1.start_thread(tx_client.clone(), rx_client_1);
                     new_client_thread_2.start_thread(tx_client.clone(), rx_client_2);
-                    let jh = new_game_thread.start_thread();
-                    games.push(jh);
+                    let jh = new_game_thread.start_thread(game_name.clone());
+                    
+                    games.insert( game_name.clone() , jh);
                 }
             }
             Err(_) => {

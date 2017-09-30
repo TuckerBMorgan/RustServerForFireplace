@@ -11,7 +11,6 @@ use client_option::{OptionType, OptionsPackage, ClientOption};
 use client_message::OptionsMessage;
 use tags_list::AURA;
 use hlua::{self, Lua};
-use time::{now};
 
 use rand::thread_rng;
 use entity::Entity;
@@ -219,7 +218,7 @@ pub struct GameState<'a> {
 }
 
 impl<'a> GameState<'a> {
-    pub fn new(game_thread: &GameThread) -> GameState {
+    pub fn new(game_thread: &GameThread, name: String) -> GameState {
         let mut gs = GameState {
             game_thread: Some(game_thread),
             game_state_data: GameStateData::new(false),
@@ -234,7 +233,7 @@ impl<'a> GameState<'a> {
             game_scope: vec![],
             first_to_connect: None,
             mulligan_played_out: 0,
-            name: now().to_timespec().sec.to_string(),
+            name: name,
             history: vec![],
         };
 

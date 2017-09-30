@@ -40,10 +40,10 @@ impl GameThread {
     }
 
     #[allow(dead_code)]
-    pub fn start_thread(self) -> JoinHandle<()> {
+    pub fn start_thread(self, name: String) -> JoinHandle<()> {
         Some(thread::Builder::new()
                 .name("game_thread".to_string())
-                .spawn(move || { game_thread_main(self); }))
+                .spawn(move || { game_thread_main(self, name); }))
             .unwrap()
             .unwrap()
     }
@@ -95,9 +95,9 @@ impl GameThread {
 }
 
 #[allow(dead_code)]
-pub fn game_thread_main(game_thread: GameThread) {
+pub fn game_thread_main(game_thread: GameThread, name: String) {
 
-    let mut game_state = GameState::new(&game_thread);
+    let mut game_state = GameState::new(&game_thread, name);
     loop {
         let t_message = game_thread.server.recv().unwrap();
         process_message::process_client_message(t_message.payload,
