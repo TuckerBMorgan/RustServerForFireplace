@@ -27,7 +27,6 @@ mod ai;
 mod rune_match;
 mod database_utils;
 
-#[macro_use]
 extern crate bson;
 extern crate mongodb;
 

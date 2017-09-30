@@ -6,7 +6,6 @@ use rand::{thread_rng, Rng, sample};
 use game_state::GameState;
 use client_option::{ClientOption, OptionGenerator, OptionType};
 use hlua;
-use std::process;
 
 #[derive(RustcDecodable, RustcEncodable, Copy, Clone, Debug)]
 pub enum EControllerType {

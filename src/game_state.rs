@@ -11,8 +11,7 @@ use client_option::{OptionType, OptionsPackage, ClientOption};
 use client_message::OptionsMessage;
 use tags_list::AURA;
 use hlua::{self, Lua};
-use std::fs::OpenOptions;
-use time::{now, Tm, Timespec};
+use time::{now};
 
 use rand::thread_rng;
 use entity::Entity;
@@ -1169,19 +1168,4 @@ impl<'a> GameState<'a> {
         self.name.clone()
     }
 
-}
-
-
-pub fn append_rune_to_file(rune:String){
-    let file = OpenOptions::new().create(true).write(true).append(true).open("rune_history.txt");
-    match file{
-        Ok(mut fil)=>{
-            fil.write_all((rune+"\n").as_bytes());
-            fil.sync_data();
-        },
-        Err(e)=>{
-            println!("{}",e)
-        }
-    }
-        
 }

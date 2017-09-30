@@ -6,12 +6,12 @@ use runes::remove_tag::RemoveTag;
 use runes::set_base_mana::SetBaseMana;
 use runes::set_mana::SetMana;
 use runes::deal_card::DealCard;
+use runes::end_game::EndGame;
 use controller::EControllerState;
 use hlua;
-use std::process;
 use bson;
 use bson::Document;
-use database_utils::{write_history, to_doc};
+use database_utils::{to_doc};
 
 #[derive(RustcDecodable, RustcEncodable, Clone, Debug, Serialize, Deserialize)]
 pub struct RotateTurn {}
@@ -82,9 +82,15 @@ impl Rune for RotateTurn {
             game_state.execute_rune(Box::new(dc));
         }
         else{
-            println!("WRITING GAME: {}", game_state.get_name());
-            write_history(game_state.get_history());
-            process::exit(0);
+            let controllers = game_state.get_game_state_data().get_controllers().clone();
+            game_state.stage_rune(
+                EndGame::new(
+                    controllers[0].get_uid(), 
+                    controllers[1].get_uid(), 
+                    controllers[0].get_life(), 
+                    controllers[1].get_life()
+                ).into_box()
+            );
         }
     }
 

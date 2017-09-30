@@ -5,8 +5,8 @@ use game_state::GameState;
 use hlua;
 use bson;
 use bson::Document;
-use std::process;
-use database_utils::{write_history, to_doc};
+use database_utils::{to_doc};
+use runes::end_game::EndGame;
 
 #[derive(RustcDecodable, RustcEncodable, Clone, Debug, Serialize, Deserialize)]
 pub struct ModifyHeroHealth {
@@ -30,11 +30,18 @@ impl Rune for ModifyHeroHealth {
     fn execute_rune(&self, game_state: &mut GameState) {
         
         game_state.get_mut_controller_by_uid(self.target_uid).unwrap().set_current_life(self.amount);
-
+        
         if game_state.get_mut_controller_by_uid(self.target_uid).unwrap().get_life() == 0{
-            println!("WRITING GAME: {}", game_state.get_name());
-            write_history(game_state.get_history());
-            process::exit(0);
+            let target_controller = game_state.get_controller_by_uid(self.target_uid).unwrap().clone();
+            let other_controller = game_state.get_other_controller(self.target_uid.clone()).clone();
+            game_state.stage_rune(
+                EndGame::new(
+                    self.target_uid.clone(), 
+                    other_controller.get_uid(), 
+                    target_controller.get_life(), 
+                    other_controller.get_life()
+                ).into_box()
+            );
         }
     }
 

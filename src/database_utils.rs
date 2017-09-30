@@ -2,7 +2,6 @@ use bson::{Document, Bson};
 use mongodb::ThreadedClient;
 use mongodb::Client;
 use mongodb::db::ThreadedDatabase;
-use rune_vm::Rune;
 use bson;
 
 pub fn write_history(history: Vec<Document>){

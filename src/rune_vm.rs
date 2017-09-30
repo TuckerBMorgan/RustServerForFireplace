@@ -12,7 +12,9 @@ use runes::modify_health::ModifyHealth;
 use runes::summon_minion::SummonMinion;
 use runes::create_card::CreateCard;
 use runes::modify_hero_health::ModifyHeroHealth;
+use runes::end_game::EndGame;
 use bson::Document;
+
 
 pub trait Rune: Send {
     fn execute_rune(&self, game_state: &mut GameState);
@@ -23,4 +25,4 @@ pub trait Rune: Send {
 }
 
 //if we want a rune to work in lua context, just add it to this macro
-implement_enum_and_unfold!(StartGame, SetMana, SetAttack, SetHealth, ModifyHealth, ModifyAttack, SetBaseMana, SummonMinion, CreateCard,ModifyHeroHealth,);
+implement_enum_and_unfold!(StartGame, SetMana, SetAttack, SetHealth, ModifyHealth, ModifyAttack, SetBaseMana, SummonMinion, CreateCard, ModifyHeroHealth, EndGame, );
