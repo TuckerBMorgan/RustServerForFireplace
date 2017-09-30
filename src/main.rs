@@ -47,6 +47,7 @@ use std::net::TcpListener;
 use std::env;
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::mpsc;
+use std::time::Duration;
 
 use thread_management::{Management, ThreadManager};
 
@@ -97,16 +98,37 @@ fn ai_only_play(name: String, end_sender: Sender<Management>)->std::thread::Join
     return jh;
 }
 
-fn check_if_aio()->bool{
-    let args = env::args();
-
-    for i in args{
+fn check_if_aio()->u32{
+    let args: Vec<String> = env::args().collect();
+    let mut ai_active = false;
+    let mut args_count = 0;
+    for i in args.clone(){
         match i.as_ref(){
-            "ai"=> return true,
+            "ai"=> {
+                ai_active = true;
+                break;
+            },
             _=>{}
         }
+        args_count+=1;
     }
-    return false
+    if ai_active{
+        if args_count+1 != args.len() as u32 {
+            match args[(args_count+1)as usize].parse::<u32>(){
+                Ok(val)=>{
+                    return val
+                },
+                Err(_)=>{
+                    return 1;
+                }
+            }
+        }
+        else{
+            return 1;
+        }
+    }
+
+    return 0
 }
 
 fn spawn_new_player(client_id: u32, stream: TcpStream) -> PlayerThread {
@@ -156,12 +178,17 @@ fn main() {
     
     ThreadManager::start(r_management_x);
 
+    let ai_check = check_if_aio();
+    if ai_check > 0{
+        for _ in 0..ai_check{
+            let tim = now().to_timespec();
+            let seconds = &tim.sec.to_string();
+            let game_name = seconds.clone() + &tim.nsec.to_string();
+            let _ = t_management_x.send(Management::new_start( ai_only_play(game_name.clone(), t_management_x.clone()), game_name.clone().to_string() ));
+            
 
-    if check_if_aio(){
-        let tim = now().to_timespec();
-        let seconds = &tim.sec.to_string();
-        let game_name = seconds.clone() + &tim.nsec.to_string();
-        let _ = t_management_x.send(Management::new_start( ai_only_play(game_name.clone(), t_management_x.clone()), game_name.clone().to_string() ));
+            thread::sleep(Duration::from_secs(1));
+        }
     }
 
     for stream in listener.incoming() {
