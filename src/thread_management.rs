@@ -1,6 +1,6 @@
 use std::thread;
 use std::thread::JoinHandle;
-use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc::{Receiver};
 use std::collections::HashMap;
 use std::process;
 
@@ -47,7 +47,7 @@ impl ThreadManager{
     }
 
     fn kill_action(&mut self, manage_msg: Management){
-        self.games.remove(&manage_msg.game_name).unwrap().join();
+        let _ = self.games.remove(&manage_msg.game_name).unwrap().join();
         if self.games.is_empty(){
             process::exit(0);
         }
@@ -63,8 +63,7 @@ impl ThreadManager{
             let t_message = self.manager.recv().unwrap();
             match t_message.message_type{
                 ManagementType::KILL=> self.kill_action(t_message),
-                ManagementType::START=>self.start_action(t_message),
-                _=>{}
+                ManagementType::START=>self.start_action(t_message)
             }
         }
     }

@@ -5,7 +5,6 @@ use hlua;
 use bson;
 use bson::Document;
 use database_utils::{write_history, to_doc};
-use std::process;
 
 #[derive(RustcDecodable, RustcEncodable, Clone, Debug, Serialize, Deserialize)]
 pub struct EndGame {
@@ -34,13 +33,17 @@ impl EndGame {
 
 impl Rune for EndGame {
     fn execute_rune(&self, _game_state: &mut GameState) {
-        println!("WRITING GAME: {}", _game_state.get_name());
-        write_history(_game_state.get_history());
-        process::exit(0);
+        if !_game_state.get_wrote(){
+            println!("WRITING GAME: {}", _game_state.get_name());
+            write_history(_game_state.get_history());
+            _game_state.write();
+            _game_state.end_game();
+        }
+        
     }
 
     fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {
-        return true;
+        return false;
     }
 
     fn to_json(&self) -> String {

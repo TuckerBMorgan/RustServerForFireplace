@@ -20,6 +20,7 @@ pub struct GameThread {
     pub server: Receiver<ThreadMessage>,
     pub client_1_id: u32,
     pub client_2_id: u32,
+    pub self_sender: Sender<ThreadMessage>,
 }
 
 impl GameThread {
@@ -27,7 +28,8 @@ impl GameThread {
                client_2: Sender<ThreadMessage>,
                server: Receiver<ThreadMessage>,
                client_1_id: u32,
-               client_2_id: u32)
+               client_2_id: u32,
+               self_send: Sender<ThreadMessage>)
                -> GameThread {
 
         GameThread {
@@ -36,6 +38,7 @@ impl GameThread {
             server: server,
             client_1_id: client_1_id,
             client_2_id: client_2_id,
+            self_sender: self_send
         }
 
     }
@@ -93,6 +96,14 @@ impl GameThread {
         let _ = self.client_1.send(thread_message_1);
         let _ = self.client_2.send(thread_message_2);
     }
+
+    pub fn send_self(&self, message: String){
+        let _ = self.self_sender.send(ThreadMessage{
+            client_id: 0,
+            payload: message,
+            }
+        );
+    }
 }
 
 #[allow(dead_code)]
@@ -106,5 +117,5 @@ pub fn game_thread_main(game_thread: GameThread, name: String, end_sender: Sende
         }
 
     }
-    end_sender.send(Management::new_kill(name.clone()));
+    let _ = end_sender.send(Management::new_kill(name.clone()));
 }

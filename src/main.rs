@@ -45,11 +45,10 @@ use player_thread::PlayerThread;
 use std::net::TcpStream;
 use std::net::TcpListener;
 use std::env;
-use std::collections::HashMap;
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::mpsc;
 
-use thread_management::{Management, ThreadManager, ManagementType};
+use thread_management::{Management, ThreadManager};
 
 use time::{now};
 
@@ -72,7 +71,9 @@ fn ai_only_play(name: String, end_sender: Sender<Management>)->std::thread::Join
         tx_server_to_client_2,
         rx_server,
         client_id_1,
-        client_id_2);
+        client_id_2,
+        tx_client.clone()
+        );
 
     let payload_message =
         format!("{{ \"{k}\":\"{v}\"}}", k = "message_type", v = "connection");
@@ -190,7 +191,9 @@ fn main() {
                                                           tx_server_to_client_2,
                                                           rx_server,
                                                           client_id_1,
-                                                          client_id_2);
+                                                          client_id_2,
+                                                          tx_client.clone()
+                                                          );
 
                     let payload_message =
                         format!("{{ \"{k}\":\"{v}\"}}", k = "message_type", v = "connection");

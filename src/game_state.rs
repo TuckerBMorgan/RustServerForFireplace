@@ -20,7 +20,6 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::collections::{VecDeque, HashMap, HashSet};
-use std::sync::mpsc::{Sender};
 
 use runes::deal_card::DealCard;
 use runes::start_game::StartGame;
@@ -215,7 +214,7 @@ pub struct GameState<'a> {
     mulligan_played_out: u8,
     name: String,
     history: Vec<Document>,
-
+    wrote: bool,
 }
 
 impl<'a> GameState<'a> {
@@ -236,6 +235,7 @@ impl<'a> GameState<'a> {
             mulligan_played_out: 0,
             name: name,
             history: vec![],
+            wrote: false,
         };
 
         //this is required because we have to have to tell lua about all the special types from our game
@@ -1168,4 +1168,16 @@ impl<'a> GameState<'a> {
         self.name.clone()
     }
 
+    pub fn end_game(&self){
+        self.game_thread.unwrap().send_self("{\"message_type\": \"EndGame\"}".to_string());
+    }
+
+    pub fn get_wrote(&self)->bool{
+        self.wrote
+    }
+
+    pub fn write(&mut self){
+        self.wrote = true;
+    }
+    
 }
