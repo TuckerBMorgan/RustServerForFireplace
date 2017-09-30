@@ -83,6 +83,7 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
             */
 
         }
+        "EndGame"=>{},
 
         _ => {
             println!("{}", message_type);

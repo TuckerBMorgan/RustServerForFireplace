@@ -102,7 +102,7 @@ pub fn game_thread_main(game_thread: GameThread, name: String) {
         let t_message = game_thread.server.recv().unwrap();
         process_message::process_client_message(t_message.payload,
                                                 t_message.client_id,
-                                                &mut game_state);
+                                                &mut game_state)
 
     }
 }

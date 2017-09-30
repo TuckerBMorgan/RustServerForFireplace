@@ -26,6 +26,7 @@ mod tags_list;
 mod ai;
 mod rune_match;
 mod database_utils;
+mod thread_management;
 
 extern crate bson;
 extern crate mongodb;
@@ -45,6 +46,10 @@ use std::net::TcpStream;
 use std::net::TcpListener;
 use std::env;
 use std::collections::HashMap;
+use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc;
+
+use thread_management::{Management, ThreadManager, ManagementType};
 
 use time::{now};
 
@@ -145,13 +150,17 @@ fn main() {
     let mut connected_clients: u32 = 0;
     let mut players: Vec<PlayerThread> = vec![];
     let listener = TcpListener::bind("127.0.0.1:1337").unwrap();
-    let mut games = HashMap::new();
+    
+    let (t_management_x, r_management_x): (Sender<Management>, Receiver<Management>) = mpsc::channel();    
+    
+    let mut games = ThreadManager::start(r_management_x);
+
 
     if check_if_aio(){
         let tim = now().to_timespec();
         let seconds = &tim.sec.to_string();
         let game_name = seconds.clone() + &tim.nsec.to_string();
-        games.insert( game_name.clone(), ai_only_play(game_name.clone()));
+        let _ = t_management_x.send(Management::new_start( ai_only_play(game_name.clone()), game_name.clone().to_string() ));
     }
 
     for stream in listener.incoming() {
@@ -202,8 +211,7 @@ fn main() {
                     new_client_thread_1.start_thread(tx_client.clone(), rx_client_1);
                     new_client_thread_2.start_thread(tx_client.clone(), rx_client_2);
                     let jh = new_game_thread.start_thread(game_name.clone());
-                    
-                    games.insert( game_name.clone() , jh);
+                    let _ = t_management_x.send(Management::new_start( jh, game_name.clone().to_string() ));
                 }
             }
             Err(_) => {
