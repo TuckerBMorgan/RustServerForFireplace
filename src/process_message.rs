@@ -13,7 +13,7 @@ use ai::ai_utils::{AiUpdateRequest};
 
 
 #[allow(dead_code)]
-pub fn process_client_message(message: String, client_id: u32, game_state: &mut GameState) {
+pub fn process_client_message(message: String, client_id: u32, game_state: &mut GameState) ->bool {
 
     if !message.contains("AIPlay"){
         println!("processing message {}", message);
@@ -26,13 +26,13 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
             match *message_type {
                 Json::String(ref v) => format!("{}", v),
                 _ => {
-                    return;
+                    return false;
                 }
             }
         }
         _ => {
             // key does not exist
-            return;
+            return false;
         }
     };
 
@@ -83,12 +83,15 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
             */
 
         }
-        "EndGame"=>{},
+        "EndGame"=>{
+            return true;
+        },
 
         _ => {
             println!("{}", message_type);
         }
     }
+    return false;
 }
 
 #[allow(dead_code)]

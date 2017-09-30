@@ -6,6 +6,7 @@ use process_message;
 use game_state::GameState;
 use std::thread::JoinHandle;
 use std::sync::mpsc::{Sender, Receiver};
+use thread_management::Management;
 
 
 pub struct ThreadMessage {
@@ -40,10 +41,10 @@ impl GameThread {
     }
 
     #[allow(dead_code)]
-    pub fn start_thread(self, name: String) -> JoinHandle<()> {
+    pub fn start_thread(self, name: String, end_sender: Sender<Management>) -> JoinHandle<()> {
         Some(thread::Builder::new()
                 .name("game_thread".to_string())
-                .spawn(move || { game_thread_main(self, name); }))
+                .spawn(move || { game_thread_main(self, name, end_sender); }))
             .unwrap()
             .unwrap()
     }
@@ -95,14 +96,15 @@ impl GameThread {
 }
 
 #[allow(dead_code)]
-pub fn game_thread_main(game_thread: GameThread, name: String) {
+pub fn game_thread_main(game_thread: GameThread, name: String, end_sender: Sender<Management>) {
 
-    let mut game_state = GameState::new(&game_thread, name);
+    let mut game_state = GameState::new(&game_thread, name.clone());
     loop {
         let t_message = game_thread.server.recv().unwrap();
-        process_message::process_client_message(t_message.payload,
-                                                t_message.client_id,
-                                                &mut game_state)
+        if process_message::process_client_message(t_message.payload, t_message.client_id, &mut game_state){
+            break;
+        }
 
     }
+    end_sender.send(Management::new_kill(name.clone()));
 }

@@ -53,7 +53,7 @@ use thread_management::{Management, ThreadManager, ManagementType};
 
 use time::{now};
 
-fn ai_only_play(name: String)->std::thread::JoinHandle<()>{
+fn ai_only_play(name: String, end_sender: Sender<Management>)->std::thread::JoinHandle<()>{
 
     let mut connected_clients: u32 = 0;
 
@@ -92,7 +92,7 @@ fn ai_only_play(name: String)->std::thread::JoinHandle<()>{
 
     new_client_thread_1.start_thread(tx_client.clone(), rx_client_1);
     new_client_thread_2.start_thread(tx_client.clone(), rx_client_2);
-    let jh = new_game_thread.start_thread(name);
+    let jh = new_game_thread.start_thread(name, end_sender);
     return jh;
 }
 
@@ -153,14 +153,14 @@ fn main() {
     
     let (t_management_x, r_management_x): (Sender<Management>, Receiver<Management>) = mpsc::channel();    
     
-    let mut games = ThreadManager::start(r_management_x);
+    ThreadManager::start(r_management_x);
 
 
     if check_if_aio(){
         let tim = now().to_timespec();
         let seconds = &tim.sec.to_string();
         let game_name = seconds.clone() + &tim.nsec.to_string();
-        let _ = t_management_x.send(Management::new_start( ai_only_play(game_name.clone()), game_name.clone().to_string() ));
+        let _ = t_management_x.send(Management::new_start( ai_only_play(game_name.clone(), t_management_x.clone()), game_name.clone().to_string() ));
     }
 
     for stream in listener.incoming() {
@@ -210,7 +210,7 @@ fn main() {
 
                     new_client_thread_1.start_thread(tx_client.clone(), rx_client_1);
                     new_client_thread_2.start_thread(tx_client.clone(), rx_client_2);
-                    let jh = new_game_thread.start_thread(game_name.clone());
+                    let jh = new_game_thread.start_thread(game_name.clone(), t_management_x.clone());
                     let _ = t_management_x.send(Management::new_start( jh, game_name.clone().to_string() ));
                 }
             }
