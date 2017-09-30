@@ -63,7 +63,7 @@ impl Rune for NewController {
         };
 
         game_state.add_player_controller(new_controller, self.deck.clone());
-        game_state.execute_rune(CreateCard::new("basic/hunter".to_owned(), self.uid, self.uid).into_box());
+        game_state.execute_rune(CreateCard::new("heroes/hunter".to_owned(), self.uid, self.uid).into_box());
 
         //new_controller.unplayed_minions.push(new_controller.uid);
         
