@@ -3,10 +3,10 @@ use std::io::prelude::*;
 use std::thread;
 use std::thread::JoinHandle;
 use std::net::TcpStream;
-use rustc_serialize::json::Json;
+use serde_json::{Value};
 
 use std::sync::mpsc::{Sender, Receiver};
-use game_thread::ThreadMessage;
+use crate::game_thread::ThreadMessage;
 
 pub struct PlayerThread {
     pub client_id: u32,
@@ -146,13 +146,13 @@ fn player_thread_function(player_thread: PlayerThread,
                     Ok(to_client_message) => {
                         let message = to_client_message.payload.clone();
 
-                        let j_message: Json = Json::from_str(message.trim()).unwrap();
+                        let j_message: Value = serde_json::from_str(message.trim()).unwrap();
                         let obj = j_message.as_object().unwrap();
 
                         let message_type = match obj.get("runeType") {
                             Some(message_type) => {
                                 match *message_type {
-                                    Json::String(ref v) => format!("{}", v),
+                                    Value::String(ref v) => format!("{}", v),
                                     _ => {
                                         println!("Happens here");
                                         continue;

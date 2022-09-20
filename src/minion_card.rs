@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 
 use std::collections::{HashSet, HashMap};
-use client_option::{OptionGenerator, ClientOption, OptionType};
-use tags_list::{TAUNT, STEALTH};
-use game_state::GameState;
-use controller::Controller;
+use crate::client_option::{OptionGenerator, ClientOption, OptionType};
+use crate::tags_list::{TAUNT, STEALTH};
+use crate::game_state::GameState;
+use crate::controller::Controller;
 use hlua;
 
 pub type UID = u32;
@@ -55,8 +55,8 @@ pub struct Minion {
     spell_damage: u32,
 }
 
-implement_for_lua!(Minion, |mut _metatable| {
-    let mut index = _metatable.empty_array("__index");
+implement_for_lua!(Minion, |mut metatable| {
+    let mut index = metatable.empty_array("__index");
 
     index.set("add_tag",
               hlua::function2(|min: &mut Minion, tag: String| min.add_tag_to(tag)));

@@ -1,17 +1,17 @@
-use game_state::GameState;
-use controller::Controller;
-use minion_card::UID;
-use rustc_serialize::json;
+use crate::game_state::GameState;
+use crate::controller::Controller;
+use crate::minion_card::UID;
+use serde::{Deserialize, Serialize};
 use hlua;
 
-#[derive(Copy, Clone, Debug, RustcDecodable, RustcEncodable)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum OptionType {
     EAttack,
     EPlayCard,
     EEndTurn,
 }
 
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(Serialize, Deserialize)]
 #[derive(Copy, Clone, Debug)]
 pub struct ClientOption {
     pub option_type: OptionType,
@@ -30,16 +30,16 @@ impl ClientOption {
     }
 }
 
-implement_for_lua!(ClientOption, |mut _metatable| {});
+implement_for_lua!(ClientOption, |mut metatable| {});
 
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(Serialize, Deserialize)]
 pub struct OptionsPackage {
     pub options: Vec<ClientOption>,
 }
 
 impl OptionsPackage {
     pub fn to_json(&self) -> String {
-        let mut _str = json::encode(self).unwrap();
+        let mut _str = serde_json::to_string(self).unwrap();
         _str.remove(0);
         let mut added_front = "{\"runeType\":\"optionRune\",".to_string();
         added_front += &_str[..];

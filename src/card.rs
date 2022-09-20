@@ -1,9 +1,9 @@
 
-use game_state::GameState;
-use minion_card::UID;
-use client_option::{OptionGenerator, ClientOption, OptionType};
-use tags_list::TARGET;
-use controller::Controller;
+use crate::game_state::GameState;
+use crate::minion_card::UID;
+use crate::client_option::{OptionGenerator, ClientOption, OptionType};
+use crate::tags_list::TARGET;
+use crate::controller::Controller;
 use hlua;
 #[derive(Copy, Clone)]
 #[allow(dead_code)]

@@ -1,11 +1,11 @@
-use rune_vm::Rune;
-use rustc_serialize::json;
-use game_state::GameState;
-use minion_card::UID;
-use minion_card::Minion;
+use crate::rune_vm::Rune;
+use serde::{Deserialize, Serialize};
+use crate::game_state::GameState;
+use crate::minion_card::UID;
+use crate::minion_card::Minion;
 use hlua;
 
-#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ReportMinionToClient {
     cost: u32,
     id: String,
@@ -25,7 +25,7 @@ pub struct ReportMinionToClient {
     is_deal: bool,
 }
 
-implement_for_lua!(ReportMinionToClient, |mut _metatable| {});
+implement_for_lua!(ReportMinionToClient, |mut metatable| {});
 
 impl ReportMinionToClient {
     #[allow(dead_code)]
@@ -99,10 +99,10 @@ impl Rune for ReportMinionToClient {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"ReportMinionToClient\",")
+        serde_json::to_string(self).unwrap().replace("{", "{\"runeType\":\"ReportMinionToClient\",")
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }

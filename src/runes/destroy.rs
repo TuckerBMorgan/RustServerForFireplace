@@ -1,15 +1,15 @@
-use rune_vm::Rune;
-use minion_card::{UID, EMinionState};
-use rustc_serialize::json;
-use game_state::GameState;
+use crate::rune_vm::Rune;
+use crate::minion_card::{UID, EMinionState};
+use serde::{Deserialize, Serialize};
+use crate::game_state::GameState;
 use hlua;
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Destroy {
     target_uid: UID,
 }
 
-implement_for_lua!(Destroy, |mut _metatable| {});
+implement_for_lua!(Destroy, |mut metatable| {});
 
 impl Destroy {
     pub fn new(target_uid: UID) -> Destroy {
@@ -29,10 +29,10 @@ impl Rune for Destroy {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"Destroy\",")
+        serde_json::to_string(self).unwrap().replace("{", "{\"runeType\":\"Destroy\",")
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }

@@ -2,8 +2,8 @@
 
 use std::str;
 use std::thread;
-use process_message;
-use game_state::GameState;
+use crate::process_message;
+use crate::game_state::GameState;
 use std::thread::JoinHandle;
 use std::sync::mpsc::{Sender, Receiver};
 

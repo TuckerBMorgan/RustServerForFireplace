@@ -1,12 +1,13 @@
-use rune_vm::Rune;
-use game_state::GameState;
-use minion_card::UID;
+use crate::rune_vm::Rune;
+use crate::game_state::GameState;
+use crate::minion_card::UID;
+use serde::{Serialize, Deserialize};
 use hlua;
 
-#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct StartGame {}
 
-implement_for_lua!(StartGame, |mut _metatable| {});
+implement_for_lua!(StartGame, |mut metatable| {});
 
 impl StartGame {
     pub fn new() -> StartGame {
@@ -25,7 +26,7 @@ impl Rune for StartGame {
         "{\"runeType\":\"StartGame\"}".to_string()
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }

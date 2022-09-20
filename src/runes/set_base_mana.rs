@@ -1,17 +1,17 @@
-use rune_vm::Rune;
-use rustc_serialize::json;
-use game_state::GameState;
-use minion_card::UID;
+use crate::rune_vm::Rune;
+use serde::{Deserialize, Serialize};
+use crate::game_state::GameState;
+use crate::minion_card::UID;
 use hlua;
 
 
-#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SetBaseMana {
     controller_uid: UID,
     base_mana: u8,
 }
 
-implement_for_lua!(SetBaseMana, |mut _metatable| {});
+implement_for_lua!(SetBaseMana, |mut metatable| {});
 
 impl SetBaseMana {
     pub fn new(controller_uid: UID, base_mana: u8) -> SetBaseMana {
@@ -35,10 +35,10 @@ impl Rune for SetBaseMana {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"SetBaseMana\",")
+        serde_json::to_string(self).unwrap().replace("{", "{\"runeType\":\"SetBaseMana\",")
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }

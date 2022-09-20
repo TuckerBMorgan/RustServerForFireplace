@@ -1,19 +1,19 @@
 
-use card::ECardType;
-use rune_vm::Rune;
-use rustc_serialize::json;
-use game_state::GameState;
-use minion_card::UID;
-use runes::report_minion_to_client::ReportMinionToClient;
+use crate::card::ECardType;
+use crate::rune_vm::Rune;
+use serde::{Deserialize, Serialize};
+use crate::game_state::GameState;
+use crate::minion_card::UID;
+use crate::runes::*;
 use hlua;
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct DealCard {
     pub card_uid: UID,
     pub controller_uid: UID,
 }
 
-implement_for_lua!(DealCard, |mut _metatable| {});
+implement_for_lua!(DealCard, |mut metatable| {});
 
 impl DealCard {
     pub fn new(card_uid: UID, controller_uid: UID) -> DealCard {
@@ -62,10 +62,10 @@ impl Rune for DealCard {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"DealCard\",")
+        serde_json::to_string(self).unwrap().replace("{", "{\"runeType\":\"DealCard\",")
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }

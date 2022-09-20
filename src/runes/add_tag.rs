@@ -1,11 +1,11 @@
-use rune_vm::Rune;
-use rustc_serialize::json;
-use game_state::GameState;
-use minion_card::UID;
+use crate::rune_vm::Rune;
+use serde::{Deserialize, Serialize};
+use crate::game_state::GameState;
+use crate::minion_card::UID;
 use hlua;
 
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct AddTag {
     pub minion_uid: UID,
     pub tag: String,
@@ -20,7 +20,7 @@ impl AddTag {
     }
 }
 
-implement_for_lua!(AddTag, |mut _metatable| {});
+implement_for_lua!(AddTag, |mut metatable| {});
 
 impl Rune for AddTag {
     fn execute_rune(&self, mut game_state: &mut GameState) {
@@ -41,10 +41,10 @@ impl Rune for AddTag {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"AddTag\",")
+        serde_json::to_string(self).unwrap().replace("{", "{\"runeType\":\"AddTag\",")
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }

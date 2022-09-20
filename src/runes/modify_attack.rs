@@ -1,16 +1,16 @@
-use rune_vm::Rune;
-use minion_card::UID;
-use rustc_serialize::json;
-use game_state::GameState;
+use crate::rune_vm::Rune;
+use crate::minion_card::UID;
+use serde::{Deserialize, Serialize};
+use crate::game_state::GameState;
 use hlua;
 
-#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ModifyAttack {
     target_uid: UID,
     amount: u32,
 }
 
-implement_for_lua!(ModifyAttack, |mut _metatable| {});
+implement_for_lua!(ModifyAttack, |mut metatable| {});
 
 impl ModifyAttack {
     pub fn new(target_uid: UID, amount: u32) -> ModifyAttack {
@@ -31,10 +31,10 @@ impl Rune for ModifyAttack {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"ModifyAttack\",")
+        serde_json::to_string(self).unwrap().replace("{", "{\"runeType\":\"ModifyAttack\",")
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }

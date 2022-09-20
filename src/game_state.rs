@@ -1,42 +1,26 @@
 #![allow(dead_code)]
 
-use rune_vm::{Rune, ERuneType};
+use crate::rune_vm::{Rune, ERuneType};
 use std::net::TcpStream;
 use std::fmt::Display;
-use card::{Card, ECardType};
-use controller::{Controller, EControllerState};
-use minion_card::{Minion, UID, EMinionState};
-use game_thread::GameThread;
-use client_option::{OptionType, OptionsPackage, ClientOption};
-use client_message::OptionsMessage;
-use tags_list::AURA;
+use crate::card::{Card, ECardType};
+use crate::controller::{Controller, EControllerState};
+use crate::minion_card::{Minion, UID, EMinionState};
+use crate::game_thread::GameThread;
+use crate::client_option::{OptionType, OptionsPackage, ClientOption};
+use crate::client_message::OptionsMessage;
+use crate::tags_list::AURA;
 use hlua::{self, Lua};
 
 use rand::thread_rng;
-use entity::Entity;
-use rhai::{Engine, Scope};
+use crate::entity::Entity;
 
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::collections::{VecDeque, HashMap, HashSet};
 
-use runes::deal_card::DealCard;
-use runes::start_game::StartGame;
-use runes::rotate_turn::RotateTurn;
-use runes::shuffle_card::ShuffleCard;
-use runes::new_controller::NewController;
-use runes::mulligan::Mulligan;
-use runes::play_card::PlayCard;
-use runes::kill_minion::KillMinion;
-use runes::set_mana::SetMana;
-use runes::set_health::SetHealth;
-use runes::set_attack::SetAttack;
-use runes::modify_attack::ModifyAttack;
-use runes::modify_health::ModifyHealth;
-use runes::create_card::CreateCard;
-use runes::summon_minion::SummonMinion;
-
+use crate::runes::*;
 
 #[derive(Clone)]
 pub struct GameStateData {
@@ -49,10 +33,10 @@ pub struct GameStateData {
     on_turn_player: i8, 
 }
 
-//implement_for_lua!(i32, |mut _metatable|{});
+//implement_for_lua!(i32, |mut metatable|{});
 
-implement_for_lua!(GameStateData, |mut _metatable| {
-    let mut index = _metatable.empty_array("__index");
+implement_for_lua!(GameStateData, |mut metatable| {
+    let mut index = metatable.empty_array("__index");
     index.set("get_uid",
               hlua::function1(|gsd: &mut GameStateData| gsd.get_uid()));
 });
@@ -169,20 +153,18 @@ impl GameStateData {
 pub struct GameState<'a> {
     // the number of players who have done all parts of handshake
     players_ready: u8,
-    game_scope: Scope,
 
     team_count: u8,
     connection_number: u8,
 
     game_thread: Option<&'a GameThread>,
     game_state_data: GameStateData,
-    script_engine: Engine,
     lua: Lua<'a>,
 
     // the current runes waiting to be fired
-    rune_queue: VecDeque<Box<Rune>>,
+    rune_queue: VecDeque<Box<dyn Rune>>,
     // all entities in the game, spells, minions, and controllers
-    entities: HashMap<String, Box<Entity>>,
+    entities: HashMap<String, Box<dyn Entity>>,
     // all the streams of the current people connected so we can talk to them again
     connections: Vec<Box<TcpStream>>,
 
@@ -202,9 +184,7 @@ impl<'a> GameState<'a> {
             connections: vec![],
             rune_queue: VecDeque::new(),
             entities: HashMap::new(),
-            script_engine: Engine::new(),
             lua: Lua::new(),
-            game_scope: vec![],
             first_to_connect: None,
             mulligan_played_out: 0,
         };
@@ -373,7 +353,7 @@ impl<'a> GameState<'a> {
         self.lua.get("result")
     }
 
-    pub fn execute_rune(&mut self, rune: Box<Rune>) {
+    pub fn execute_rune(&mut self, rune: Box<dyn Rune>) {
 
         if self.is_rune_queue_empty() == false {
             self.add_rune_to_queue(rune)
@@ -382,11 +362,11 @@ impl<'a> GameState<'a> {
         }
     }
     
-    pub fn stage_rune(&mut self, rune: Box<Rune>) {
+    pub fn stage_rune(&mut self, rune: Box<dyn Rune>) {
         self.add_rune_to_queue(rune);
     }
 
-    pub fn process_rune(&mut self, rune: Box<Rune>) {
+    pub fn process_rune(&mut self, rune: Box<dyn Rune>) {
 
         println!("executing rune {}", rune.to_json());
         rune.execute_rune(self);
@@ -464,11 +444,11 @@ impl<'a> GameState<'a> {
     }
 
     // adds a rune to the rune queue, this is down when a executing rune creates a rune
-    pub fn add_rune_to_queue(&mut self, rune: Box<Rune>) {
+    pub fn add_rune_to_queue(&mut self, rune: Box<dyn Rune>) {
         self.rune_queue.push_back(rune);
     }
 
-    pub fn remove_rune_from_queue(&mut self) -> Box<Rune> {
+    pub fn remove_rune_from_queue(&mut self) -> Box<dyn Rune> {
         self.rune_queue.pop_front().unwrap()
     }
 

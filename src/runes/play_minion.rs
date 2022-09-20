@@ -1,10 +1,9 @@
-use rune_vm::{Rune, ERuneType};
-use rustc_serialize::json;
-use game_state::GameState;
-use minion_card::UID;
-use runes::add_tag::AddTag;
-use runes::summon_minion::SummonMinion;
-use tags_list::{CHARGE, SUMMONING_SICKNESS, TARGET};
+use crate::rune_vm::{Rune, ERuneType};
+use serde::{Deserialize, Serialize};
+use crate::game_state::GameState;
+use crate::minion_card::UID;
+use crate::runes::*;
+use crate::tags_list::{CHARGE, SUMMONING_SICKNESS, TARGET};
 use hlua;
 
 // the play_minion rune is called when you play a minion
@@ -15,7 +14,7 @@ use hlua;
 //
 
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct PlayMinion {
     pub minion_uid: UID,
     pub controller_uid: UID,
@@ -23,7 +22,7 @@ pub struct PlayMinion {
     pub target_uid: UID,
 }
 
-implement_for_lua!(PlayMinion, |mut _metatable| {});
+implement_for_lua!(PlayMinion, |mut metatable| {});
 
 impl PlayMinion {
     pub fn new(minion_uid: UID,
@@ -58,7 +57,7 @@ impl Rune for PlayMinion {
                 let at = AddTag::new(self.minion_uid.clone(), SUMMONING_SICKNESS.to_string());
                 game_state.execute_rune(Box::new(at));
             }
-
+            //TODO: move the functions to a number so I can avoid a string compare
             match min.get_function("battle_cry_function".to_string()) {
                 Some(function) => {
                     let rune_vec = {
@@ -85,7 +84,6 @@ impl Rune for PlayMinion {
 
         let s_r = SummonMinion::new(self.minion_uid, self.controller_uid, self.field_index as u8);
         game_state.stage_rune(Box::new(s_r));
-    //    game_state.process_rune(Box::new(s_r));
     }
 
     fn can_see(&self, _controller: UID, _game_state: &GameState) -> bool {
@@ -93,10 +91,10 @@ impl Rune for PlayMinion {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"PlayMinion\",")
+        serde_json::to_string(self).unwrap().replace("{", "{\"runeType\":\"PlayMinion\",")
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }

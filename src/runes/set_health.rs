@@ -1,16 +1,16 @@
-use rune_vm::Rune;
-use rustc_serialize::json;
-use game_state::GameState;
-use minion_card::UID;
+use crate::rune_vm::Rune;
+use serde::{Deserialize, Serialize};
+use crate::game_state::GameState;
+use crate::minion_card::UID;
 use hlua;
 
-#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SetHealth {
     card_uid: UID,
     amount: u32,
 }
 
-implement_for_lua!(SetHealth, |mut _metatable| {});
+implement_for_lua!(SetHealth, |mut metatable| {});
 
 impl SetHealth {
     pub fn new(card_uid: UID, amount: u32) -> SetHealth {
@@ -37,10 +37,10 @@ impl Rune for SetHealth {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"SetHealth\",")
+        serde_json::to_string(self).unwrap().replace("{", "{\"runeType\":\"SetHealth\",")
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }

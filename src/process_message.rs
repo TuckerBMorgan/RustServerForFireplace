@@ -1,10 +1,8 @@
-extern crate rustc_serialize;
 
-use game_state::GameState;
-use rustc_serialize::json;
-use rustc_serialize::json::Json;
-use runes::new_controller::NewController;
-use client_message::{MulliganMessage, OptionsMessage};
+use crate::game_state::GameState;
+use serde_json::{Value};
+use crate::runes::new_controller::NewController;
+use crate::client_message::*;
 
 
 
@@ -12,13 +10,13 @@ use client_message::{MulliganMessage, OptionsMessage};
 pub fn process_client_message(message: String, client_id: u32, game_state: &mut GameState) {
 
     println!("processing message {}", message);
-    let j_message: Json = Json::from_str(message.trim()).unwrap();
+    let j_message: Value = serde_json::from_str(message.trim()).unwrap();
     let obj = j_message.as_object().unwrap();
 
     let message_type = match obj.get("message_type") {
         Some(message_type) => {
             match *message_type {
-                Json::String(ref v) => format!("{}", v),
+                Value::String(ref v) => format!("{}", v),
                 _ => {
                     return;
                 }
@@ -38,12 +36,12 @@ pub fn process_client_message(message: String, client_id: u32, game_state: &mut 
 
         "ready" => {}
         "option" => {
-            let ops_message: OptionsMessage = json::decode(message.trim()).unwrap();
+            let ops_message: OptionsMessage = serde_json::from_str(message.trim()).unwrap();
             game_state.execute_option(ops_message);
         }
 
         "mulligan" => {
-            let mull_message: MulliganMessage = json::decode(message.trim()).unwrap();
+            let mull_message: MulliganMessage = serde_json::from_str(message.trim()).unwrap();
             game_state.mulligan(client_id, mull_message.index.clone());
         }
 

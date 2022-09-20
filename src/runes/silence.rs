@@ -1,19 +1,19 @@
-use rune_vm::Rune;
-use rustc_serialize::json;
-use game_state::GameState;
-use minion_card::UID;
-use tags_list::{FROZEN, CHARGE, WINDFURY, DIVINE_SHIELD, STEALTH, TAUNT, DEATH_RATTLE,
+use crate::rune_vm::Rune;
+use serde::{Deserialize, Serialize};
+use crate::game_state::GameState;
+use crate::minion_card::UID;
+use crate::tags_list::{FROZEN, CHARGE, WINDFURY, DIVINE_SHIELD, STEALTH, TAUNT, DEATH_RATTLE,
                 TRIGGERED_EFFECT, POISON, SPELL_DAMAGE, TARGET};
-use runes::remove_tag::RemoveTag;
+use crate::runes::*;
 use hlua;
 
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Silence {
     pub minion_uid: UID,
 }
 
-implement_for_lua!(Silence, |mut _metatable| {});
+implement_for_lua!(Silence, |mut metatable| {});
 
 impl Silence {
     pub fn new(minion_uid: UID) -> Silence {
@@ -57,10 +57,10 @@ impl Rune for Silence {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"Silence\",")
+        serde_json::to_string(self).unwrap().replace("{", "{\"runeType\":\"Silence\",")
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }

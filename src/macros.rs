@@ -19,8 +19,8 @@ macro_rules! implement_lua_userdata_read {
 macro_rules! implement_for_lua {
     ($ty:ty, $cb:expr) => {
         implement_lua_userdata_read!($ty);
-        implement_lua_read!($ty);
         implement_lua_push!($ty, $cb);
+        implement_lua_read!($ty);
     }
 }
 
@@ -36,7 +36,7 @@ macro_rules! implement_enum_and_unfold {
         }
 
         impl ERuneType {
-            pub fn unfold(&self) -> Box<Rune> {
+            pub fn unfold(&self) -> Box<dyn Rune> {
                 match *self {
                     $(
                         ERuneType::$enum_id(ref val) => {
@@ -46,6 +46,6 @@ macro_rules! implement_enum_and_unfold {
                 }
             }
         }
-        implement_for_lua!(ERuneType, |mut _metatable| {});
+        implement_for_lua!(ERuneType, |mut metatable| {});
     )
 }

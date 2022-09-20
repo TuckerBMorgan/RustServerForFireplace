@@ -1,17 +1,17 @@
 
-use rune_vm::Rune;
-use rustc_serialize::json;
-use game_state::GameState;
-use minion_card::UID;
+use crate::rune_vm::Rune;
+use serde::{Deserialize, Serialize};
+use crate::game_state::GameState;
+use crate::minion_card::UID;
 use hlua;
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ShuffleCard {
     pub card_uid: UID,
     pub controller_uid: UID,
 }
 
-implement_for_lua!(ShuffleCard, |mut _metatable| {});
+implement_for_lua!(ShuffleCard, |mut metatable| {});
 
 impl ShuffleCard {
     pub fn new(card_uid: UID, controller_uid: UID) -> ShuffleCard {
@@ -36,10 +36,10 @@ impl Rune for ShuffleCard {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"ShuffleCard\",")
+        serde_json::to_string(self).unwrap().replace("{", "{\"runeType\":\"ShuffleCard\",")
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }

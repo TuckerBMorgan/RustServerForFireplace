@@ -1,19 +1,20 @@
 
-use minion_card::UID;
-use card::Card;
+use crate::minion_card::UID;
+use crate::card::Card;
 use std::collections::HashSet;
 use rand::{thread_rng, Rng, sample};
-use game_state::GameState;
-use client_option::{ClientOption, OptionGenerator, OptionType};
+use crate::game_state::GameState;
+use serde::{Serialize, Deserialize};
+use crate::client_option::{ClientOption, OptionGenerator, OptionType};
 use hlua;
 
-#[derive(RustcDecodable, RustcEncodable, Copy, Clone)]
+#[derive(Serialize, Deserialize, Copy, Clone)]
 pub enum EControllerType {
     Player,
     AI,
 }
 
-#[derive(RustcDecodable, RustcEncodable, Copy, Clone)]
+#[derive(Serialize, Deserialize, Copy, Clone)]
 pub enum EControllerState {
     Mulligan,
     WaitingForStart,
@@ -40,7 +41,7 @@ pub struct Controller {
     pub seen_cards: HashSet<UID>,
 
     // minions that are in the deck to start with get created,
-    // but as placed here until we are they are summoned
+    // but are placed here until we are they are summoned
     // the reason for this is because it allows us to refer
     // to a particular minion before it is summoned in case we need
     // to modify it, or look it up
@@ -52,7 +53,7 @@ pub struct Controller {
 }
 
 implement_lua_read!(Controller);
-implement_lua_push!(Controller, |mut _metatable| {});
+implement_lua_push!(Controller, |mut metatable| {});
 
 impl Controller {
     pub fn add_minion_to_unplayed(&mut self, minion_uid: UID) {

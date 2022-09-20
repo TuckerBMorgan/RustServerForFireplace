@@ -1,9 +1,10 @@
-use rune_vm::Rune;
-use game_state::GameState;
-use minion_card::UID;
+use crate::rune_vm::Rune;
+use crate::game_state::GameState;
+use crate::minion_card::UID;
+use serde::{Serialize, Deserialize};
 use hlua;
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Mulligan {}
 
 impl Mulligan {
@@ -12,7 +13,7 @@ impl Mulligan {
     }
 }
 
-implement_for_lua!(Mulligan, |mut _metatable| {});
+implement_for_lua!(Mulligan, |mut metatable| {});
 
 impl Rune for Mulligan {
     fn execute_rune(&self, _game_state: &mut GameState) {}
@@ -25,7 +26,7 @@ impl Rune for Mulligan {
         "{\"runeType\":\"Mulligan\"}".to_string()
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }

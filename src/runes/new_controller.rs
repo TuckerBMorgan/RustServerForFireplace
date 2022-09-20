@@ -1,13 +1,13 @@
 
-use rune_vm::Rune;
-use rustc_serialize::json;
-use minion_card::UID;
-use game_state::GameState;
+use crate::rune_vm::Rune;
+use serde::{Deserialize, Serialize};
+use crate::minion_card::UID;
+use crate::game_state::GameState;
 use std::collections::HashSet;
-use controller::{EControllerState, Controller};
+use crate::controller::{EControllerState, Controller};
 use hlua;
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct NewController {
     pub uid: UID,
     pub hero: String,
@@ -29,7 +29,7 @@ impl NewController {
     }
 }
 
-implement_for_lua!(NewController, |mut _metatable| {});
+implement_for_lua!(NewController, |mut metatable| {});
 
 impl Rune for NewController {
     fn execute_rune(&self, game_state: &mut GameState) {
@@ -63,10 +63,10 @@ impl Rune for NewController {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"NewController\",")
+        serde_json::to_string(self).unwrap().replace("{", "{\"runeType\":\"NewController\",")
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }

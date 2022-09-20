@@ -1,19 +1,19 @@
 
-use rune_vm::Rune;
-use rustc_serialize::json;
-use game_state::GameState;
-use minion_card::{UID, EMinionState};
+use crate::rune_vm::Rune;
+use serde::{Deserialize, Serialize};
+use crate::game_state::GameState;
+use crate::minion_card::{UID, EMinionState};
 use hlua;
-use runes::report_minion_to_client::ReportMinionToClient;
+use crate::runes::*;
 
-#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SummonMinion {
     pub minion_uid: UID,
     pub controller_uid: UID,
     pub field_index: u8,
 }
 
-implement_for_lua!(SummonMinion, |mut _metatable| {});
+implement_for_lua!(SummonMinion, |mut metatable| {});
 
 impl SummonMinion {
     pub fn new(minion_uid: UID, controller_uid: UID, field_index: u8) -> SummonMinion {
@@ -33,7 +33,6 @@ impl Rune for SummonMinion {
                 .unwrap()
                 .set_minion_state(EMinionState::InPlay);
         }
-        println!("{}", self.minion_uid);
         if !game_state.get_mut_controller_by_uid(self.controller_uid).unwrap().has_seen_card(self.minion_uid) {
             let rmtc = ReportMinionToClient::from_minion(game_state.get_minion(self.minion_uid).unwrap(), self.controller_uid, false);
             game_state.execute_rune(Box::new(rmtc));
@@ -62,10 +61,10 @@ impl Rune for SummonMinion {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"SummonMinion\",")
+        serde_json::to_string(self).unwrap().replace("{", "{\"runeType\":\"SummonMinion\",")
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }

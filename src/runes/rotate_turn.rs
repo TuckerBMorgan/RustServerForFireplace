@@ -1,15 +1,14 @@
-use rune_vm::Rune;
-use game_state::GameState;
-use minion_card::UID;
-use ::tags_list::*;
-use runes::remove_tag::RemoveTag;
-use runes::set_base_mana::SetBaseMana;
-use runes::set_mana::SetMana;
-use runes::deal_card::DealCard;
-use controller::EControllerState;
+use crate::rune_vm::Rune;
+use crate::game_state::GameState;
+use crate::minion_card::UID;
+use crate::tags_list::*;
+use crate::runes::*;
+use serde::{Serialize, Deserialize};
+
+use crate::controller::EControllerState;
 use hlua;
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct RotateTurn {}
 
 impl RotateTurn {
@@ -18,7 +17,7 @@ impl RotateTurn {
     }
 }
 
-implement_for_lua!(RotateTurn, |mut _metatable| {});
+implement_for_lua!(RotateTurn, |mut metatable| {});
 
 impl Rune for RotateTurn {
     fn execute_rune(&self, mut game_state: &mut GameState) {
@@ -49,7 +48,10 @@ impl Rune for RotateTurn {
         }
 
         game_state.set_on_turn_player(turn_index);
-
+        let current_controller_uid = game_state.get_controller_by_index(turn_index as usize).get_uid();
+        let scc = SetCurrentController::new(current_controller_uid);
+        game_state.execute_rune(Box::new(scc));
+        
         let new_mana =
             game_state.get_controller_by_index(turn_index as usize).get_base_mana().clone() + 1;
         let sbm = SetBaseMana::new(game_state.get_controller_by_index(turn_index as usize)
@@ -81,7 +83,8 @@ impl Rune for RotateTurn {
         "{\"runeType\":\"RotateTurn\"}".to_string()
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }
+    

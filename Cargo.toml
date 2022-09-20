@@ -1,13 +1,23 @@
 [package]
-
 name = "fireplace_server"
 version  = "0.0.1"
 authors = ["Tucker Morgan Tucker.bull.morgan@gmail.com"]
+edition = "2021"
 
 [dependencies]
-
 rand = "0.3.0"
-rustc-serialize = "0.3"
 rhai = "0.4.0"
 regex = "1.5"
-hlua = "0.3"
+hlua = "0.4.1"
+quinn = "0.8.5"
+rustls = { version = "0.20.3", default-features = false, features = ["quic"]}
+rcgen = "0.9.1"
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+tokio = { version = "1.0.1", features = ["rt", "rt-multi-thread", "time", "macros", "sync"] }
+bytes = "1"
+# Enables futures::io::{AsyncRead, AsyncWrite} support for streams
+futures-io = { version = "0.3.19"}
+# Implements futures::Stream for async streams such as `Incoming`
+futures-core = { version = "0.3.19"}
+futures = "*"

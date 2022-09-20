@@ -1,17 +1,17 @@
-use rune_vm::Rune;
-use minion_card::{UID, EMinionState};
-use tags_list::DEATH_RATTLE;
-use rustc_serialize::json;
-use game_state::GameState;
+use crate::rune_vm::Rune;
+use crate::minion_card::{UID, EMinionState};
+use crate::tags_list::DEATH_RATTLE;
+use serde::{Deserialize, Serialize};
+use crate::game_state::GameState;
 use hlua;
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct KillMinion {
     controller_uid: UID,
     minion_uid: UID,
 }
 
-implement_for_lua!(KillMinion, |mut _metatable| {});
+implement_for_lua!(KillMinion, |mut metatable| {});
 
 impl KillMinion {
     pub fn new(controller_uid: UID, minion_uid: UID) -> KillMinion {
@@ -40,10 +40,10 @@ impl Rune for KillMinion {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"KillMinion\",")
+        serde_json::to_string(self).unwrap().replace("{", "{\"runeType\":\"KillMinion\",")
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }

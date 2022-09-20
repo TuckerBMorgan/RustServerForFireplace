@@ -1,20 +1,20 @@
-use rune_vm::Rune;
-use rustc_serialize::json;
-use game_state::GameState;
-use minion_card::{UID, Minion, EMinionState};
+use crate::rune_vm::Rune;
+use serde::{Deserialize, Serialize};
+use crate::game_state::GameState;
+use crate::minion_card::{UID, Minion, EMinionState};
 use hlua;
 
 use std::fs::File;
 use std::io::prelude::*;
 
-#[derive(RustcDecodable, RustcEncodable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct CreateCard {
     card_id: String,
     uid: UID,
     controller_uid: UID,
 }
 
-implement_for_lua!(CreateCard, |mut _metatable| {});
+implement_for_lua!(CreateCard, |mut metatable| {});
 
 impl CreateCard {
     #[allow(dead_code)]
@@ -62,10 +62,10 @@ impl Rune for CreateCard {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"CreateCard\",")
+        serde_json::to_string(self).unwrap().replace("{", "{\"runeType\":\"CreateCard\",")
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }

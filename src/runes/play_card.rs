@@ -1,9 +1,9 @@
-use rune_vm::Rune;
-use rustc_serialize::json;
-use game_state::GameState;
-use minion_card::UID;
-use runes::play_minion::PlayMinion;
-use runes::set_mana::SetMana;
+use crate::rune_vm::Rune;
+use serde::{Deserialize, Serialize};
+use crate::game_state::GameState;
+use crate::minion_card::UID;
+use crate::runes::*;
+
 use hlua;
 
 // the play_minion rune is called when you play a minion
@@ -14,7 +14,7 @@ use hlua;
 //
 
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct PlayCard {
     pub card_uid: UID,
     pub controller_uid: UID,
@@ -37,10 +37,10 @@ impl PlayCard {
     }
 }
 
-implement_for_lua!(PlayCard, |mut _metatable| {});
+implement_for_lua!(PlayCard, |mut metatable| {});
 
 impl Rune for PlayCard {
-    fn execute_rune(&self, mut game_state: &mut GameState) {
+    fn execute_rune(&self, game_state: &mut GameState) {
         let card = game_state.get_controller_by_uid(self.controller_uid)
             .unwrap()
             .get_copy_of_card_from_hand(self.card_uid);
@@ -71,10 +71,10 @@ impl Rune for PlayCard {
     }
 
     fn to_json(&self) -> String {
-        json::encode(self).unwrap().replace("{", "{\"runeType\":\"PlayCard\",")
+        serde_json::to_string(self).unwrap().replace("{", "{\"runeType\":\"PlayCard\",")
     }
 
-    fn into_box(&self) -> Box<Rune> {
+    fn into_box(&self) -> Box<dyn Rune> {
         Box::new(self.clone())
     }
 }
